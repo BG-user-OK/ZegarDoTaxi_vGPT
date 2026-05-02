@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_1.5: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_1.6: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_1.5: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_1.6: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1198,8 +1198,10 @@
     }
 
     .note-panel{
-      padding-top:2px;
-      gap:3px;
+      height:min(98.5vh, 850px);
+      padding:2px 8px 8px;
+      gap:2px;
+      transform:translateY(-6px);
     }
     .note-panel h3{
       margin:0 0 1px;
@@ -1227,32 +1229,68 @@
       text-transform:uppercase; letter-spacing:1px;
       padding-left:4px;
     }
+    .note-alarm-layout{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+      align-items:center;
+    }
+    .note-now-display{
+      min-height:150px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      background:#121212;
+      border:1px solid #343434;
+      border-radius:12px;
+      padding:8px;
+    }
+    .note-now-label{
+      color:#9a9a9a;
+      font-size:14px;
+      font-weight:900;
+      letter-spacing:1px;
+      line-height:1;
+      margin-bottom:8px;
+    }
+    .note-now-time{
+      color:#ffffff;
+      font-size:clamp(42px, 13vw, 72px);
+      font-weight:900;
+      line-height:1;
+      font-variant-numeric:tabular-nums;
+      text-shadow:0 0 14px rgba(255,255,255,.22);
+    }
+    .note-alarm-picker{
+      min-width:0;
+    }
     .note-time-control{
       display:grid;
       grid-template-columns:1fr auto 1fr;
       align-items:center;
       justify-items:center;
-      gap:10px;
+      gap:5px;
       padding:4px 0 2px;
     }
     .note-time-control .time-col{ gap:8px; }
     .note-time-control .arrow-btn{
-      width:min(24vw, 92px);
-      height:min(13vw, 54px);
-      font-size:30px;
+      width:min(18vw, 70px);
+      height:min(11vw, 46px);
+      font-size:26px;
       color:#ffffff;
       background:#202020;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);
     }
     .note-time-control .time-box{
-      min-width:98px;
-      font-size:clamp(48px, 13vw, 78px);
+      min-width:58px;
+      font-size:clamp(34px, 8.5vw, 52px);
       color:#ffffff;
       font-weight:900;
     }
     .note-time-control .colon{
       color:#ffffff;
-      font-size:clamp(42px, 10vw, 64px);
+      font-size:clamp(30px, 7vw, 44px);
       margin-top:0;
     }
     .note-time-control.off{ opacity:.45; }
@@ -1260,7 +1298,7 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:8px;
+      gap:6px;
     }
     .note-alarm-row label{
       flex:1 1 auto;
@@ -1270,10 +1308,10 @@
     .note-alarm-toggle{
       border:none;
       border-radius:10px;
-      padding:10px 12px;
+      padding:9px 10px;
       background:#242424;
       color:#dddddd;
-      font-size:16px;
+      font-size:14px;
       font-weight:900;
     }
     .note-alarm-toggle.on{
@@ -1488,7 +1526,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_1.5</div>
+  <div class="version">vGPT_1.6</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2972,21 +3010,29 @@
           <div class="note-fields">
             <label>Treść</label>
             <textarea id="noteText" rows="4" placeholder="Np. kupić wodę...">${escapeHtml(text)}</textarea>
-            <div class="note-alarm-row">
-              <label style="padding-left:4px;">ALARM TIME (now: ${currentTimeLabel})</label>
-              <button type="button" class="note-alarm-toggle" id="noteAlarmToggle">Alarm</button>
-            </div>
-            <div class="note-time-control" id="noteTimeControl">
-              <div class="time-col">
-                <button class="arrow-btn" data-note-act="hUp">▲</button>
-                <div class="time-box" id="noteAlarmHourBox"></div>
-                <button class="arrow-btn" data-note-act="hDn">▼</button>
+            <div class="note-alarm-layout">
+              <div class="note-now-display">
+                <div class="note-now-label">NOW</div>
+                <div class="note-now-time">${currentTimeLabel}</div>
               </div>
-              <div class="colon">:</div>
-              <div class="time-col">
-                <button class="arrow-btn" data-note-act="mUp">▲</button>
-                <div class="time-box" id="noteAlarmMinuteBox"></div>
-                <button class="arrow-btn" data-note-act="mDn">▼</button>
+              <div class="note-alarm-picker">
+                <div class="note-alarm-row">
+                  <label style="padding-left:4px;">ALARM TIME</label>
+                  <button type="button" class="note-alarm-toggle" id="noteAlarmToggle">Alarm</button>
+                </div>
+                <div class="note-time-control" id="noteTimeControl">
+                  <div class="time-col">
+                    <button class="arrow-btn" data-note-act="hUp">▲</button>
+                    <div class="time-box" id="noteAlarmHourBox"></div>
+                    <button class="arrow-btn" data-note-act="hDn">▼</button>
+                  </div>
+                  <div class="colon">:</div>
+                  <div class="time-col">
+                    <button class="arrow-btn" data-note-act="mUp">▲</button>
+                    <div class="time-box" id="noteAlarmMinuteBox"></div>
+                    <button class="arrow-btn" data-note-act="mDn">▼</button>
+                  </div>
+                </div>
               </div>
             </div>
             <label>Wyprzedzenie alarmu</label>
