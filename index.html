@@ -1,0 +1,3369 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Tarcza czasu pracy</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#000000">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tarcza">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <style>
+    :root{
+      --bg:#000000;
+      --dot:#d7d7d7;
+      --dot-big:#ececec;
+      --txt:#f4f4f4;
+      --version:#3b3b3b;
+
+      --hand-hour:#e8e8e8;
+      --hand-minute:#b9b9b9;
+      --hand-outline:rgba(0,0,0,.85);
+      --dial-number:#8a8a8a;
+
+      --work-green:#38c866;
+      --no-exercise-red:#ff3838;
+      --overtime-orange:#ff9a1f;
+      --exercise:#e5871f;
+      --break-cut:#000000;
+      --forecast:#44df73;
+
+      --btn-work-off-1:#0d3f18;
+      --btn-work-off-2:#07250f;
+      --btn-work-on-1:#2ac158;
+      --btn-work-on-2:#17873a;
+      --btn-work-over-1:#ffa335;
+      --btn-work-over-2:#c96a0a;
+
+      --btn-ex-off-1:#75410a;
+      --btn-ex-off-2:#492805;
+      --btn-ex-on-1:#ffaa3f;
+      --btn-ex-on-2:#d87210;
+      --btn-ex-alert-1:#d12727;
+      --btn-ex-alert-2:#8f1717;
+      --btn-ex-blink-1:#ff5a47;
+      --btn-ex-blink-2:#cd2313;
+
+      --btn-break-off-1:#72600b;
+      --btn-break-off-2:#463a06;
+      --btn-break-on-1:#ffe84d;
+      --btn-break-on-2:#d7bc05;
+
+      --btn-pot-off-1:#2a2a2a;
+      --btn-pot-off-2:#1a1a1a;
+
+      --btn-money-1:#f4d87a;
+      --btn-money-2:#c9a03d;
+      --btn-money-text:#5c3e08;
+
+      --work-text-green:#0f431c;
+      --work-text-orange:#4a2600;
+      --exercise-text:#ffd39a;
+      --exercise-text-alert:#ffd6d6;
+      --break-text:#fff0a6;
+
+      --red:#b11919;
+      --red-dark:#5e0e0e;
+      --ok:#188439;
+      --ok-dark:#0f5f28;
+    }
+
+    *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
+    button, .btn, .ok-btn, .cancel-btn, .delete-btn, .arrow-btn, .prov-btn, .counter-edit, .note-sticker, .keypad button {
+      touch-action: manipulation;
+    }
+    html,body{ margin:0; padding:0; width:100%; height:100%; background:#000; color:var(--txt); font-family:Arial, Helvetica, sans-serif; overflow:hidden; }
+    body{ display:flex; align-items:center; justify-content:center; }
+
+    .app{
+      width:100%; height:100%;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:space-between;
+      padding:6px 8px 30px;
+      gap:6px; position:relative; background:#000;
+    }
+
+    .notes-bar{
+      width:100%; min-height:64px;
+      display:flex; align-items:center; gap:2px;
+      padding:4px 60px 4px 6px;
+      flex-wrap:wrap;
+    }
+    .note-sticker{
+      flex:0 0 auto;
+      width:var(--note-size, 68px);
+      height:var(--note-size, 60px);
+      padding:0 4px;
+      border-radius:8px 8px 14px 8px;
+      display:inline-flex; align-items:center; justify-content:center;
+      font-size:calc(var(--note-size, 60px) * 0.5);
+      font-weight:800;
+      box-shadow:0 2px 4px rgba(0,0,0,.5);
+      border:none; cursor:pointer;
+      transition:opacity .2s, background .2s;
+    }
+    .note-sticker.empty{
+      width:34px;
+      height:30px;
+      background:#1a1a1a;
+      color:#5a5a3a;
+      font-size:18px;
+    }
+    .note-sticker.filled{
+      background:#f4d847;
+      color:#3a2c00;
+    }
+    .note-sticker.alarm-blink{
+      background:#ff3838;
+      color:#fff;
+    }
+    .note-sticker:active{ transform:scale(.96); }
+
+    .clock-wrap{
+      width:min(94vw, 64vh); aspect-ratio:1/1;
+      position:relative; display:flex; align-items:center; justify-content:center;
+      margin:8px 0;
+    }
+    .clock-svg{ width:100%; height:100%; display:block; }
+    /* Punkty 4+5: druga warstwa SVG NAD cyframi godzin - dla strzałki i kropki minut */
+    .clock-svg-overlay{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      z-index:30;
+    }
+    .clock-center{
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      pointer-events:none;
+    }
+    .clock-face{ width:73%; height:73%; border-radius:50%; position:relative; }
+    .number{
+      position:absolute; left:50%; top:50%;
+      transform:translate(-50%,-50%);
+      color:var(--dial-number); font-weight:900;
+      font-size:clamp(45px, 12vw, 84px);
+      line-height:1; letter-spacing:-1.2px;
+      transition:color .3s ease, text-shadow .3s ease;
+    }
+    .number.active{
+      color:#ffffff;
+      text-shadow:
+        0 0 8px rgba(255,255,255,.85),
+        0 0 16px rgba(255,255,255,.6),
+        0 0 24px rgba(180,255,200,.4);
+    }
+
+    .controls{
+      width:min(96vw, 620px);
+      display:grid; grid-template-columns:repeat(3, 1fr);
+      grid-auto-rows:1fr; gap:6px;
+      align-items:end;
+    }
+    /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
+    .exercise-btn{
+      aspect-ratio:1/1.5 !important;
+      align-self:end;
+    }
+
+    /* Data pod zegarem (zmiana 11) */
+    .date-display{
+      width:100%;
+      text-align:center;
+      font-size:clamp(24px, 6.4vw, 36px);
+      font-weight:800;
+      color:var(--dial-number);
+      letter-spacing:.5px;
+      padding:0;
+      line-height:1;
+      text-shadow:
+        0 0 8px rgba(220,220,225,.55),
+        0 0 16px rgba(200,200,210,.35),
+        0 0 24px rgba(180,180,200,.2);
+    }
+
+    /* Bateria w prawym górnym rogu (zmiana 13) */
+    .battery-indicator{
+      position:fixed;
+      top:6px; right:8px;
+      z-index:20;
+      padding:3px 9px;
+      border:1.5px solid #2ecc71;
+      border-radius:4px;
+      color:#2ecc71;
+      font-size:14px;
+      font-weight:800;
+      letter-spacing:.3px;
+      background:rgba(0,0,0,.4);
+      min-width:48px;
+      text-align:center;
+      pointer-events:none;
+    }
+    .battery-indicator::after{
+      content:'';
+      position:absolute;
+      top:50%;
+      right:-5px;
+      transform:translateY(-50%);
+      width:3px; height:9px;
+      background:#2ecc71;
+      border-radius:0 2px 2px 0;
+    }
+    .battery-indicator.low{
+      color:#ff3838;
+      border-color:#ff3838;
+    }
+    .battery-indicator.low::after{
+      background:#ff3838;
+    }
+    .btn{
+      position:relative; border:none; border-radius:16px;
+      aspect-ratio:1/1; min-height:84px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08),
+                  inset 0 -12px 16px rgba(0,0,0,.34),
+                  0 0 0 1px rgba(0,0,0,.55);
+      color:#fff; overflow:hidden;
+      appearance:none; -webkit-appearance:none; background:#111;
+    }
+    .btn:active{ transform:scale(.985); }
+    .btn.empty-slot{ background:#0a0a0a; box-shadow:inset 0 0 0 1px #1a1a1a; pointer-events:none; opacity:.3; }
+
+    /* === v1.12: long-press progress ring === */
+    .btn .lp-ring{
+      position:absolute; inset:0;
+      border-radius:16px;
+      pointer-events:none;
+      z-index:6;
+      opacity:0;
+      box-shadow:inset 0 0 0 0 rgba(255,255,255,0.85);
+      transition:opacity .15s ease;
+    }
+    .btn.lp-active .lp-ring{
+      opacity:1;
+      animation:lpFill 3s linear forwards;
+    }
+    @keyframes lpFill{
+      0%   { box-shadow:inset 0 0 0 0px rgba(80,200,255,0.0); }
+      30%  { box-shadow:inset 0 0 0 3px rgba(80,200,255,0.55); }
+      60%  { box-shadow:inset 0 0 0 5px rgba(120,220,255,0.75); }
+      100% { box-shadow:inset 0 0 0 8px rgba(255,255,255,0.95); }
+    }
+
+    /* === v1.12: edit-mini przekształcony w nieklikalną etykietę "✎ 3s" === */
+    .edit-hint{
+      position:absolute; top:6px; right:6px;
+      font-size:11px; font-weight:800;
+      color:rgba(255,255,255,.55);
+      background:rgba(0,0,0,.28);
+      padding:2px 6px;
+      border-radius:6px;
+      z-index:5;
+      pointer-events:none;
+      letter-spacing:.5px;
+    }
+
+    /* === v1.12: przycisk START/STOP - podział pionowy === */
+    .work-split{
+      position:absolute; inset:0;
+      display:grid;
+      grid-template-columns:1.2fr 1fr;
+      z-index:2;
+      pointer-events:none;
+    }
+    .work-left{
+      display:flex; flex-direction:column;
+      justify-content:space-between;
+      padding:8px 6px 8px 10px;
+    }
+    .work-time-top{
+      font-size:clamp(16px, 4.2vw, 22px);
+      font-weight:900;
+      color:rgba(255,255,255,.95);
+      letter-spacing:-.5px;
+      text-shadow:0 1px 0 rgba(0,0,0,.3);
+    }
+    .work-time-bot{
+      font-size:clamp(16px, 4.2vw, 22px);
+      font-weight:900;
+      color:rgba(255,255,255,.85);
+      letter-spacing:-.5px;
+    }
+    .work-icon-row{
+      display:flex; align-items:center;
+      gap:4px;
+      font-size:18px;
+      color:rgba(255,255,255,.85);
+    }
+    /* Rolka odhaczająca godziny */
+    .work-right{
+      display:flex; align-items:center; justify-content:center;
+      padding:6px 6px 6px 0;
+      position:relative;
+    }
+    .work-roller{
+      position:absolute;
+      top:50%; left:6%; right:6%;
+      transform:translateY(-50%);
+      height:80%;
+      background:rgba(0,0,0,.55);
+      border-radius:8px;
+      box-shadow:inset 0 0 0 1px rgba(56,200,102,.22),
+                 inset 0 0 10px rgba(0,0,0,.7);
+      overflow:hidden;
+      -webkit-mask-image:linear-gradient(180deg,
+        transparent 0%,
+        rgba(0,0,0,.05) 22%,
+        rgba(0,0,0,.4) 35%,
+        black 45%, black 55%,
+        rgba(0,0,0,.4) 65%,
+        rgba(0,0,0,.05) 78%,
+        transparent 100%);
+      mask-image:linear-gradient(180deg,
+        transparent 0%,
+        rgba(0,0,0,.05) 22%,
+        rgba(0,0,0,.4) 35%,
+        black 45%, black 55%,
+        rgba(0,0,0,.4) 65%,
+        rgba(0,0,0,.05) 78%,
+        transparent 100%);
+    }
+    .work-roller-inner{
+      display:flex; flex-direction:column;
+      align-items:center;
+      position:absolute;
+      top:0; left:0; right:0;
+      transition:transform 0.6s ease;
+      will-change:transform;
+    }
+    .work-roller-digit{
+      width:100%;
+      flex:0 0 auto;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:900;
+      color:#f4ffe8;
+      text-shadow:0 1px 0 rgba(0,0,0,.5);
+      border-bottom:2.5px solid rgba(88,232,120,.55);
+      box-sizing:border-box;
+      /* font-size i height ustawia JS dynamicznie */
+    }
+    /* znaczniki na środku rolki - lewy i prawy */
+    .work-roller-mark-left,
+    .work-roller-mark-right{
+      position:absolute;
+      top:50%;
+      transform:translateY(-50%);
+      width:0; height:0;
+      border-style:solid;
+      z-index:10;
+      pointer-events:none;
+      filter:drop-shadow(0 0 3px rgba(88,232,120,.85));
+    }
+    .work-roller-mark-left{
+      left:-1px;
+      border-width:5px 0 5px 8px;
+      border-color:transparent transparent transparent #58e878;
+    }
+    .work-roller-mark-right{
+      right:-1px;
+      border-width:5px 8px 5px 0;
+      border-color:transparent #58e878 transparent transparent;
+    }
+
+    /* === v1.12: przycisk obrotów - dwa banknoty (góra/dół) === */
+    .money-btn{
+      background:#000;
+      padding:0;
+      overflow:hidden;
+      border-radius:0;
+    }
+    /* Pełnoekranowy worek pieniędzy gdy brak kwot - znika gdy są banknoty */
+    .money-empty-bag{
+      position:absolute;
+      inset:0;
+      z-index:3;
+      display:flex; align-items:center; justify-content:center;
+      font-size:clamp(70px, 18vw, 130px);
+      line-height:1;
+      pointer-events:none;
+      opacity:.85;
+    }
+    .money-empty-bag.hidden{ display:none; }
+    .money-split{
+      position:absolute; inset:0;
+      display:grid;
+      grid-template-rows:1fr 1fr;
+      gap:0;
+      z-index:2;
+      pointer-events:none;
+    }
+    .money-cell{
+      position:relative;
+      display:flex; align-items:center; justify-content:center;
+      background-color:#000;
+      background-size:contain;
+      background-position:center;
+      background-repeat:no-repeat;
+      overflow:hidden;
+      border-radius:0;
+    }
+    .money-cell.empty{
+      background-image:none !important;
+    }
+    .money-cell-text{
+      display:inline-block;
+      width:auto;
+      font-size:clamp(28px, 9vw, 48px);
+      font-weight:900;
+      text-align:center;
+      line-height:1;
+      padding:0;
+      font-variant-numeric:tabular-nums;
+      white-space:nowrap;
+      /* offsety: --note-tx ustawia per-banknot (poziomo), górny dodatkowo dostaje shift w lewo */
+      transform:translate(calc(var(--note-tx, 0%) + var(--row-shift, 0%)), var(--note-ty, 0%));
+    }
+    /* Kolory liczb - rozjaśnione, w odcieniu banknotu, z delikatną poświatą */
+    .money-cell.note-50  .money-cell-text{
+      color:#3870c8;          /* 50zł niebieski - jaśniejszy granatowy */
+      text-shadow:0 0 6px rgba(0,30,90,.6), 0 1px 1px rgba(255,255,255,.3);
+    }
+    .money-cell.note-100 .money-cell-text{
+      color:#1a8a3a;          /* 100zł zielony - intensywna zieleń */
+      text-shadow:0 0 6px rgba(0,40,15,.6), 0 1px 1px rgba(255,255,255,.3);
+    }
+    .money-cell.note-200 .money-cell-text{
+      color:#a87010;          /* 200zł złoty - jasny złoty/oker */
+      text-shadow:0 0 6px rgba(60,30,0,.55), 0 1px 1px rgba(255,255,255,.3);
+    }
+    .money-cell.note-500 .money-cell-text{
+      color:#7a3aaa;          /* 500zł fiolet - jasny fioletowy */
+      text-shadow:0 0 6px rgba(40,0,60,.6), 0 1px 1px rgba(255,255,255,.3);
+    }
+    /* Per-banknot offsety (gdyby okienko obrazka nie było centralnie - korekta) */
+    .money-cell.note-50  { --note-tx:0%; --note-ty:0%; }
+    .money-cell.note-100 { --note-tx:0%; --note-ty:0%; }
+    .money-cell.note-200 { --note-tx:0%; --note-ty:0%; }
+    .money-cell.note-500 { --note-tx:0%; --note-ty:0%; }
+    /* Punkt 2: górny banknot kwota w lewo, dolny banknot kwota w lewo */
+    #moneyTop .money-cell-text { --row-shift:-35%; }
+    #moneyBot .money-cell-text { --row-shift:-20%; }
+
+    /* moneta (przycisk dolny prawy) */
+    .coin-btn{
+      background:#000;
+      padding:0;
+      overflow:hidden;
+      border-radius:0;
+    }
+    .coin-cell{
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      background-color:#000;
+      background-size:contain;
+      background-position:center;
+      background-repeat:no-repeat;
+      z-index:2;
+    }
+    .coin-cell.empty{ background-image:none !important; }
+    .coin-cell-text{
+      font-size:clamp(27px, 7.6vw, 43px);
+      font-weight:900;
+      text-align:center;
+      line-height:1;
+      font-variant-numeric:tabular-nums;
+      white-space:nowrap;
+    }
+    .coin-cell.coin-1 .coin-cell-text{
+      color:#3a3a3a;
+      text-shadow:0 0 3px rgba(255,255,255,.85);
+    }
+    .coin-cell.coin-2 .coin-cell-text{
+      color:#5e3f08;
+      text-shadow:0 0 3px rgba(255,255,255,.85);
+    }
+    .coin-cell.coin-5 .coin-cell-text{
+      color:#3a2a06;
+      text-shadow:0 0 3px rgba(255,255,255,.85);
+    }
+
+    /* === v1.12: garnek "spał" po wykorzystaniu === */
+    .pot-btn.dimmed{
+      opacity:.45;
+    }
+
+    /* === v1.12: Animacja END - czerwona fala zalewająca tarczę + napis + odliczanie === */
+    .end-confirm-overlay{
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      z-index:50;
+      pointer-events:auto;
+      /* ograniczenie do okręgu tarczy zegara - środek (50%,50%), promień ~50% */
+      clip-path:circle(50% at 50% 50%);
+      -webkit-clip-path:circle(50% at 50% 50%);
+      overflow:hidden;
+      border-radius:50%;
+    }
+    .end-confirm-overlay.hidden{ display:none; }
+    .end-wave{
+      position:absolute;
+      left:50%; top:50%;
+      width:0; height:0;
+      background:radial-gradient(circle,#ff2828 0%,#a80000 70%,#5e0000 100%);
+      border-radius:50%;
+      transform:translate(-50%,-50%);
+      animation:endWaveExpand .55s ease-out forwards;
+    }
+    /* Wariant żółty dla resetu */
+    .end-confirm-overlay.yellow .end-wave{
+      background:radial-gradient(circle,#ffe040 0%,#d6a90a 70%,#7a5e00 100%);
+    }
+    .end-confirm-overlay.yellow .end-confirm-counter,
+    .end-confirm-overlay.yellow .end-confirm-title,
+    .end-confirm-overlay.yellow .end-confirm-hint{
+      color:#1c1400;
+      text-shadow:0 1px 3px rgba(255,255,255,.5);
+    }
+    @keyframes endWaveExpand{
+      0%   { width:0; height:0; opacity:.6; }
+      100% { width:200%; height:200%; opacity:1; }
+    }
+    /* Punkt 5: zwijanie wstecz gdy minie czas bez kliknięcia */
+    @keyframes endWaveCollapse{
+      0%   { width:200%; height:200%; opacity:1; }
+      100% { width:0; height:0; opacity:.4; }
+    }
+    .end-confirm-overlay.collapsing .end-wave{
+      animation:endWaveCollapse .5s ease-in forwards !important;
+    }
+    .end-confirm-overlay.collapsing .end-confirm-content{
+      animation:endTextFadeOut .25s ease-out forwards !important;
+    }
+    @keyframes endTextFadeOut{
+      0% { opacity:1; }
+      100% { opacity:0; }
+    }
+    .end-confirm-content{
+      position:relative;
+      z-index:51;
+      text-align:center;
+      color:#fff;
+      opacity:0;
+      animation:endTextFade .35s .35s forwards;
+      padding:0 16px;
+    }
+    @keyframes endTextFade{ to{ opacity:1; } }
+    .end-confirm-title{
+      font-size:clamp(18px, 4.6vw, 26px);
+      font-weight:900;
+      letter-spacing:.5px;
+      line-height:1.1;
+      text-shadow:0 2px 6px rgba(0,0,0,.6);
+      margin-bottom:8px;
+    }
+    .end-confirm-counter{
+      font-size:clamp(60px, 18vw, 110px);
+      font-weight:900;
+      line-height:1;
+      text-shadow:0 4px 14px rgba(0,0,0,.7);
+    }
+    .end-confirm-hint{
+      font-size:clamp(12px, 3vw, 15px);
+      font-weight:700;
+      color:rgba(255,230,230,.92);
+      margin-top:6px;
+    }
+
+    .work-btn{ background:linear-gradient(180deg,var(--btn-work-off-1),var(--btn-work-off-2)); }
+    /* Punkt 3: wyszarzenie przycisku pracy podczas trwania przerwy */
+    .work-btn.dimmed-during-break{
+      opacity:.45;
+      filter:grayscale(.7);
+      transition:opacity .3s ease, filter .3s ease;
+    }
+    .work-btn.on{
+      background:linear-gradient(180deg,var(--btn-work-on-1),var(--btn-work-on-2));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.14),
+                  inset 0 -12px 16px rgba(0,0,0,.24),
+                  0 0 20px rgba(56,200,102,.38),
+                  0 0 0 1px rgba(56,200,102,.45);
+    }
+    .work-btn.overtime{
+      background:linear-gradient(180deg,var(--btn-work-over-1),var(--btn-work-over-2));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.15),
+                  inset 0 -12px 16px rgba(0,0,0,.18),
+                  0 0 22px rgba(255,154,31,.55),
+                  0 0 0 1px rgba(255,154,31,.55);
+    }
+
+    .exercise-btn.flash{
+      background:linear-gradient(180deg,var(--btn-ex-on-1),var(--btn-ex-on-2));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.16),
+                  inset 0 -12px 16px rgba(0,0,0,.2),
+                  0 0 22px rgba(255,170,63,.45),
+                  0 0 0 1px rgba(255,170,63,.45);
+    }
+    .exercise-btn.alert{
+      background:linear-gradient(180deg,var(--btn-ex-alert-1),var(--btn-ex-alert-2));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.10),
+                  inset 0 -12px 16px rgba(0,0,0,.22),
+                  0 0 18px rgba(209,39,39,.34),
+                  0 0 0 1px rgba(209,39,39,.42);
+    }
+    .exercise-btn.blink{
+      background:linear-gradient(180deg,var(--btn-ex-blink-1),var(--btn-ex-blink-2));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.18),
+                  inset 0 -12px 16px rgba(0,0,0,.18),
+                  0 0 24px rgba(255,90,71,.52),
+                  0 0 0 1px rgba(255,90,71,.52);
+    }
+
+    /* === Przerwa === */
+    .break-btn{
+      background:#aaaaaa;
+      transition:background .25s ease;
+    }
+    .break-img{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      object-fit:contain;
+      z-index:1; pointer-events:none;
+    }
+    /* Obrazek "off" widoczny gdy nie ma przerwy. Obrazek "on" gdy trwa przerwa (klasa .on) */
+    .break-img-off{ display:block; }
+    .break-img-on{ display:none; }
+    .break-btn.on .break-img-off{ display:none; }
+    .break-btn.on .break-img-on{ display:block; }
+    .break-top-zone, .break-bot-zone{
+      position:absolute;
+      left:5%; width:50%;
+      height:33%;
+      display:flex; align-items:center; justify-content:flex-start;
+      font-size:clamp(18px,5vw,28px); font-weight:900;
+      color:#1a1a1a; z-index:3; pointer-events:none;
+      text-shadow:0 0 6px rgba(255,255,255,.85),0 1px 0 rgba(255,255,255,.6);
+      font-variant-numeric:tabular-nums;
+    }
+    .break-top-zone{ top:0; }
+    .break-bot-zone{ bottom:0; }
+    /* Tło miga między szarym a żółtym - tylko gdy klasa .blink-bg jest aktywna */
+    .break-btn.on{ background:#aaaaaa; }
+    .break-btn.on.blink-bg{
+      background:#ffe84d;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.22),
+                 0 0 24px rgba(255,232,77,.55),
+                 0 0 0 1px rgba(255,232,77,.55);
+    }
+
+    /* === Garnek z obrazkiem === */
+    .pot-btn{ background:linear-gradient(180deg,var(--btn-pot-off-1),var(--btn-pot-off-2)); }
+    .pot-btn.done-alarm{ background:linear-gradient(180deg,#ff5050,#ff3030); box-shadow:inset 0 0 0 1px rgba(255,200,200,.4), 0 0 30px rgba(255,48,48,.7); }
+    .pot-btn.done-alarm-off{ background:linear-gradient(180deg,#3a0000,#1a0000); }
+    .pot-btn.pot-has-img{ background:#000 !important; }
+    .pot-img{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      object-fit:contain;
+      z-index:3;        /* nad paskiem ognia, ale pod licznikiem */
+      pointer-events:none;
+    }
+    /* Pasek ognia półprzezroczysty żeby nie zasłaniał obrazka */
+    .pot-fire-bar{
+      position:absolute; bottom:0; left:0; right:0;
+      background:linear-gradient(0deg, rgba(122,0,0,.85), rgba(212,32,32,.7));
+      border-radius:0 0 14px 14px;
+      z-index:2; transition:height 0.8s linear;
+      pointer-events:none;
+    }
+    /* Podczas alarmu (done-alarm/off) tło miga - obrazek nadal widoczny ale półprzezroczyste tło */
+    .pot-btn.done-alarm .pot-img,
+    .pot-btn.done-alarm-off .pot-img{
+      opacity:0.85;
+    }
+    /* Licznik garnka: okienko 250x15 na 400x400 = 62.5%x3.75%, rozmiar 106x105 = 26.5%x26.25%
+       Środek: left=75.75%, top=16.875% */
+    .pot-counter-box{
+      position:absolute;
+      left:75.75%; top:16.875%;
+      transform:translate(-50%,-50%);
+      z-index:5;
+      font-size:clamp(18px,5vw,32px); font-weight:900;
+      color:#fff;
+      text-shadow:0 0 6px rgba(0,0,0,.9),0 1px 0 rgba(0,0,0,.7);
+      font-variant-numeric:tabular-nums;
+      line-height:1; pointer-events:none;
+    }
+    /* Gdy brak obrazka - centralnie i większa czcionka */
+    .pot-btn:not(.pot-has-img) .pot-counter-box{
+      left:50%; top:50%;
+      font-size:clamp(40px,11vw,64px);
+    }
+
+    /* === Moduł ćwiczeń: pojedyncze koło z animowaną maską (zanikanie zgodnie z ruchem wskazówek) === */
+    .exercise-btn{
+      background:#000 !important;
+      box-shadow:none !important;
+      border-radius:16px;
+      overflow:hidden;
+      position:relative;
+    }
+    .wheel-image{
+      position:absolute;
+      inset:0;
+      width:100%; height:100%;
+      object-fit:contain;
+      pointer-events:none;
+      filter:drop-shadow(0 0 10px rgba(220,220,235,.5));
+      /* Maska sterowana z JS - przez clip-path lub przez nakładkę SVG.
+         Tutaj samo CSS bez maski, JS rysuje overlay. */
+    }
+    /* Czarna nakładka maskująca - SVG sektor który rośnie od 12:00 */
+    .wheel-mask-overlay{
+      position:absolute;
+      inset:0;
+      width:100%; height:100%;
+      pointer-events:none;
+      z-index:2;
+    }
+    /* Czerwony moduł nadwyżki - jak dotychczas */
+    .overage-display{
+      position:absolute;
+      inset:0;
+      z-index:3;
+      background:linear-gradient(180deg, #c01515, #6a0808);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.15),
+        inset 0 -10px 18px rgba(0,0,0,.45),
+        0 0 22px rgba(255,40,40,.35);
+      display:none;
+      border-radius:16px;
+      transition:opacity 0.6s ease;
+    }
+    .exercise-btn.overage .overage-display{
+      display:block;
+    }
+    .exercise-btn.overage .wheel-image,
+    .exercise-btn.overage .wheel-mask-overlay{
+      display:none;
+    }
+    /* Stan "fading-overage": czerwony moduł gaśnie do czerni przed pojawieniem się koła z animacją odwrotną */
+    .exercise-btn.fading-overage .overage-display{
+      opacity:0;
+    }
+    .overage-display .work-roller-digit{
+      color:#fff !important;
+      text-shadow:0 0 6px rgba(255,180,180,.6);
+      border-bottom:2.5px solid rgba(255,200,200,.45);
+    }
+    .exercise-btn.flash{
+      background:linear-gradient(180deg,var(--btn-ex-on-1),var(--btn-ex-on-2));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.16),
+                  inset 0 -12px 16px rgba(0,0,0,.2),
+                  0 0 22px rgba(255,170,63,.45),
+                  0 0 0 1px rgba(255,170,63,.45);
+    }
+
+    /* === Data w środku tarczy - na czarnym kole pod nią === */
+    .date-center{
+      position:absolute;
+      top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      z-index:20;
+      text-align:center; pointer-events:none;
+      font-size:clamp(20px,5.6vw,32px);
+      font-weight:800;
+      color:var(--dial-number);
+      line-height:1.2;
+      text-shadow:0 0 8px rgba(220,220,225,.55),0 0 16px rgba(200,200,210,.35);
+      /* Ograniczenie do czarnego koła w SVG (r=70) - dopasować do circle w SVG */
+      width:32%; height:32%;
+      border-radius:50%;
+      overflow:hidden;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      padding:6px;
+      box-sizing:border-box;
+    }
+
+    .money-btn{ background:linear-gradient(180deg,var(--btn-money-1),var(--btn-money-2)); }
+
+    .btn-inner{
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      pointer-events:none;
+      z-index:2;
+    }
+    .btn-inner.money-stack{ flex-direction:column; gap:2px; padding:4px; }
+
+    .mini-corner, .mini-corner-bottom{
+      position:absolute; left:8px;
+      font-size:15px; font-weight:800;
+      color:rgba(255,255,255,.9);
+      letter-spacing:-.3px; z-index:2; pointer-events:none;
+    }
+    .mini-corner{ top:6px; }
+    .mini-corner-bottom{ bottom:6px; }
+
+    .center-big{
+      font-size:clamp(48px, 13vw, 76px);
+      font-weight:900; line-height:1;
+      letter-spacing:-1.2px; text-align:center;
+      pointer-events:none; text-shadow:0 1px 0 rgba(0,0,0,.25);
+    }
+    .work-btn .center-big{ color:var(--work-text-green); }
+    .work-btn.overtime .center-big{ color:var(--work-text-orange); }
+    .exercise-btn .center-big{ color:var(--exercise-text); }
+    .exercise-btn.alert .center-big,
+    .exercise-btn.blink .center-big{ color:var(--exercise-text-alert); }
+    .break-btn .center-big, .break-btn .mini-corner{ color:var(--break-text); }
+    .pot-btn .center-big{ color:#fff; font-size:clamp(40px,11vw,64px); }
+    /* alarm po grzaniu - cyfra ciemnoczerwona z mocną białą poświatą */
+    .pot-btn.done-alarm .center-big,
+    .pot-btn.done-alarm-off .center-big{
+      color:#5e0e0e;
+      text-shadow:
+        0 0 10px rgba(255,255,255,1),
+        0 0 5px rgba(255,255,255,1),
+        0 1px 0 rgba(255,255,255,.6);
+    }
+
+    .money-big{
+      font-size:clamp(34px, 9vw, 54px);
+      font-weight:900; line-height:1;
+      color:var(--btn-money-text); letter-spacing:-1px;
+    }
+    .money-mid, .money-small{
+      font-size:clamp(15px, 3.6vw, 22px);
+      font-weight:800; line-height:1;
+      color:#6e4d0d;
+      display:flex; align-items:center; gap:3px;
+    }
+
+    .emoji{
+      position:absolute; bottom:6px; right:8px;
+      font-size:20px; opacity:.92; pointer-events:none;
+    }
+
+    .edit-mini{
+      position:absolute; top:6px; right:6px;
+      width:30px; height:30px; border:none;
+      border-radius:8px; background:rgba(0,0,0,.22);
+      color:#f0fff0; font-size:16px; font-weight:700;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+      z-index:5; cursor:pointer;
+    }
+    .edit-mini:active{ transform:scale(.96); }
+
+    .overlay{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.85);
+      display:none; align-items:center; justify-content:center;
+      z-index:1000; padding:8px;
+    }
+    .overlay.show{ display:flex; }
+
+    .editor{
+      width:min(96vw, 520px);
+      max-height:90vh;
+      background:#060606; border:1px solid #232323;
+      border-radius:18px;
+      box-shadow:0 0 30px rgba(0,0,0,.65);
+      display:flex; flex-direction:column; justify-content:center;
+      padding:18px 14px 88px; position:relative;
+      overflow-y:auto;
+    }
+    .editor-center{
+      display:grid; grid-template-columns:1fr auto 1fr;
+      align-items:center; justify-items:center;
+      gap:10px; padding:12px 8px 12px;
+    }
+    .target-section{
+      text-align:center;
+      margin-top:8px;
+      padding-top:10px;
+      border-top:1px solid #2a2a2a;
+    }
+    .target-section button{
+      margin-top:6px;
+      padding:0 18px;
+      font-size:15px;
+      height:42px;
+      width:auto;
+    }
+    .time-col{ display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; }
+    .arrow-btn{
+      width:min(22vw, 84px); height:min(14vw, 58px);
+      border:none; border-radius:14px;
+      background:#111; color:#d5d5d5;
+      font-size:30px; font-weight:700;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.05), 0 4px 12px rgba(0,0,0,.3);
+    }
+    .time-box{
+      min-width:110px; text-align:center;
+      font-size:clamp(52px, 14vw, 86px);
+      font-weight:700; color:#f0f0f0;
+      letter-spacing:2px;
+    }
+    .colon{
+      font-size:clamp(42px, 10vw, 66px);
+      font-weight:700; color:#d9d9d9;
+      margin-top:-6px;
+    }
+    .editor-actions{
+      position:absolute; left:12px; right:12px; bottom:12px;
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .cancel-btn, .ok-btn, .delete-btn{
+      width:64px; height:64px;
+      border:none; border-radius:16px;
+      font-size:32px; font-weight:700; color:#fff;
+    }
+    .cancel-btn{ background:linear-gradient(180deg,var(--red),var(--red-dark)); box-shadow:0 0 18px rgba(177,25,25,.25); }
+    .ok-btn{ background:linear-gradient(180deg,var(--ok),var(--ok-dark)); box-shadow:0 0 18px rgba(24,132,57,.25); }
+    .delete-btn{ background:linear-gradient(180deg,#555,#222); font-size:22px; }
+
+    .big-panel{
+      width:100%;
+      height:min(96vh, 820px);
+      max-width:560px;
+      background:#0a0a0a;
+      border:1px solid #222; border-radius:16px;
+      padding:6px 10px 10px;
+      display:flex; flex-direction:column; gap:4px;
+      position:relative;
+    }
+    .big-panel h3{
+      margin:0 0 4px;
+      font-size:18px; font-weight:900;
+      color:#bbb;
+      text-transform:uppercase;
+      letter-spacing:2px;
+      text-align:center;
+      text-shadow:0 1px 2px rgba(0,0,0,.6);
+    }
+    .providers-list{
+      flex:1;
+      display:flex; flex-direction:column;
+      gap:6px;
+      overflow-y:auto;
+      position:relative;
+      padding:22px 14px;
+      isolation:isolate;
+    }
+    /* Dwie tablice w tle - srebrna (lewa) i złota (prawa) */
+    .board-bg{
+      position:absolute;
+      top:0; bottom:0;
+      width:calc(50% - 8px);
+      border-radius:14px;
+      z-index:0;
+      box-shadow:
+        inset 0 2px 4px rgba(255,255,255,.5),
+        inset 0 -2px 6px rgba(0,0,0,.45),
+        0 4px 14px rgba(0,0,0,.7);
+    }
+    .board-silver{
+      left:0;
+      background:
+        /* drobne pionowe szlify */
+        repeating-linear-gradient(90deg,
+          rgba(255,255,255,.04) 0 1px,
+          transparent 1px 3px),
+        /* główny gradient metalowy */
+        linear-gradient(140deg,
+          #e4e4ea 0%, #aaaab2 18%, #cdcdd4 35%,
+          #969aa0 52%, #d0d0d6 70%, #9a9aa2 88%, #b5b5bc 100%);
+    }
+    .board-gold{
+      right:0;
+      background:
+        repeating-linear-gradient(90deg,
+          rgba(0,0,0,.05) 0 1px,
+          transparent 1px 3px),
+        linear-gradient(140deg,
+          #f8da72 0%, #c69a30 18%, #ecc760 35%,
+          #b58820 52%, #ecc960 70%, #ad8018 88%, #d6a838 100%);
+    }
+    /* Śrubki w rogach każdej tablicy */
+    .board-bg::before, .board-bg::after,
+    .board-bg .screw-bl, .board-bg .screw-br{
+      content:'';
+      position:absolute;
+      width:11px; height:11px;
+      border-radius:50%;
+      box-shadow:
+        inset -1px -1px 1px rgba(0,0,0,.5),
+        0 1px 2px rgba(0,0,0,.6);
+    }
+    .board-silver::before, .board-silver::after,
+    .board-silver .screw-bl, .board-silver .screw-br{
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,255,255,.7) 0%, transparent 40%),
+        linear-gradient(90deg, transparent 40%, rgba(0,0,0,.55) 45%, rgba(0,0,0,.55) 55%, transparent 60%),
+        radial-gradient(circle at 30% 30%, #fafafa 0%, #b0b0b0 35%, #555 100%);
+    }
+    .board-gold::before, .board-gold::after,
+    .board-gold .screw-bl, .board-gold .screw-br{
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,250,210,.7) 0%, transparent 40%),
+        linear-gradient(90deg, transparent 40%, rgba(0,0,0,.55) 45%, rgba(0,0,0,.55) 55%, transparent 60%),
+        radial-gradient(circle at 30% 30%, #fff4cc 0%, #b8902a 35%, #5a4408 100%);
+    }
+    .board-bg::before{ top:7px; left:7px; }
+    .board-bg::after{ top:7px; right:7px; }
+    .board-bg .screw-bl{ position:absolute; bottom:7px; left:7px; }
+    .board-bg .screw-br{ position:absolute; bottom:7px; right:7px; }
+
+    .provider-row{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      column-gap:16px;
+      min-height:50px;
+      padding:0;
+    }
+    /* Wewnątrz każdej kolumny - moduł z marginesem od krawędzi tablicy */
+    .provider-row > .prov-btn,
+    .provider-row > .prov-amount{
+      margin:0 14px;
+    }
+    .prov-btn{
+      position:relative;
+      border:none; border-radius:8px;
+      font-size:18px; font-weight:900;
+      letter-spacing:.5px;
+      padding:0 10px;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+      overflow:hidden;
+      text-align:center;
+      min-height:46px;
+      box-shadow:
+        0 2px 4px rgba(0,0,0,.5),
+        inset 0 1px 0 rgba(255,255,255,.15);
+    }
+    .prov-img{
+      position:absolute;
+      left:50%; top:50%;
+      transform:translate(-50%,-50%);
+      height:100%;
+      width:auto;
+      max-width:none;
+      object-fit:contain;
+      pointer-events:none;
+      display:none;
+    }
+    .prov-btn.has-img{
+      background:transparent !important;
+      border-radius:0;
+      justify-content:center;
+      padding:0;
+      box-shadow:none;
+    }
+    .prov-btn.has-img .prov-img{ display:block; }
+    .prov-btn.has-img .prov-label{ display:none; }
+    .prov-label{
+      position:relative;
+      z-index:1;
+    }
+    .prov-amount{
+      display:flex; align-items:center; justify-content:flex-end;
+      padding:0 14px;
+      background:rgba(0,0,0,.55);
+      border-radius:8px;
+      color:#fff;
+      font-size:24px; font-weight:900;
+      font-variant-numeric:tabular-nums;
+      box-shadow:
+        inset 0 2px 4px rgba(0,0,0,.6),
+        0 1px 0 rgba(255,255,255,.2);
+    }
+    .prov-amount.empty{ color:#888; }
+
+    .panel-actions{
+      display:flex; justify-content:space-between; align-items:center;
+      padding:4px 2px 2px;
+    }
+
+    .keypad{
+      display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;
+    }
+    .keypad button{
+      border:none; border-radius:12px;
+      background:#1a1a1a; color:#f0f0f0;
+      font-size:28px; font-weight:700;
+      padding:18px 0;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    .keypad button:active{
+      transform:scale(.97);
+      background:#5a5a5a !important;
+      color:#fff !important;
+      box-shadow:
+        inset 0 0 0 2px rgba(255,255,255,.4),
+        0 0 18px rgba(255,255,255,.5),
+        0 0 6px rgba(255,255,255,.7) !important;
+    }
+    .keypad .key-back{ background:#2a1e0e; color:#ffc48a; }
+    .keypad .key-ok{ background:linear-gradient(180deg,var(--ok),var(--ok-dark)); }
+    .keypad .key-cancel{ background:linear-gradient(180deg,var(--red),var(--red-dark)); }
+
+    .keypad-display{
+      background:#111; border-radius:12px;
+      padding:14px 16px; text-align:right;
+      color:#f0f0f0;
+      font-size:44px; font-weight:900;
+      font-variant-numeric:tabular-nums;
+      letter-spacing:2px;
+    }
+    .keypad-display .underline{
+      text-decoration:underline;
+      text-decoration-color:#ffc48a;
+      text-decoration-thickness:4px;
+      text-underline-offset:4px;
+    }
+    .keypad-label{
+      padding:0 8px;
+      font-size:13px; color:#777;
+      text-transform:uppercase; letter-spacing:.8px;
+    }
+
+    .counter-fields{ display:flex; flex-direction:column; gap:8px; }
+    .counter-row{
+      display:grid; grid-template-columns:1fr auto auto;
+      align-items:center; gap:6px;
+      background:#141414; border-radius:10px;
+      padding:8px 10px;
+    }
+    .counter-row.disabled{ opacity:.4; pointer-events:none; }
+    .counter-label{ color:#ccc; font-size:15px; font-weight:700; }
+    .counter-value{
+      color:#fff;
+      font-size:22px; font-weight:900;
+      font-variant-numeric:tabular-nums;
+      min-width:100px; text-align:right;
+    }
+    .counter-value.empty{ color:#555; }
+    .counter-edit{
+      width:36px; height:36px;
+      border-radius:8px; border:none;
+      background:#222; color:#d5d5d5; font-size:16px;
+    }
+
+    .note-fields{ display:flex; flex-direction:column; gap:8px; }
+    .note-fields textarea,
+    .note-fields input{
+      background:#141414; color:#f0f0f0;
+      border:1px solid #2a2a2a; border-radius:10px;
+      padding:10px; font-size:16px;
+      font-family:inherit; resize:vertical;
+    }
+    .note-fields textarea{ min-height:120px; }
+    .note-fields .icon-input{
+      font-size:22px; font-weight:700;
+      text-align:center; max-width:80px; letter-spacing:1px;
+    }
+    .note-fields label{
+      font-size:12px; color:#888;
+      text-transform:uppercase; letter-spacing:1px;
+      padding-left:4px;
+    }
+
+    .toast{
+      position:fixed; left:50%; bottom:40px;
+      transform:translateX(-50%);
+      background:#1a1a1a; color:#e0e0e0;
+      border:1px solid #333;
+      padding:10px 16px; border-radius:10px;
+      font-size:14px; z-index:2000; max-width:90vw;
+      text-align:center; box-shadow:0 4px 20px rgba(0,0,0,.5);
+    }
+    .toast.ok{ border-color:#2a6a3a; }
+    .toast.err{ border-color:#6a2a2a; }
+
+    .version{
+      position:fixed; right:10px; bottom:6px;
+      font-size:13px; color:var(--version);
+      letter-spacing:.4px; z-index:5;
+    }
+    .install-btn{
+      position:fixed; left:10px; bottom:4px;
+      border:none; background:rgba(255,255,255,.05);
+      color:#5a7a5a; font-size:12px;
+      padding:3px 8px; border-radius:8px;
+      z-index:6; display:none; cursor:pointer;
+    }
+    .install-btn.visible{ display:inline-block; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="battery-indicator" id="batteryIndicator">—</div>
+    <div class="notes-bar" id="notesBar"></div>
+
+    <div class="clock-wrap">
+      <div class="end-confirm-overlay hidden" id="endConfirmOverlay">
+        <div class="end-wave"></div>
+        <div class="end-confirm-content">
+          <div class="end-confirm-title">POTWIERDŹ<br>KONIEC DNIÓWKI</div>
+          <div class="end-confirm-counter" id="endConfirmCounter">5</div>
+          <div class="end-confirm-hint">stuknij aby zakończyć</div>
+        </div>
+      </div>
+      <svg class="clock-svg" viewBox="-30 -30 460 460" aria-hidden="true">
+        <defs>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <g id="workFill"></g>
+        <g id="noExerciseFill"></g>
+        <g id="radarSweep"></g>
+        <g id="overtimeFill"></g>
+        <g id="breakFill"></g>
+        <g id="exerciseMarks"></g>
+        <g id="forecastHand"></g>
+        <g id="dots"></g>
+        <!-- Czarne koło pod datą - przykrywa wszystkie kolory tarczy w środku, datę pokazuje na czystym tle -->
+        <circle cx="200" cy="200" r="70" fill="#000" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+      </svg>
+
+      <div class="clock-center">
+        <div class="clock-face">
+          <div class="number" data-hour="12" style="top:2%; left:50%;">12</div>
+          <div class="number" data-hour="1" style="top:9%; left:75%;">1</div>
+          <div class="number" data-hour="2" style="top:28%; left:91%;">2</div>
+          <div class="number" data-hour="3" style="top:50%; left:99%;">3</div>
+          <div class="number" data-hour="4" style="top:72%; left:91%;">4</div>
+          <div class="number" data-hour="5" style="top:91%; left:75%;">5</div>
+          <div class="number" data-hour="6" style="top:99%; left:50%;">6</div>
+          <div class="number" data-hour="7" style="top:91%; left:25%;">7</div>
+          <div class="number" data-hour="8" style="top:72%; left:9%;">8</div>
+          <div class="number" data-hour="9" style="top:50%; left:1%;">9</div>
+          <div class="number" data-hour="10" style="top:28%; left:9%;">10</div>
+          <div class="number" data-hour="11" style="top:9%; left:25%;">11</div>
+          <div class="date-center" id="dateCenterEl"></div>
+        </div>
+      </div>
+
+      <!-- Punkty 4+5: druga warstwa SVG nad cyframi godzin - dla strzałki godzinowej i kropki minut -->
+      <svg class="clock-svg clock-svg-overlay" viewBox="-30 -30 460 460" aria-hidden="true">
+        <g id="hourArrow"></g>
+        <g id="minuteDot"></g>
+      </svg>
+    </div>
+
+    <div class="controls">
+      <button class="btn work-btn" id="workBtn" type="button">
+        <div class="lp-ring"></div>
+        <div class="work-split">
+          <div class="work-left">
+            <div class="work-time-top" id="workStartMini">--:--</div>
+            <div class="work-icon-row"></div>
+            <div class="work-time-bot" id="workEndMini"></div>
+          </div>
+          <div class="work-right">
+            <div class="work-roller">
+              <div class="work-roller-inner" id="workRollerInner">
+                <div class="work-roller-digit">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </button>
+
+      <button class="btn exercise-btn" id="exerciseBtn" type="button">
+        <img src="Photos/kolo.png" alt="Koło" class="wheel-image" id="wheelImage"
+             onerror="this.style.display='none'" />
+        <svg class="wheel-mask-overlay" id="wheelMaskOverlay" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <defs>
+            <radialGradient id="maskFade" cx="100" cy="100" r="100" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#000" stop-opacity="1"/>
+              <stop offset="100%" stop-color="#000" stop-opacity="1"/>
+            </radialGradient>
+            <!-- Maska kątowa: kąt który zanikł (czarny sektor) z miękkim brzegiem -->
+            <linearGradient id="edgeFade" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#000" stop-opacity="1"/>
+              <stop offset="50%" stop-color="#000" stop-opacity="0.5"/>
+              <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <!-- Czarny sektor (vanished area) - rysowany dynamicznie z JS -->
+          <path id="wheelVanishSector" d="" fill="#000" />
+          <!-- Miękka krawędź (gradient blur) - rysowana dynamicznie z JS -->
+          <path id="wheelVanishEdge" d="" fill="#000" opacity="0.5" filter="url(#blurEdge)" />
+          <filter id="blurEdge">
+            <feGaussianBlur stdDeviation="3"/>
+          </filter>
+        </svg>
+        <div class="overage-display" id="overageDisplay">
+          <div class="work-roller" style="position:absolute;top:50%;left:6%;right:6%;transform:translateY(-50%);height:80%;background:rgba(0,0,0,.55);">
+            <div class="work-roller-inner" id="overageRollerInner"></div>
+          </div>
+        </div>
+      </button>
+
+      <button class="btn break-btn" id="breakBtn" type="button">
+        <div class="lp-ring"></div>
+        <img src="Photos/przerwa-off.png" alt="Przerwa" class="break-img break-img-off" id="breakImgOff"
+             onload="this.parentElement.classList.add('has-img')"
+             onerror="this.style.display='none'" />
+        <img src="Photos/przerwa.png" alt="Przerwa" class="break-img break-img-on" id="breakImgOn"
+             onerror="this.style.display='none'" />
+        <div class="break-top-zone" id="breakTopZone"></div>
+        <div class="break-bot-zone" id="breakBotZone"></div>
+      </button>
+
+      <button class="btn pot-btn" id="potBtn" type="button">
+        <div class="lp-ring"></div>
+        <div class="pot-fire-bar" id="potFireBar" style="height:0%"></div>
+        <img src="Photos/gotowanie.png" alt="Gotowanie" class="pot-img" id="potImg"
+             onload="this.parentElement.classList.add('pot-has-img')"
+             onerror="this.style.display='none'" />
+        <div class="pot-counter-box" id="potCenter">🫕</div>
+      </button>
+
+      <button class="btn money-btn" id="moneyBtn" type="button">
+        <div class="money-empty-bag" id="moneyEmptyBag">💰</div>
+        <div class="money-split">
+          <div class="money-cell empty" id="moneyTop"></div>
+          <div class="money-cell empty" id="moneyBot"></div>
+        </div>
+      </button>
+
+      <button class="btn coin-btn" id="coinBtn" type="button">
+        <div class="coin-cell empty" id="coinCell"></div>
+      </button>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+
+  <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
+  <div class="version">v:1.28</div>
+
+  <script>
+    const LS_KEY = 'tarcza_state_v1';
+    const LS_PERSIST = 'tarcza_persist_v1';
+    const LS_APPSCRIPT = 'tarcza_appscript_url';
+
+    const PROVIDERS = [
+      { key:'uber',    label:'UBER',    bg:'#000000', fg:'#ffffff' },
+      { key:'bolt',    label:'BOLT',    bg:'#34d186', fg:'#ffffff' },
+      { key:'taxi',    label:'TAXI',    bg:'#f4d500', fg:'#000000' },
+      { key:'priv',    label:'PRIV',    bg:'#13204a', fg:'#ffffff' },
+      { key:'freenow', label:'FREENOW', bg:'#000000', fg:'#ff3838' },
+      { key:'agap',    label:'AGAP',    bg:'#ff8a0a', fg:'#000000' },
+      { key:'tip',     label:'NAPIWEK', bg:'#9adf9a', fg:'#0d3b0d' },
+      { key:'other',   label:'INNE',    bg:'#555555', fg:'#ffffff' }
+    ];
+
+    let startWorkMinutes = null;
+    let endWorkMinutes = null;
+    let lastExerciseMinutes = null;
+    let breakActive = false;
+    let currentBreakStart = null;
+    let breakSegments = [];
+    let exerciseMarkers = [];
+    let breakAdjustMinutes = 0;
+    let workDate = null;
+    // Punkt 7: planowany cel pracy w minutach (domyślnie 8h = 480min)
+    let workTargetMinutes = 480;
+
+    let potDurationMin = 20;
+    let potStartedAt = null;
+    let potAckedDone = false;
+    let potUsedToday = false;
+
+    let revenues = {};
+    PROVIDERS.forEach(p => revenues[p.key] = 0);
+
+    let counterStart = null;
+    let counterEnd = null;
+    let privKmTotal = 0;
+
+    let lastCounterEnd = null;
+    let notes = [];
+
+    let editMode = "start";
+    let editHour = 0, editMinute = 0;
+    let editSignedMinutes = 0;
+    let editPotMinutes = 20;
+
+    let keypadMode = null;
+    let keypadContext = null;
+    let keypadRaw = '';
+    let keypadCounterDigits = [];
+    let keypadCursorFromRight = 0;
+
+    const cx=200, cy=200, radius=180;
+    let blinkState = false;
+
+    // ===== localStorage =====
+    function saveState(){
+      try{
+        const state = {
+          startWorkMinutes, endWorkMinutes, lastExerciseMinutes,
+          breakActive, currentBreakStart, breakSegments,
+          exerciseMarkers, breakAdjustMinutes, workDate,
+          potDurationMin, potStartedAt, potAckedDone, potUsedToday,
+          revenues, counterStart, counterEnd, privKmTotal,
+          workTargetMinutes
+        };
+        localStorage.setItem(LS_KEY, JSON.stringify(state));
+        const persist = { lastCounterEnd, notes };
+        localStorage.setItem(LS_PERSIST, JSON.stringify(persist));
+      }catch(e){}
+    }
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(LS_KEY);
+        if(raw){
+          const s = JSON.parse(raw);
+          startWorkMinutes = s.startWorkMinutes ?? null;
+          endWorkMinutes = s.endWorkMinutes ?? null;
+          lastExerciseMinutes = s.lastExerciseMinutes ?? null;
+          breakActive = !!s.breakActive;
+          currentBreakStart = s.currentBreakStart ?? null;
+          breakSegments = Array.isArray(s.breakSegments) ? s.breakSegments : [];
+          exerciseMarkers = Array.isArray(s.exerciseMarkers) ? s.exerciseMarkers : [];
+          breakAdjustMinutes = s.breakAdjustMinutes || 0;
+          workDate = s.workDate || null;
+          potDurationMin = s.potDurationMin ?? 20;
+          potStartedAt = s.potStartedAt ?? null;
+          potAckedDone = !!s.potAckedDone;
+          potUsedToday = !!s.potUsedToday;
+          workTargetMinutes = s.workTargetMinutes ?? 480;
+          // Sanitacja: jeśli pot był uruchomiony >24h temu (np. zostawiony z innego dnia
+          // i apka się sama nie wygasiła) - resetujemy. Inaczej miga z zawyżonymi liczbami.
+          if(potStartedAt !== null){
+            const ageMs = Date.now() - potStartedAt;
+            const maxAgeMs = 24 * 60 * 60 * 1000;
+            if(ageMs > maxAgeMs || ageMs < 0){
+              potStartedAt = null;
+              potAckedDone = false;
+            }
+          }
+          if(s.revenues){
+            PROVIDERS.forEach(p => revenues[p.key] = s.revenues[p.key] || 0);
+          }
+          counterStart = s.counterStart ?? null;
+          counterEnd = s.counterEnd ?? null;
+          privKmTotal = s.privKmTotal || 0;
+        }
+        const rawP = localStorage.getItem(LS_PERSIST);
+        if(rawP){
+          const p = JSON.parse(rawP);
+          lastCounterEnd = p.lastCounterEnd ?? null;
+          notes = Array.isArray(p.notes) ? p.notes : [];
+        }
+      }catch(e){}
+    }
+
+    // ===== pomocnicze =====
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function nowMinutes(){ const d=new Date(); return d.getHours()*60 + d.getMinutes(); }
+    function effectiveNow(){ return endWorkMinutes!==null ? endWorkMinutes : nowMinutes(); }
+    function todayISO(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+    function formatHHMM(m){ m=((m%1440)+1440)%1440; return `${pad(Math.floor(m/60))}:${pad(m%60)}`; }
+    function formatCompact(m){ m=Math.max(0,m); const h=Math.floor(m/60), mm=m%60; return h<=0?String(mm):`${h}:${pad(mm)}`; }
+    function formatCompactSigned(m){ const s=m<0?'-':''; const a=Math.abs(m); const h=Math.floor(a/60), mm=a%60; return h<=0?s+String(mm):`${s}${h}:${pad(mm)}`; }
+    function minutesToHHMM(m){ m=Math.max(0,m); return pad(Math.floor(m/60))+':'+pad(m%60); }
+    function diffMinutes(f,t){ let d=t-f; if(d<0) d+=1440; return d; }
+    function clock720(m){ return m%720; }
+    function angleFromMinutes(m){ return (clock720(m)/720)*360 - 90; }
+    function polarToCartesian(cX,cY,r,a){ const rad=a*Math.PI/180; return {x:cX+Math.cos(rad)*r, y:cY+Math.sin(rad)*r}; }
+    function clearChildren(n){ while(n.firstChild) n.removeChild(n.firstChild); }
+    function createSectorPath(sM,eM,r){
+      let diff=clock720(eM)-clock720(sM);
+      if(diff<0) diff+=720;
+      if(diff===0) return '';
+      const p1=polarToCartesian(cx,cy,r,angleFromMinutes(sM));
+      const p2=polarToCartesian(cx,cy,r,angleFromMinutes(eM));
+      const large=diff>360?1:0;
+      return `M ${cx} ${cy} L ${p1.x} ${p1.y} A ${r} ${r} 0 ${large} 1 ${p2.x} ${p2.y} Z`;
+    }
+    function svgFilledPath(d,c,o=1,extra={}){
+      const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d',d); p.setAttribute('fill',c); p.setAttribute('opacity',o);
+      Object.keys(extra).forEach(k=>p.setAttribute(k,extra[k]));
+      return p;
+    }
+    function svgLine(x1,y1,x2,y2,c,w,dash=''){
+      const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+      l.setAttribute('x1',x1); l.setAttribute('y1',y1); l.setAttribute('x2',x2); l.setAttribute('y2',y2);
+      l.setAttribute('stroke',c); l.setAttribute('stroke-width',w);
+      l.setAttribute('stroke-linecap','round'); l.setAttribute('opacity','0.96');
+      if(dash) l.setAttribute('stroke-dasharray',dash);
+      return l;
+    }
+
+    function buildDots(){
+      const g=document.getElementById('dots');
+      clearChildren(g);
+      for(let i=0;i<60;i++){
+        const ang=(i*6-90)*Math.PI/180;
+        const x=cx+Math.cos(ang)*radius, y=cy+Math.sin(ang)*radius;
+        const isH=i%5===0;
+        const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+        dot.setAttribute('cx',x.toFixed(2)); dot.setAttribute('cy',y.toFixed(2));
+        dot.setAttribute('r', isH?'3.8':'2.1');
+        dot.setAttribute('fill', isH?'var(--dot-big)':'var(--dot)');
+        dot.setAttribute('opacity', isH?'0.92':'0.72');
+        g.appendChild(dot);
+      }
+    }
+
+    // ===== wskazówki: kropka minut + strzałka godzin =====
+    function renderHands(){
+      const gHour = document.getElementById('hourArrow');
+      const gMin  = document.getElementById('minuteDot');
+      clearChildren(gHour); clearChildren(gMin);
+
+      const now = new Date();
+      const h = now.getHours(), m = now.getMinutes();
+      const hourDeg = (h % 12) * 30 + m * 0.5;
+      // Minuty stoją na pełnej minucie - bez płynnego ruchu sekund
+      const minDeg  = m * 6;
+
+      // === Strzałka godzinowa - jako polygon (grot strzałki) ===
+      const aRad = (hourDeg - 90) * Math.PI / 180;
+      const r1 = 130, r2 = 75;
+      // Punkty trzonu strzałki (prostokąt) + grot na końcu (przy cyfrze, r1)
+      // Grot ma szerokość większą i kończy się w punkcie r1+8
+      const tipR = r1 + 4;        // wierzchołek grotu
+      const headR = r1 - 14;       // gdzie zaczyna się grot (cofnięty od wierzchołka o 18)
+      const shaftR = r2;           // koniec trzonu (bliżej środka)
+      const halfShaft = 5.5;       // pół-szerokość trzonu
+      const halfHead  = 11;        // pół-szerokość grotu (szersza)
+      // Wektor wzdłużny i prostopadły
+      const ux = Math.cos(aRad), uy = Math.sin(aRad);
+      const nx = -uy, ny = ux;
+      function pt(r, side){
+        return [cx + ux*r + nx*side, cy + uy*r + ny*side];
+      }
+      // 7 wierzchołków: trzon-lewa-koniec, trzon-lewa-baza, grot-lewa-baza,
+      //                  wierzchołek, grot-prawa-baza, trzon-prawa-baza, trzon-prawa-koniec
+      const p1 = pt(shaftR, -halfShaft);
+      const p2 = pt(headR,  -halfShaft);
+      const p3 = pt(headR,  -halfHead);
+      const p4 = pt(tipR,    0);
+      const p5 = pt(headR,   halfHead);
+      const p6 = pt(headR,   halfShaft);
+      const p7 = pt(shaftR,  halfShaft);
+      const points = [p1,p2,p3,p4,p5,p6,p7].map(p=>p.map(n=>n.toFixed(2)).join(',')).join(' ');
+
+      // Obwódka (czarna)
+      const hOut = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+      hOut.setAttribute('points', points);
+      hOut.setAttribute('fill', '#000');
+      hOut.setAttribute('stroke', '#000');
+      hOut.setAttribute('stroke-width', '4');
+      hOut.setAttribute('stroke-linejoin', 'round');
+      gHour.appendChild(hOut);
+      // Wypełnienie białe
+      const hIn = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+      hIn.setAttribute('points', points);
+      hIn.setAttribute('fill', '#ffffff');
+      gHour.appendChild(hIn);
+
+      // === Kropka minut na obwodzie + liczba minut na zewnątrz ===
+      // Kropka pokazuje aktualną minutę i nie porusza się w obrębie minuty.
+      const mRad = (minDeg - 90) * Math.PI / 180;
+      const dotR = radius;
+      const dotX = cx + Math.cos(mRad) * dotR, dotY = cy + Math.sin(mRad) * dotR;
+      const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      dot.setAttribute('cx', dotX.toFixed(2)); dot.setAttribute('cy', dotY.toFixed(2));
+      dot.setAttribute('r','7'); dot.setAttribute('fill','#ffffff');
+      dot.setAttribute('filter','url(#glow)');
+      gMin.appendChild(dot);
+      // Etykieta minut na zewnątrz
+      const lblR = radius + 22;
+      const lblX = cx + Math.cos(mRad) * lblR, lblY = cy + Math.sin(mRad) * lblR;
+      const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+      lbl.setAttribute('x', lblX.toFixed(2)); lbl.setAttribute('y', lblY.toFixed(2));
+      lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('dominant-baseline','central');
+      lbl.setAttribute('fill','#fff'); lbl.setAttribute('font-size','22');
+      lbl.setAttribute('font-weight','800'); lbl.setAttribute('font-family','inherit');
+      lbl.setAttribute('opacity','0.95');
+      lbl.textContent = String(m);
+      gMin.appendChild(lbl);
+
+      // === Podświetlenie aktualnej godziny (tryb 24h dla świecących) ===
+      const hh12 = h === 0 ? 12 : (h > 12 ? h - 12 : h);
+      const hNext24 = (h + 1) % 24;
+      const nextHh = hNext24 === 0 ? 12 : (hNext24 > 12 ? hNext24 - 12 : hNext24);
+      function hourLabel24(hour24){ return hour24 === 0 ? '24' : String(hour24); }
+      const labelCurrent = hourLabel24(h);
+      const labelNext = hourLabel24(hNext24);
+      let activeHours = [];
+      if(m < 30)       activeHours = [{pos:hh12, label:labelCurrent}];
+      else if(m < 55)  activeHours = [{pos:hh12, label:labelCurrent},{pos:nextHh, label:labelNext}];
+      else             activeHours = [{pos:nextHh, label:labelNext}];
+      const activePosMap = {};
+      for(const a of activeHours) activePosMap[a.pos] = a.label;
+      document.querySelectorAll('.number').forEach(el => {
+        const hourVal = parseInt(el.dataset.hour, 10);
+        if(activePosMap[hourVal] !== undefined){
+          el.classList.add('active');
+          el.textContent = activePosMap[hourVal];
+        } else {
+          el.classList.remove('active');
+          el.textContent = String(hourVal);
+        }
+      });
+    }
+
+    // ===== czas / praca =====
+    function getClosedBreakMinutes(){ let s=0; for(const seg of breakSegments) s+=diffMinutes(seg.start,seg.end); return s; }
+    function getActiveBreakMinutes(){ return (breakActive&&currentBreakStart!==null)?diffMinutes(currentBreakStart,effectiveNow()):0; }
+    function getTotalBreakMinutes(a=true){ let s=getClosedBreakMinutes()+breakAdjustMinutes; if(a) s+=getActiveBreakMinutes(); return s; }
+    function getNetWorkMinutes(){ if(startWorkMinutes===null) return 0; return diffMinutes(startWorkMinutes,effectiveNow()) - getTotalBreakMinutes(true); }
+    function getForecastEndMinutes(){ if(startWorkMinutes===null) return null; return startWorkMinutes + workTargetMinutes + getTotalBreakMinutes(true); }
+    function getBreakOverlapSince(anchor){
+      const total=diffMinutes(anchor,effectiveNow()); let o=0;
+      for(const seg of breakSegments){
+        let s=diffMinutes(anchor,seg.start), e=diffMinutes(anchor,seg.end);
+        if(e<s) e+=1440;
+        const f=Math.max(0,s), t=Math.min(total,e);
+        if(t>f) o+=t-f;
+      }
+      if(breakActive&&currentBreakStart!==null){
+        let s=diffMinutes(anchor,currentBreakStart), e=total;
+        const f=Math.max(0,s), t=Math.min(total,e);
+        if(t>f) o+=t-f;
+      }
+      return o;
+    }
+    function getEffectiveExerciseElapsed(){
+      if(startWorkMinutes===null||lastExerciseMinutes===null) return 0;
+      return Math.max(0, diffMinutes(lastExerciseMinutes,effectiveNow()) - getBreakOverlapSince(lastExerciseMinutes));
+    }
+    // Płynna wersja w minutach z ułamkiem (uwzględnia sekundy z aktualnego zegara)
+    function getEffectiveExerciseElapsedFractional(){
+      if(startWorkMinutes===null||lastExerciseMinutes===null) return 0;
+      const baseMin = getEffectiveExerciseElapsed();
+      // Jeśli mamy zamknięty endWorkMinutes - nie ma już ruchu sekund
+      if(endWorkMinutes!==null) return baseMin;
+      // Inaczej - dodaj ułamek wynikający z aktualnych sekund
+      const secs = new Date().getSeconds();
+      return baseMin + (secs/60);
+    }
+
+    // === Bug 15: efektywny początek czerwonego sektora ===
+    // Jeśli po lastExerciseMinutes była przerwa, "wizualny" start brakuczu ćwiczeń
+    // to koniec OSTATNIEJ takiej przerwy. W przeciwnym razie - lastExerciseMinutes.
+    // Dotyczy zarówno czerwonego pola na tarczy jak i radaru.
+    function getRedSectorStart(){
+      if(lastExerciseMinutes===null) return null;
+      const now = effectiveNow();
+      let latestBreakEnd = null;
+      // Iteruj zamknięte przerwy
+      for(const seg of breakSegments){
+        // Czy ta przerwa jest między lastExerciseMinutes a now?
+        const segEndAfter = diffMinutes(lastExerciseMinutes, seg.end);
+        const segEndBeforeNow = diffMinutes(seg.end, now);
+        // segment jest "po lastExercise" gdy segEndAfter < diffMinutes(lastExerciseMinutes, now)
+        // i jednocześnie seg.end <= now (czyli zamknięta przerwa skończyła się przed now)
+        if(segEndAfter > 0 && segEndAfter <= diffMinutes(lastExerciseMinutes, now)){
+          // wybierz najpóźniejszą z takich przerw
+          if(latestBreakEnd === null || segEndAfter > diffMinutes(lastExerciseMinutes, latestBreakEnd)){
+            latestBreakEnd = seg.end;
+          }
+        }
+      }
+      // Jeśli aktualnie trwa przerwa - radar nie powinien latać dalej, ale getEffectiveExerciseElapsed
+      // już pauzuje liczenie. Tu zwracamy najlepszy znany punkt:
+      return latestBreakEnd !== null ? latestBreakEnd : lastExerciseMinutes;
+    }
+
+    function renderWorkFill(){
+      const wf=document.getElementById('workFill');
+      const nef=document.getElementById('noExerciseFill');
+      const ov=document.getElementById('overtimeFill');
+      clearChildren(wf); clearChildren(nef); clearChildren(ov);
+      if(startWorkMinutes===null) return;
+
+      const now=effectiveNow();
+      const forecastEnd=getForecastEndMinutes();
+      const net=getNetWorkMinutes();
+
+      const base=createSectorPath(startWorkMinutes,now,radius);
+      if(base) wf.appendChild(svgFilledPath(base,'var(--work-green)',0.62));
+
+      if(lastExerciseMinutes!==null && getEffectiveExerciseElapsed()>60){
+        const sectorStart = getRedSectorStart();
+        const red=createSectorPath(sectorStart,now,radius);
+        if(red) nef.appendChild(svgFilledPath(red,'var(--no-exercise-red)',0.78));
+      }
+      if(net>workTargetMinutes && forecastEnd!==null){
+        const s=createSectorPath(forecastEnd,now,radius);
+        if(s) ov.appendChild(svgFilledPath(s,'var(--overtime-orange)',0.88));
+      }
+    }
+
+    function renderRadarSweep(){
+      const sw=document.getElementById('radarSweep');
+      clearChildren(sw);
+      if(startWorkMinutes===null||lastExerciseMinutes===null) return;
+      if(getEffectiveExerciseElapsed()<=60) return;
+
+      const sM=getRedSectorStart();
+      const eM=effectiveNow();
+      const spanM=diffMinutes(sM,eM);
+      if(spanM<=0) return;
+
+      const cycle=4000;
+      const t=(Date.now()%cycle)/cycle;
+      const progress = t<0.5 ? t*2 : 1-(t-0.5)*2;
+      const posM=sM + progress*spanM;
+      const widthM=Math.max(1.5, spanM*0.06);
+
+      const tip=createSectorPath(posM-widthM/2, posM+widthM/2, radius);
+      if(tip) sw.appendChild(svgFilledPath(tip,'#ffcccc',0.85));
+
+      for(let i=1;i<=3;i++){
+        const off=widthM*1.8*i;
+        const dir=(t<0.5)?-1:1;
+        const tailC=posM+dir*off;
+        if(tailC<sM||tailC>eM) continue;
+        const tail=createSectorPath(tailC-widthM/2, tailC+widthM/2, radius);
+        if(tail) sw.appendChild(svgFilledPath(tail,'#ff8888', 0.5/i));
+      }
+    }
+
+    function renderBreakFill(){
+      const bf=document.getElementById('breakFill');
+      clearChildren(bf);
+      for(const seg of breakSegments){
+        const d=createSectorPath(seg.start,seg.end,radius);
+        if(d) bf.appendChild(svgFilledPath(d,'var(--break-cut)',1));
+      }
+      if(breakActive&&currentBreakStart!==null){
+        const d=createSectorPath(currentBreakStart,effectiveNow(),radius);
+        if(d) bf.appendChild(svgFilledPath(d,'var(--break-cut)',1));
+      }
+    }
+
+    function renderExerciseMarks(){
+      const g=document.getElementById('exerciseMarks');
+      clearChildren(g);
+      for(const mk of exerciseMarkers){
+        const d=createSectorPath(mk-1.3,mk+1.3,radius);
+        if(d) g.appendChild(svgFilledPath(d,'#1a8a3a',0.98));
+      }
+    }
+
+    function renderForecastHand(){
+      const g=document.getElementById('forecastHand');
+      clearChildren(g);
+      const end=getForecastEndMinutes();
+      if(end===null) return;
+      const ang = angleFromMinutes(end);
+      const fRad = ang * Math.PI / 180;
+      const r1 = 130, r2 = 75;
+      const fx1 = cx + Math.cos(fRad)*r1, fy1 = cy + Math.sin(fRad)*r1;
+      const fx2 = cx + Math.cos(fRad)*r2, fy2 = cy + Math.sin(fRad)*r2;
+      g.appendChild(svgLine(fx1,fy1,fx2,fy2,'var(--forecast)',5,'8 6'));
+    }
+
+    // ===== przyciski =====
+    function renderButtons(){
+      const workBtn=document.getElementById('workBtn');
+      const workStartMini=document.getElementById('workStartMini');
+      const workEndMini=document.getElementById('workEndMini');
+      const exBtn=document.getElementById('exerciseBtn');
+      const breakTopZone=document.getElementById('breakTopZone');
+      const breakBotZone=document.getElementById('breakBotZone');
+
+      if(startWorkMinutes===null){
+        workStartMini.textContent='--:--';
+        workEndMini.textContent='';
+        breakTopZone.textContent='';
+        breakBotZone.textContent='';
+        workBtn.classList.remove('overtime');
+        renderWorkRoller(0);
+        renderWheels(0);
+      } else {
+        const net=getNetWorkMinutes();
+        const ex=getEffectiveExerciseElapsed();
+        const totalBreak=getTotalBreakMinutes(true);
+        workStartMini.textContent=formatHHMM(startWorkMinutes);
+        workEndMini.textContent=endWorkMinutes!==null?formatHHMM(endWorkMinutes):'';
+        // Punkt 2: gdy pauza aktywna - pokaż tylko dolny (bieżąca pauza); gdy nieaktywna - tylko górny (suma)
+        if(breakActive){
+          breakTopZone.textContent = '';
+          breakBotZone.textContent = ':' + pad(getActiveBreakMinutes());
+        } else {
+          breakTopZone.textContent = totalBreak !== 0 ? ':' + pad(Math.abs(totalBreak)) : '';
+          breakBotZone.textContent = '';
+        }
+        workBtn.classList.toggle('overtime', net>workTargetMinutes);
+        renderWorkRoller(Math.max(0,net));
+        renderWheels(ex);
+      }
+
+      const breakBtn=document.getElementById('breakBtn');
+      // Punkt 10: obrazek "on/off" sterowany TYLKO przez breakActive (nie przez blinkState).
+      // Klasa .on pokazuje obrazek przerwa.png; .blink-bg miga tłem żółto-szarym.
+      breakBtn.classList.remove('on','blink-bg');
+      if(endWorkMinutes===null && breakActive){
+        breakBtn.classList.add('on');                  // obrazek przerwa.png stale
+        if(blinkState) breakBtn.classList.add('blink-bg');  // tło miga
+      }
+      // Punkt 3: przy aktywnej przerwie przycisk pracy wyszarzony
+      workBtn.classList.toggle('dimmed-during-break', breakActive && endWorkMinutes===null);
+
+      renderPotButton();
+      renderMoneyButton();
+      renderNotesBar();
+    }
+
+    // === Render modułu ćwiczeń ===
+    // Logika: koło ma SVG-overlay z czarnym sektorem który rośnie zgodnie z minutami.
+    // Sektor zaczyna się od 12:00 (kąt -90 w SVG units), idzie zgodnie z ruchem wskazówek.
+    // 60 minut → 360°, czyli 6°/min.
+    // Stan _wheelsState:
+    //   .restoring - czy aktualnie odtwarzamy koło wstecz (po kliknięciu)
+    //   .restoreFromAngle - od jakiego kąta startujemy odtwarzanie
+    //   .restoreStartTime - kiedy zaczęliśmy odtwarzanie (animacja 2s)
+    let _wheelsState = {
+      restoring: false,
+      restoreFromAngle: 0,
+      restoreStartTime: 0
+    };
+
+    // Rysuje SVG path sektora od 12:00 do `vanishedDeg` (zgodnie ze wskazówkami).
+    // Sektor pełny = czarny, plus krawędź soft (filter blur na końcu).
+    function paintWheelMask(vanishedDeg){
+      const sector = document.getElementById('wheelVanishSector');
+      const edge = document.getElementById('wheelVanishEdge');
+      if(!sector || !edge) return;
+
+      if(vanishedDeg <= 0){
+        sector.setAttribute('d', '');
+        edge.setAttribute('d', '');
+        return;
+      }
+      if(vanishedDeg >= 360){
+        // Pełny krąg
+        sector.setAttribute('d', 'M 100 0 A 100 100 0 1 1 99.99 0 Z M 100 100 Z');
+        edge.setAttribute('d', '');
+        return;
+      }
+
+      const cx=100, cy=100, r=110; // r=110 daje minimalny zapas poza viewBox 0-200, żeby nie odsłaniało koła
+      // SVG kąty: 0deg = w prawo, ale w zegarze 0deg = w górę. Korekta -90.
+      // Sektor "zniknięty" idzie od 12:00 (top) zgodnie ze wskazówkami do `vanishedDeg`.
+      const startAng = -90;                    // 12:00
+      const endAng   = -90 + vanishedDeg;       // np. dla 90deg → 0deg = 3:00
+
+      const startRad = startAng * Math.PI / 180;
+      const endRad   = endAng   * Math.PI / 180;
+      const startX = cx + r * Math.cos(startRad);
+      const startY = cy + r * Math.sin(startRad);
+      const endX   = cx + r * Math.cos(endRad);
+      const endY   = cy + r * Math.sin(endRad);
+      const largeArc = vanishedDeg > 180 ? 1 : 0;
+
+      const d = `M ${cx} ${cy} L ${startX.toFixed(2)} ${startY.toFixed(2)} ` +
+                `A ${r} ${r} 0 ${largeArc} 1 ${endX.toFixed(2)} ${endY.toFixed(2)} Z`;
+      sector.setAttribute('d', d);
+
+      // Soft edge: cienki sektor o szerokości 25deg na końcu z opacity gradient
+      // Aby uzyskać rozmycie - rysuję drugi krótki sektor i blur go w SVG
+      const edgeWidth = 25;
+      const edgeStart = Math.max(0, vanishedDeg - edgeWidth);
+      const e1Ang = -90 + edgeStart;
+      const e2Ang = endAng;
+      const e1Rad = e1Ang * Math.PI / 180;
+      const e2Rad = e2Ang * Math.PI / 180;
+      const e1X = cx + r * Math.cos(e1Rad), e1Y = cy + r * Math.sin(e1Rad);
+      const e2X = cx + r * Math.cos(e2Rad), e2Y = cy + r * Math.sin(e2Rad);
+      const eLargeArc = (edgeStart - vanishedDeg) > 180 ? 1 : 0;
+      const dEdge = `M ${cx} ${cy} L ${e1X.toFixed(2)} ${e1Y.toFixed(2)} ` +
+                    `A ${r} ${r} 0 ${eLargeArc} 1 ${e2X.toFixed(2)} ${e2Y.toFixed(2)} Z`;
+      edge.setAttribute('d', dEdge);
+    }
+
+    function renderWheels(elapsedMinutes){
+      const exBtn = document.getElementById('exerciseBtn');
+
+      if(!startWorkMinutes){
+        elapsedMinutes = 0;
+      }
+      if(elapsedMinutes > 500) elapsedMinutes = 500;
+
+      // === Tryb odtwarzania (po kliknięciu) ===
+      if(_wheelsState.restoring){
+        const dt = (Date.now() - _wheelsState.restoreStartTime) / 1000;
+        const RESTORE_DUR = 2.0;
+        if(dt >= RESTORE_DUR){
+          _wheelsState.restoring = false;
+          paintWheelMask(0);
+          exBtn.classList.remove('overage','fading-overage');
+          return;
+        }
+        const progress = dt / RESTORE_DUR;
+        const ang = _wheelsState.restoreFromAngle * (1 - progress);
+        paintWheelMask(ang);
+        return;
+      }
+
+      // === Tryb normalny: maska zanika zgodnie z upływem minut ===
+      const elapsedFrac = (startWorkMinutes && lastExerciseMinutes!==null && endWorkMinutes===null)
+        ? getEffectiveExerciseElapsedFractional()
+        : elapsedMinutes;
+
+      if(elapsedFrac >= 60){
+        // Tryb "overage" - czerwony licznik nadwyżki
+        exBtn.classList.add('overage');
+        paintWheelMask(360);
+        const overFrac = Math.max(0, elapsedFrac - 60);
+        renderOverageRoller(overFrac);
+        return;
+      }
+      exBtn.classList.remove('overage','fading-overage');
+
+      const ang = Math.min(360, elapsedFrac * 6);
+      paintWheelMask(ang);
+    }
+
+    // Animacja przywracania koła po kliknięciu
+    function startWheelRestore(){
+      const exBtn = document.getElementById('exerciseBtn');
+
+      if(exBtn.classList.contains('overage')){
+        // Najpierw fade czerwonego do czerni (0.6s)
+        exBtn.classList.add('fading-overage');
+        setTimeout(()=>{
+          exBtn.classList.remove('overage','fading-overage');
+          _wheelsState.restoring = true;
+          _wheelsState.restoreFromAngle = 360;
+          _wheelsState.restoreStartTime = Date.now();
+          renderWheels(0);
+        }, 600);
+      } else {
+        // Z bieżącego stanu zanikania - zacznij animację wstecz
+        const elapsedFrac = (startWorkMinutes && lastExerciseMinutes!==null && endWorkMinutes===null)
+          ? getEffectiveExerciseElapsedFractional()
+          : 0;
+        const currentAngle = Math.min(360, elapsedFrac * 6);
+        _wheelsState.restoring = true;
+        _wheelsState.restoreFromAngle = currentAngle;
+        _wheelsState.restoreStartTime = Date.now();
+        renderWheels(0);
+      }
+    }
+
+    // Rolka nadwyżki - pełne przewijanie jak workRoller, minuty od 1 w górę
+    function renderOverageRoller(minutes){
+      const roller = document.querySelector('#overageDisplay .work-roller');
+      const inner = document.getElementById('overageRollerInner');
+      if(!roller || !inner) return;
+
+      // Lazy build: cyfry 0..180 (zapas)
+      const MAX_MIN = 180;
+      if(inner.dataset.built !== '1'){
+        inner.innerHTML='';
+        for(let i=0; i<=MAX_MIN; i++){
+          const d = document.createElement('div');
+          d.className = 'work-roller-digit';
+          inner.appendChild(d);
+          d.textContent = i;
+        }
+        inner.dataset.built='1';
+      }
+
+      const h = roller.clientHeight;
+      if(!h) return;
+
+      const digitH = Math.round(h * 0.55);
+
+      if(inner.dataset.lastH !== String(h)){
+        inner.querySelectorAll('.work-roller-digit').forEach(d => {
+          d.style.height = digitH + 'px';
+          // Dla 3-cyfrowych - mniejsza czcionka
+          const n = parseInt(d.textContent, 10);
+          d.style.fontSize = (n >= 100
+            ? Math.floor(digitH * 0.52)
+            : Math.floor(digitH * 0.78)) + 'px';
+        });
+        inner.dataset.lastH = String(h);
+      }
+
+      const clamped = Math.min(MAX_MIN, Math.max(0, minutes));
+      const intM = Math.floor(clamped);
+      const frac = clamped - intM;
+      const baseOffset = (h / 2) - (digitH / 2);
+      const offset = baseOffset - (intM + frac) * digitH;
+      // Krótka transition żeby kropki sekund nie szarpały
+      inner.style.transition = 'transform 0.95s linear';
+      inner.style.transform = `translateY(${offset}px)`;
+    }
+
+    // === Rolka cyfr godzin pracy ===
+    // Strategia: wysokość okna rolki = clientHeight w px. Każda cyfra ma tę samą
+    // wysokość. translateY = -(intH+frac) * h. Cyfry 10..20 mają mniejszy font,
+    // żeby zmieściły się dwucyfrowe.
+    function renderWorkRoller(workMinutes){
+      const roller = document.querySelector('#workBtn .work-roller');
+      const inner = document.getElementById('workRollerInner');
+      if(!roller || !inner) return;
+
+      // Lazy build: cyfry 0..20 + znaczniki ◀ ▶ na rolce
+      if(inner.dataset.built !== '1'){
+        inner.innerHTML='';
+        for(let i=0; i<=20; i++){
+          const d = document.createElement('div');
+          d.className = 'work-roller-digit' + (i>=10 ? ' two-digit' : '');
+          d.textContent = i;
+          inner.appendChild(d);
+        }
+        if(!roller.querySelector('.work-roller-mark-left')){
+          const ml = document.createElement('div');
+          ml.className = 'work-roller-mark-left';
+          roller.appendChild(ml);
+          const mr = document.createElement('div');
+          mr.className = 'work-roller-mark-right';
+          roller.appendChild(mr);
+        }
+        inner.dataset.built='1';
+      }
+
+      const h = roller.clientHeight;
+      if(!h) return;  // jeszcze nie zrenderowane
+
+      // Każda cyfra ma height = 55% wysokości okna - dzięki temu sąsiadująca cyfra
+      // jest widoczna częściowo (efekt "rolki", gdzie cyfra wypiera następną).
+      const digitH = Math.round(h * 0.55);
+
+      // Ustaw wysokość każdej cyfry i font proporcjonalnie do digitH
+      if(inner.dataset.lastH !== String(h)){
+        inner.querySelectorAll('.work-roller-digit').forEach(d => {
+          d.style.height = digitH + 'px';
+          if(d.classList.contains('two-digit')){
+            d.style.fontSize = Math.floor(digitH * 0.78) + 'px';
+          } else {
+            d.style.fontSize = Math.floor(digitH * 0.92) + 'px';
+          }
+        });
+        inner.dataset.lastH = String(h);
+      }
+
+      // Wycentruj tak, by aktualna cyfra była na środku okna.
+      // top inner = (h/2 - digitH/2) - (intH+frac)*digitH
+      const totalH = workMinutes / 60;
+      const intH = Math.min(20, Math.floor(totalH));
+      const frac = totalH - Math.floor(totalH);
+      const baseOffset = (h / 2) - (digitH / 2);
+      const offset = baseOffset - (intH + frac) * digitH;
+      inner.style.transform = `translateY(${offset}px)`;
+    }
+
+    function potRemainingSeconds(){
+      if(potStartedAt===null) return null;
+      const el=(Date.now()-potStartedAt)/1000;
+      return potDurationMin*60 - el;
+    }
+
+    function renderPotButton(){
+      const btn=document.getElementById('potBtn');
+      const ctr=document.getElementById('potCenter');
+      const bar=document.getElementById('potFireBar');
+      btn.classList.remove('done-alarm','done-alarm-off','dimmed');
+
+      if(potStartedAt===null){
+        // spoczynek - gdy jest obrazek: ukryj counter-box; gdy brak: emoji garnek
+        if(btn.classList.contains('pot-has-img')){
+          ctr.removeAttribute('data-show');
+          ctr.textContent='';
+        } else {
+          ctr.textContent='🫕';
+        }
+        if(bar) bar.style.height='0%';
+        if(potUsedToday) btn.classList.add('dimmed');
+        return;
+      }
+      // Gdy grzeje - zawsze pokaż licznik (data-show żeby CSS go pokazał)
+      ctr.setAttribute('data-show','1');
+      const rem=potRemainingSeconds();
+      const totalSec=potDurationMin*60;
+      const elapsedSec=totalSec - rem;
+      if(rem>0){
+        const pct=Math.min(100,(elapsedSec/totalSec)*100);
+        if(bar) bar.style.height=pct.toFixed(1)+'%';
+        ctr.textContent=Math.ceil(rem/60);
+      } else {
+        if(bar) bar.style.height='0%';
+        if(!potAckedDone){
+          btn.classList.add(blinkState?'done-alarm':'done-alarm-off');
+          const totalMin=Math.ceil(elapsedSec/60);
+          ctr.textContent=totalMin;
+        } else {
+          if(btn.classList.contains('pot-has-img')){
+            ctr.removeAttribute('data-show');
+            ctr.textContent='';
+          } else {
+            ctr.textContent='🫕';
+          }
+          potStartedAt=null;
+          potAckedDone=false;
+          potUsedToday=true;
+          btn.classList.add('dimmed');
+        }
+      }
+    }
+
+    function getTotalRevenueGroszy(){ let s=0; for(const p of PROVIDERS) s+=revenues[p.key]||0; return s; }
+
+    function renderMoneyButton(){
+      const moneyTop=document.getElementById('moneyTop');
+      const moneyBot=document.getElementById('moneyBot');
+      const coinCell=document.getElementById('coinCell');
+      const moneyEmptyBag=document.getElementById('moneyEmptyBag');
+
+      // === górny banknot: SUMA OBROTÓW ===
+      moneyTop.classList.remove('note-50','note-100','note-200','note-500','empty');
+      moneyTop.style.backgroundImage='';
+      clearChildren(moneyTop);
+
+      const total=getTotalRevenueGroszy();
+      if(total<=0){
+        moneyTop.classList.add('empty');
+      } else {
+        const totalInt=Math.floor(total/100);
+        let noteCls='note-100', noteFile='100zl.png';
+        if(totalInt < 100){ noteCls='note-50';  noteFile='50zl.png'; }
+        else if(totalInt < 200){ noteCls='note-100'; noteFile='100zl.png'; }
+        else if(totalInt < 400){ noteCls='note-200'; noteFile='200zl.png'; }
+        else { noteCls='note-500'; noteFile='500zl.png'; }
+        moneyTop.classList.add(noteCls);
+        moneyTop.style.backgroundImage=`url('Photos/${noteFile}')`;
+        const t=document.createElement('div');
+        t.className='money-cell-text';
+        t.textContent=totalInt;
+        moneyTop.appendChild(t);
+      }
+
+      // === dolny banknot: zł/h ===
+      moneyBot.classList.remove('note-50','note-100','note-200','note-500','empty');
+      moneyBot.style.backgroundImage='';
+      clearChildren(moneyBot);
+
+      const net=Math.max(0,getNetWorkMinutes());
+      if(total>0 && net>0){
+        const totalInt=Math.floor(total/100);
+        const per=Math.round(totalInt*60/net);
+        let noteCls='note-100', noteFile='100zl.png';
+        if(per < 100){ noteCls='note-50'; noteFile='50zl.png'; }
+        else if(per < 200){ noteCls='note-100'; noteFile='100zl.png'; }
+        else if(per < 400){ noteCls='note-200'; noteFile='200zl.png'; }
+        else { noteCls='note-500'; noteFile='500zl.png'; }
+        moneyBot.classList.add(noteCls);
+        moneyBot.style.backgroundImage=`url('Photos/${noteFile}')`;
+        const t=document.createElement('div');
+        t.className='money-cell-text';
+        t.textContent=per;
+        moneyBot.appendChild(t);
+      } else {
+        moneyBot.classList.add('empty');
+      }
+
+      // === pełnoekranowy worek pojawia się tylko gdy oba banknoty są puste ===
+      if(moneyEmptyBag){
+        if(total <= 0){
+          moneyEmptyBag.classList.remove('hidden');
+        } else {
+          moneyEmptyBag.classList.add('hidden');
+        }
+      }
+
+      // === moneta: zł/km ===
+      coinCell.classList.remove('coin-1','coin-2','coin-5','empty');
+      coinCell.style.backgroundImage='';
+      clearChildren(coinCell);
+
+      if(total>0 && counterStart!==null && counterEnd!==null){
+        const km=counterEnd-counterStart-privKmTotal;
+        if(km>0){
+          const totalInt=Math.floor(total/100);
+          const perKm=totalInt/km;
+          let coinCls='coin-2', coinFile='2zl.png';
+          if(perKm < 1.6){ coinCls='coin-1'; coinFile='1zl.png'; }
+          else if(perKm < 4.0){ coinCls='coin-2'; coinFile='2zl.png'; }
+          else { coinCls='coin-5'; coinFile='5zl.png'; }
+          coinCell.classList.add(coinCls);
+          coinCell.style.backgroundImage=`url('Photos/${coinFile}')`;
+          const t=document.createElement('div');
+          t.className='coin-cell-text';
+          t.textContent=perKm.toFixed(2);
+          coinCell.appendChild(t);
+        } else {
+          coinCell.classList.add('empty');
+        }
+      } else {
+        coinCell.classList.add('empty');
+      }
+    }
+
+    function renderNotesBar(){
+      const bar=document.getElementById('notesBar');
+      clearChildren(bar);
+
+      // Dynamiczne skalowanie - im więcej karteczek tym mniejsze
+      const total = notes.length + 1;  // +1 za "dodaj"
+      let size = 68;
+      if(total > 5) size = 60;
+      if(total > 7) size = 52;
+      if(total > 9) size = 44;
+      if(total > 12) size = 36;
+      bar.style.setProperty('--note-size', size + 'px');
+
+      const add=document.createElement('button');
+      add.className='note-sticker empty';
+      add.style.setProperty('--note-size', size + 'px');
+      add.textContent='＋';
+      add.addEventListener('click', ()=> openNoteEditor(null));
+      bar.appendChild(add);
+
+      // Sprawdź alarmy
+      const nowMs = Date.now();
+      for(const n of notes){
+        const b=document.createElement('button');
+        b.className='note-sticker filled';
+        b.style.setProperty('--note-size', size + 'px');
+        b.textContent=n.icon||'•';
+        b.title=n.text||'';
+
+        // Czy któryś alarm jest aktywny (przeszedł moment trigger i nie został potwierdzony)?
+        const activeAlarm = isNoteAlarmActive(n, nowMs);
+        if(activeAlarm && blinkState){
+          b.classList.add('alarm-blink');
+        }
+
+        b.addEventListener('click', ()=>{
+          if(isNoteAlarmActive(n, Date.now())){
+            // Stuknięcie aktywnego alarmu = potwierdzenie najbliższego
+            ackNoteAlarm(n);
+            saveState();
+            renderAll();
+          } else {
+            openNoteEditor(n.id);
+          }
+        });
+        bar.appendChild(b);
+      }
+    }
+
+    // Czy notatka ma w tej chwili aktywny alarm (czas przekroczony i nie potwierdzony)?
+    function isNoteAlarmActive(n, nowMs){
+      if(!n.alarmTime || !Array.isArray(n.alerts) || n.alerts.length === 0) return false;
+      const triggerTimes = computeNoteAlertTimes(n);
+      for(const t of triggerTimes){
+        if(nowMs >= t.ms && !t.acked) return true;
+      }
+      return false;
+    }
+    // Oblicz czasy ms dla każdego alertu (w kontekście dzisiejszego dnia)
+    function computeNoteAlertTimes(n){
+      if(!n.alarmTime) return [];
+      const [hh,mm] = n.alarmTime.split(':').map(x=>parseInt(x,10));
+      const target = new Date();
+      target.setHours(hh, mm, 0, 0);
+      const targetMs = target.getTime();
+      const acked = n.ackedAlerts || {};
+      return (n.alerts||[]).map(min => ({
+        offset: min,
+        ms: targetMs - min*60*1000,
+        acked: !!acked[min]
+      }));
+    }
+    function ackNoteAlarm(n){
+      const triggerTimes = computeNoteAlertTimes(n);
+      const nowMs = Date.now();
+      // Potwierdź najbliższy nadal aktywny
+      for(const t of triggerTimes){
+        if(nowMs >= t.ms && !t.acked){
+          if(!n.ackedAlerts) n.ackedAlerts = {};
+          n.ackedAlerts[t.offset] = true;
+          break;
+        }
+      }
+    }
+
+    function renderAll(){
+      renderHands();
+      renderWorkFill();
+      renderRadarSweep();
+      renderBreakFill();
+      renderExerciseMarks();
+      renderForecastHand();
+      renderButtons();
+      renderDate();
+      renderBattery();
+    }
+
+    // === Data pod zegarem ===
+    function renderDate(){
+      const el = document.getElementById('dateCenterEl');
+      if(!el) return;
+      const days = ['niedziela','poniedziałek','wtorek','środa','czwartek','piątek','sobota'];
+      const months = ['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
+      const d = new Date();
+      el.innerHTML = `<div>${days[d.getDay()]}</div><div>${d.getDate()} ${months[d.getMonth()]}</div>`;
+    }
+
+    // === Bateria w prawym górnym rogu ===
+    let batteryObj = null;
+    function renderBattery(){
+      const el = document.getElementById('batteryIndicator');
+      if(!el) return;
+      if(batteryObj === null){ el.textContent='—'; return; }
+      const pct = Math.round(batteryObj.level * 100);
+      el.textContent = pct + '%';
+      el.classList.toggle('low', pct <= 30);
+      // Miganie: gdy low, ukrywaj co sekundę
+      if(pct <= 30 && !blinkState){
+        el.style.visibility='hidden';
+      } else {
+        el.style.visibility='visible';
+      }
+    }
+    if(navigator.getBattery){
+      navigator.getBattery().then(b => {
+        batteryObj = b;
+        b.addEventListener('levelchange', renderBattery);
+        renderBattery();
+      }).catch(()=>{});
+    }
+
+    // ===== overlay =====
+    const overlay=document.getElementById('overlay');
+    function showOverlay(html){ overlay.innerHTML=html; overlay.classList.add('show'); }
+    function hideOverlay(){ overlay.classList.remove('show'); overlay.innerHTML=''; }
+    overlay.addEventListener('click',(e)=>{ if(e.target===overlay) hideOverlay(); });
+
+    // ===== edytor czasu =====
+    function openTimeEditor(mode){
+      editMode=mode;
+      if(mode==='start'){
+        if(startWorkMinutes!==null){
+          editHour=Math.floor(startWorkMinutes/60);
+          editMinute=startWorkMinutes%60;
+        } else {
+          const n=new Date();
+          editHour=n.getHours(); editMinute=n.getMinutes();
+        }
+      } else if(mode==='breakAdjust'){ editSignedMinutes=0; }
+      else if(mode==='pot'){ editPotMinutes=potDurationMin; }
+      renderTimeEditor();
+    }
+    function renderTimeEditor(){
+      let hT, mT, lab='';
+      if(editMode==='start'){
+        hT=pad(editHour); mT=pad(editMinute); lab='Godzina rozpoczęcia pracy';
+      } else if(editMode==='breakAdjust'){
+        const s=editSignedMinutes<0?'-':''; const a=Math.abs(editSignedMinutes);
+        hT=`${s}${pad(Math.floor(a/60))}`; mT=pad(a%60); lab='Korekta sumy przerw (+/-)';
+      } else if(editMode==='pot'){
+        hT=pad(Math.floor(editPotMinutes/60)); mT=pad(editPotMinutes%60); lab='Czas grzania obiadu';
+      } else if(editMode==='target'){
+        hT=pad(Math.floor(workTargetMinutes/60)); mT=pad(workTargetMinutes%60); lab='Cel pracy (godziny dziś)';
+      }
+      // Punkt 7: w trybie 'start' dodatkowo widać i można edytować cel pracy
+      const targetSection = editMode==='start' ? `
+        <div class="target-section">
+          <div class="keypad-label" style="opacity:.7;">Cel pracy: <strong style="color:#7adf8a;">${pad(Math.floor(workTargetMinutes/60))}:${pad(workTargetMinutes%60)}</strong></div>
+          <button class="ok-btn" data-act="editTarget" style="background:linear-gradient(180deg,#2a4a2a,#1a3a1a);">Zmień cel</button>
+        </div>
+      ` : '';
+      showOverlay(`
+        <div class="editor">
+          <div class="keypad-label" style="text-align:center;padding-top:8px;">${lab}</div>
+          <div class="editor-center">
+            <div class="time-col">
+              <button class="arrow-btn" data-act="hUp">▲</button>
+              <div class="time-box">${hT}</div>
+              <button class="arrow-btn" data-act="hDn">▼</button>
+            </div>
+            <div class="colon">:</div>
+            <div class="time-col">
+              <button class="arrow-btn" data-act="mUp">▲</button>
+              <div class="time-box">${mT}</div>
+              <button class="arrow-btn" data-act="mDn">▼</button>
+            </div>
+          </div>
+          ${targetSection}
+          <div class="editor-actions">
+            <button class="cancel-btn" data-act="cancel">✕</button>
+            <button class="ok-btn" data-act="ok">✓</button>
+          </div>
+        </div>
+      `);
+      overlay.querySelectorAll('[data-act]').forEach(el=>{
+        el.addEventListener('click',(e)=>{ e.stopPropagation(); timeEditorAction(el.dataset.act); });
+      });
+    }
+    function timeEditorAction(a){
+      if(a==='cancel'){ hideOverlay(); return; }
+      if(a==='editTarget'){ openTimeEditor('target'); return; }
+      if(a==='ok'){
+        if(editMode==='start'){
+          setWorkStart(editHour*60+editMinute, true);
+        } else if(editMode==='breakAdjust'){
+          breakAdjustMinutes += editSignedMinutes;
+          saveState(); renderAll();
+        } else if(editMode==='pot'){
+          potDurationMin = Math.max(1, editPotMinutes);
+          saveState(); renderAll();
+        } else if(editMode==='target'){
+          // Cel zatwierdzony - wracamy do edytora startu
+          saveState(); renderAll();
+          openTimeEditor('start');
+          return;
+        }
+        hideOverlay(); return;
+      }
+      if(editMode==='start'){
+        if(a==='hUp') editHour=(editHour+1)%24;
+        if(a==='hDn') editHour=(editHour+23)%24;
+        if(a==='mUp') editMinute=(editMinute+1)%60;
+        if(a==='mDn') editMinute=(editMinute+59)%60;
+      } else if(editMode==='breakAdjust'){
+        if(a==='hUp') editSignedMinutes+=60;
+        if(a==='hDn') editSignedMinutes-=60;
+        if(a==='mUp') editSignedMinutes+=1;
+        if(a==='mDn') editSignedMinutes-=1;
+      } else if(editMode==='pot'){
+        if(a==='hUp') editPotMinutes=Math.min(999,editPotMinutes+60);
+        if(a==='hDn') editPotMinutes=Math.max(1,editPotMinutes-60);
+        if(a==='mUp') editPotMinutes=Math.min(999,editPotMinutes+1);
+        if(a==='mDn') editPotMinutes=Math.max(1,editPotMinutes-1);
+      } else if(editMode==='target'){
+        // Cel pracy - od 1h do 16h
+        if(a==='hUp') workTargetMinutes=Math.min(960, workTargetMinutes+60);
+        if(a==='hDn') workTargetMinutes=Math.max(60, workTargetMinutes-60);
+        if(a==='mUp') workTargetMinutes=Math.min(960, workTargetMinutes+15);
+        if(a==='mDn') workTargetMinutes=Math.max(60, workTargetMinutes-15);
+      }
+      renderTimeEditor();
+    }
+
+    // ===== obroty =====
+    function formatAmountDisplay(g){
+      const z=Math.floor(g/100), gg=g%100;
+      return `${z},${pad(gg)}`;
+    }
+    function openMoneyPanel(){
+      let rows='';
+      for(const p of PROVIDERS){
+        const v=revenues[p.key]||0;
+        const disp=v>0?formatAmountDisplay(v):'—';
+        const imgSrc = `Photos/${p.key}.png`;
+        rows += `
+          <div class="provider-row">
+            <button class="prov-btn" data-prov="${p.key}" style="background:${p.bg};color:${p.fg};">
+              <img src="${imgSrc}" alt="${p.label}" class="prov-img"
+                   onload="this.parentElement.classList.add('has-img')"
+                   onerror="this.remove()" />
+              <span class="prov-label">${p.label}</span>
+            </button>
+            <div class="prov-amount ${v>0?'':'empty'}">${disp}</div>
+          </div>`;
+      }
+      // Punkt 8: zamiast 'otwórz' pokazuj najwyższy aktualny licznik (końcowy > początkowy > z wczoraj)
+      const counterDisplay = (
+        counterEnd !== null ? counterEnd :
+        counterStart !== null ? counterStart :
+        lastCounterEnd !== null ? lastCounterEnd :
+        null
+      );
+      const cAny = counterStart!==null||counterEnd!==null||privKmTotal>0||lastCounterEnd!==null;
+      rows += `
+        <div class="provider-row" style="margin-top:8px;">
+          <button class="prov-btn" data-prov="__counter" style="background:#2a2a2a;color:#f0f0f0;">LICZNIK</button>
+          <div class="prov-amount ${cAny?'':'empty'}">${counterDisplay !== null ? counterDisplay : '—'}</div>
+        </div>`;
+      showOverlay(`
+        <div class="big-panel">
+          <h3>Obroty dnia</h3>
+          <div class="providers-list">
+            <div class="board-bg board-silver"><span class="screw-bl"></span><span class="screw-br"></span></div>
+            <div class="board-bg board-gold"><span class="screw-bl"></span><span class="screw-br"></span></div>
+            ${rows}
+          </div>
+          <div class="panel-actions">
+            <button class="cancel-btn" data-act="cancel" style="width:96px;height:96px;font-size:48px;border-radius:20px;">✕</button>
+            <button class="ok-btn" data-act="ok" style="width:96px;height:96px;font-size:48px;border-radius:20px;">✓</button>
+          </div>
+        </div>
+      `);
+      overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); hideOverlay(); });
+      overlay.querySelector('[data-act="ok"]').addEventListener('click',(e)=>{ e.stopPropagation(); saveState(); hideOverlay(); renderAll(); });
+      overlay.querySelectorAll('[data-prov]').forEach(btn=>{
+        btn.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          const k=btn.dataset.prov;
+          if(k==='__counter') openCounterPanel();
+          else handleProviderClick(k);
+        });
+      });
+    }
+    function handleProviderClick(key){
+      const cur=revenues[key]||0;
+      if(cur>0){
+        const lab = PROVIDERS.find(p=>p.key===key).label;
+        showOverlay(`
+          <div class="big-panel" style="height:auto;max-width:440px;">
+            <div style="display:flex;justify-content:flex-start;padding:2px;">
+              <button class="cancel-btn" data-act="back" style="width:54px;height:54px;font-size:28px;">←</button>
+            </div>
+            <div style="color:#ddd;font-size:17px;text-align:center;padding:18px 10px 8px;line-height:1.4;">
+              <strong>${lab}</strong>: już ${formatAmountDisplay(cur)}<br>
+              <span style="color:#999;font-size:14px;">Co zrobić z nową kwotą?</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 4px 4px;">
+              <button class="choice-btn" data-choice="replace"
+                      style="height:80px;border:none;border-radius:14px;font-size:18px;font-weight:900;color:#fff;background:linear-gradient(180deg,var(--ok),var(--ok-dark));box-shadow:0 0 18px rgba(24,132,57,.25);cursor:pointer;">
+                ZASTĄPIĆ
+              </button>
+              <button class="choice-btn" data-choice="add"
+                      style="height:80px;border:none;border-radius:14px;font-size:18px;font-weight:900;color:#fff;background:linear-gradient(180deg,#1a6aaa,#0a3a6a);box-shadow:0 0 18px rgba(26,106,170,.25);cursor:pointer;">
+                DODAĆ
+              </button>
+            </div>
+          </div>
+        `);
+        overlay.querySelector('[data-act="back"]').addEventListener('click',(e)=>{
+          e.stopPropagation(); openMoneyPanel();
+        });
+        overlay.querySelectorAll('[data-choice]').forEach(b=>{
+          b.addEventListener('click',(e)=>{
+            e.stopPropagation();
+            openKeypad('amount',{ provider:key, addMode:b.dataset.choice==='add' });
+          });
+        });
+      } else {
+        openKeypad('amount',{ provider:key, addMode:false });
+      }
+    }
+
+    // ===== keypad =====
+    function openKeypad(mode,ctx){
+      keypadMode=mode;
+      keypadContext=ctx;
+      keypadRaw='';
+      if(mode==='counter'){
+        let hint=ctx.hint;
+        if(hint===null||hint===undefined) hint=0;
+        // Trzymam oryginalny hint (do liveKm i do backspace)
+        keypadContext.hintDigits = String(hint).padStart(6,'0').split('').map(d=>parseInt(d));
+        keypadCounterDigits = keypadContext.hintDigits.slice();
+        keypadContext.entered = [];   // historia wpisanych cyfr (od pierwszej do ostatniej)
+        keypadCursorFromRight = 0;    // zawsze na ostatniej pozycji
+      }
+      renderKeypad();
+    }
+    function liveKmPreview(){
+      // oblicza przebieg na podstawie aktualnie wpisywanych cyfr licznika końcowego
+      const curEnd=parseInt(keypadCounterDigits.join(''),10);
+      if(counterStart===null) return '';
+      const km=curEnd - counterStart - privKmTotal;
+      return `przebieg: ${km} km`;
+    }
+
+    function renderKeypad(){
+      let disp='', lab='';
+      if(keypadMode==='amount'){
+        const p=PROVIDERS.find(x=>x.key===keypadContext.provider);
+        lab=`Kwota: ${p.label}${keypadContext.addMode?' (dodaj)':''}`;
+        disp=formatAmountDisplay(parseInt(keypadRaw||'0',10));
+      } else if(keypadMode==='counter'){
+        lab=keypadContext.label||'Licznik';
+        // Kursor zawsze na ostatniej pozycji (idx=5)
+        disp=keypadCounterDigits.map((d,i)=> i===5?`<span class="underline">${d}</span>`:String(d)).join('');
+      }
+      showOverlay(`
+        <div class="big-panel" style="max-width:420px;">
+          <div class="keypad-label">${lab}</div>
+          <div class="keypad-display">${disp}</div>
+          ${keypadMode==='counter' && keypadContext.field==='end'
+            ? `<div style="text-align:center;font-size:17px;font-weight:700;color:#aaa;padding:2px 0 4px;">${liveKmPreview()}</div>`
+            : ''}
+          <div class="keypad" style="flex:1;">
+            <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+            <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+            <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+            <button class="key-cancel" data-k="cancel">✕</button>
+            <button data-k="0">0</button>
+            <button class="key-ok" data-k="ok">✓</button>
+            <button class="key-back" data-k="back" style="grid-column:span 3;">← Cofnij</button>
+          </div>
+        </div>
+      `);
+      overlay.querySelectorAll('[data-k]').forEach(b=>{
+        b.addEventListener('click',(e)=>{ e.stopPropagation(); keypadPress(b.dataset.k); });
+      });
+    }
+    function keypadPress(k){
+      if(k==='cancel'){
+        if(keypadMode==='amount') openMoneyPanel();
+        else if(keypadMode==='counter') openCounterPanel();
+        return;
+      }
+      if(k==='ok'){ commitKeypad(); return; }
+      if(k==='back'){
+        if(keypadMode==='amount'){
+          keypadRaw=keypadRaw.slice(0,-1);
+        } else if(keypadMode==='counter'){
+          // cofnij ostatnio wpisaną cyfrę: usuń z entered, odbuduj displej z hint + entered
+          if(keypadContext.entered.length > 0){
+            keypadContext.entered.pop();
+            rebuildCounterDisplay();
+          }
+        }
+        renderKeypad(); return;
+      }
+      if(/^[0-9]$/.test(k)){
+        if(keypadMode==='amount'){
+          if(keypadRaw.length<10) keypadRaw+=k;
+        } else if(keypadMode==='counter'){
+          // shift left + push: nowa cyfra na końcu, najstarsza wypada z lewej
+          keypadContext.entered.push(parseInt(k));
+          if(keypadContext.entered.length > 6) keypadContext.entered.shift();
+          rebuildCounterDisplay();
+          // auto-akceptacja po wpisaniu 6 cyfr (cały licznik nadpisany)
+          if(keypadContext.entered.length >= 6){
+            commitKeypad();
+            return;
+          }
+        }
+        renderKeypad();
+      }
+    }
+    // Buduje keypadCounterDigits jako: hint z lewej (na pozycjach niezastąpionych) + entered z prawej
+    function rebuildCounterDisplay(){
+      const hint = keypadContext.hintDigits;
+      const ent = keypadContext.entered;
+      const n = ent.length;
+      // n=0: tylko hint; n=k: ostatnich k pozycji to entered, reszta z hint (przesunięta? NIE - hint zostaje na lewych pozycjach)
+      // Przykład: hint=284756, wpisuję 3 -> 284753 (zastąpiona ostatnia)
+      // Wpisuję jeszcze 9 -> 284739 (ostatnie 2)
+      const result = hint.slice();
+      for(let i=0; i<n; i++){
+        result[6 - n + i] = ent[i];
+      }
+      keypadCounterDigits = result;
+    }
+    function commitKeypad(){
+      if(keypadMode==='amount'){
+        const g=parseInt(keypadRaw||'0',10);
+        if(g>0){
+          const k=keypadContext.provider;
+          if(keypadContext.addMode) revenues[k]=(revenues[k]||0)+g;
+          else revenues[k]=g;
+        }
+        saveState();
+        openMoneyPanel();
+      } else if(keypadMode==='counter'){
+        const val=parseInt(keypadCounterDigits.join(''),10);
+        if(keypadContext.field==='start') counterStart=val;
+        else if(keypadContext.field==='end') counterEnd=val;
+        else if(keypadContext.field==='priv') privKmTotal+=val;
+        saveState();
+        openCounterPanel();
+      }
+    }
+
+    function openCounterPanel(){
+      // Licznik początkowy: jeśli pusty to pokaż lastCounterEnd (z wczoraj) jako podpowiedź
+      const sDisplay = counterStart!==null ? counterStart : (lastCounterEnd!==null ? lastCounterEnd : null);
+      const sIsHint = counterStart===null && lastCounterEnd!==null;
+      const sT=sDisplay!==null?sDisplay:'—';
+      const eT=counterEnd!==null?counterEnd:'—';
+      const pT=privKmTotal>0?privKmTotal:'—';
+      // Punkt 9: przebieg służbowy = końcowy - początkowy - prywatne
+      let kmZaw = null;
+      if(counterEnd !== null && sDisplay !== null){
+        kmZaw = counterEnd - sDisplay - privKmTotal;
+      }
+      const kmZawT = kmZaw !== null ? kmZaw : '—';
+      // Końcowy nie jest disabled jeśli mamy podpowiedź sDisplay (czyli też z lastCounterEnd)
+      const endDis=sDisplay===null?' disabled':'';
+      showOverlay(`
+        <div class="big-panel">
+          <h3>Licznik kilometrów</h3>
+          <div class="counter-fields">
+            <div class="counter-row">
+              <div class="counter-label">Początkowy${sIsHint?' <span style="color:#888;font-weight:400;">(z wczoraj)</span>':''}</div>
+              <div class="counter-value ${sDisplay!==null?'':'empty'}" style="${sIsHint?'color:#aaa;':''}">${sT}</div>
+              <button class="counter-edit" data-cnt="start">✎</button>
+            </div>
+            <div class="counter-row${endDis}">
+              <div class="counter-label">Końcowy</div>
+              <div class="counter-value ${counterEnd!==null?'':'empty'}">${eT}</div>
+              <button class="counter-edit" data-cnt="end">✎</button>
+            </div>
+            <div class="counter-row">
+              <div class="counter-label">km PRIV (dodaj)</div>
+              <div class="counter-value ${privKmTotal>0?'':'empty'}">${pT}</div>
+              <button class="counter-edit" data-cnt="priv">＋</button>
+            </div>
+            <div class="counter-row" style="background:#0a1f0d;">
+              <div class="counter-label" style="color:#7adf8a;">Przebieg służbowy</div>
+              <div class="counter-value ${kmZaw!==null?'':'empty'}" style="${kmZaw!==null?'color:#7adf8a;':''}">${kmZawT}</div>
+              <span style="width:36px;"></span>
+            </div>
+          </div>
+          <div style="flex:1;"></div>
+          <div class="panel-actions">
+            <button class="cancel-btn" data-act="back">←</button>
+            <button class="ok-btn" data-act="ok">✓</button>
+          </div>
+        </div>
+      `);
+      overlay.querySelector('[data-act="back"]').addEventListener('click',(e)=>{ e.stopPropagation(); openMoneyPanel(); });
+      overlay.querySelector('[data-act="ok"]').addEventListener('click',(e)=>{
+        e.stopPropagation();
+        // Jeśli counterStart jeszcze pusty ale mamy lastCounterEnd - akceptuj jako start (potwierdzenie)
+        if(counterStart===null && lastCounterEnd!==null){
+          counterStart = lastCounterEnd;
+        }
+        saveState(); hideOverlay(); renderAll();
+      });
+      overlay.querySelectorAll('[data-cnt]').forEach(b=>{
+        b.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          const f=b.dataset.cnt;
+          let hint=0, label='Licznik';
+          if(f==='start'){
+            hint=counterStart!==null?counterStart:(lastCounterEnd!==null?lastCounterEnd:0);
+            label='Stan licznika początkowy';
+          } else if(f==='end'){
+            hint=counterEnd!==null?counterEnd:(counterStart!==null?counterStart:(lastCounterEnd!==null?lastCounterEnd:0));
+            label='Stan licznika końcowy';
+          } else if(f==='priv'){
+            hint=0; label='Dodaj km prywatne';
+          }
+          openKeypad('counter',{ field:f, hint, label });
+        });
+      });
+    }
+
+    // ===== notatki =====
+    function openNoteEditor(noteId){
+      const ex = noteId!==null?notes.find(n=>n.id===noteId):null;
+      const text=ex?ex.text:'';
+      const icon=ex?ex.icon:'';
+      const alarmTime = ex && ex.alarmTime ? ex.alarmTime : '';
+      const alerts = (ex && Array.isArray(ex.alerts)) ? ex.alerts.slice() : [];
+      // Domyślne wyprzedzenia
+      const defaultOffsets = [15, 30, 60, 120];
+      // Pamiętamy własne wyprzedzenia (jeśli ktoś zedytował przez long-press)
+      const customOffsets = (ex && Array.isArray(ex.customOffsets)) ? ex.customOffsets.slice() : defaultOffsets.slice();
+
+      function offsetLabel(min){
+        if(min < 60) return min + 'm';
+        if(min % 60 === 0) return (min/60) + 'H';
+        return Math.floor(min/60) + 'H' + (min%60) + 'm';
+      }
+
+      showOverlay(`
+        <div class="big-panel">
+          <h3>${ex?'Edytuj notatkę':'Nowa notatka'}</h3>
+          <div class="note-fields">
+            <label>Treść</label>
+            <textarea id="noteText" rows="4" placeholder="Np. kupić wodę...">${text.replace(/</g,'&lt;')}</textarea>
+            <label>Symbol widoczny na karteczce (1–3 znaki)</label>
+            <input id="noteIcon" class="icon-input" maxlength="3" value="${(icon||'').replace(/"/g,'&quot;')}" placeholder="💧" />
+            <label>Godzina alarmu (opcjonalnie, HH:MM)</label>
+            <input id="noteAlarm" class="icon-input" style="max-width:120px;" maxlength="5" value="${alarmTime}" placeholder="14:30" />
+            <label>Wyprzedzenie alarmu</label>
+            <div id="alertButtons" style="display:flex;gap:6px;flex-wrap:wrap;">
+              ${customOffsets.map((off,idx)=>`
+                <button type="button" class="alert-btn ${alerts.includes(off)?'on':''}" data-offset="${off}" data-idx="${idx}"
+                        style="border:none;border-radius:8px;padding:8px 14px;font-size:16px;font-weight:800;cursor:pointer;
+                               background:${alerts.includes(off)?'#5a4a18':'#2a2a2a'};
+                               color:${alerts.includes(off)?'#ffd848':'#ccc'};">
+                  ${offsetLabel(off)}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+          <div style="flex:1;"></div>
+          <div class="panel-actions">
+            <button class="cancel-btn" data-act="cancel">✕</button>
+            <div style="display:flex;gap:8px;">
+              ${ex?'<button class="delete-btn" data-act="delete">🗑</button>':''}
+              <button class="ok-btn" data-act="ok">✓</button>
+            </div>
+          </div>
+        </div>
+      `);
+
+      // Toggle alertów
+      const currentAlerts = alerts.slice();
+      const currentOffsets = customOffsets.slice();
+      let alertEditTimer = null;
+
+      overlay.querySelectorAll('.alert-btn').forEach(btn => {
+        // krótki klik = toggle
+        btn.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          if(btn.dataset._longFired === '1'){ btn.dataset._longFired=''; return; }
+          const off = parseInt(btn.dataset.offset, 10);
+          const i = currentAlerts.indexOf(off);
+          if(i >= 0) currentAlerts.splice(i,1);
+          else currentAlerts.push(off);
+          // odśwież wygląd
+          if(currentAlerts.includes(off)){
+            btn.classList.add('on');
+            btn.style.background='#5a4a18';
+            btn.style.color='#ffd848';
+          } else {
+            btn.classList.remove('on');
+            btn.style.background='#2a2a2a';
+            btn.style.color='#ccc';
+          }
+        });
+        // long-press 2s = edycja wartości
+        let lp=null;
+        btn.addEventListener('pointerdown',(e)=>{
+          lp = setTimeout(()=>{
+            btn.dataset._longFired='1';
+            const idx = parseInt(btn.dataset.idx, 10);
+            const cur = currentOffsets[idx];
+            const v = prompt('Wyprzedzenie w minutach:', String(cur));
+            if(v !== null){
+              const num = parseInt(v.trim(), 10);
+              if(!isNaN(num) && num > 0){
+                // jeśli stary off był aktywny, przepisz na nowy
+                const oldOff = currentOffsets[idx];
+                const wasOn = currentAlerts.indexOf(oldOff);
+                if(wasOn>=0){ currentAlerts.splice(wasOn,1); currentAlerts.push(num); }
+                currentOffsets[idx] = num;
+                btn.dataset.offset = String(num);
+                btn.textContent = offsetLabel(num);
+              }
+            }
+          }, 2000);
+        });
+        btn.addEventListener('pointerup',()=>{ clearTimeout(lp); });
+        btn.addEventListener('pointerleave',()=>{ clearTimeout(lp); });
+        btn.addEventListener('pointercancel',()=>{ clearTimeout(lp); });
+      });
+
+      overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); hideOverlay(); });
+      overlay.querySelector('[data-act="ok"]').addEventListener('click',(e)=>{
+        e.stopPropagation();
+        const t=document.getElementById('noteText').value.trim();
+        const i=document.getElementById('noteIcon').value.trim()||'•';
+        let aT=document.getElementById('noteAlarm').value.trim();
+        // Walidacja czasu
+        if(aT && !/^\d{1,2}:\d{2}$/.test(aT)) aT = '';
+        const alertOffs = currentAlerts.slice().sort((a,b)=>a-b);
+        if(ex){
+          ex.text=t; ex.icon=i;
+          ex.alarmTime = aT;
+          ex.alerts = alertOffs;
+          ex.customOffsets = currentOffsets;
+          // Reset acked przy zmianie
+          ex.ackedAlerts = {};
+        } else {
+          notes.push({
+            id:Date.now(), text:t, icon:i,
+            alarmTime: aT, alerts: alertOffs,
+            customOffsets: currentOffsets,
+            ackedAlerts: {}
+          });
+        }
+        saveState(); hideOverlay(); renderAll();
+      });
+      const del=overlay.querySelector('[data-act="delete"]');
+      if(del) del.addEventListener('click',(e)=>{
+        e.stopPropagation();
+        notes = notes.filter(n=>n.id!==noteId);
+        saveState(); hideOverlay(); renderAll();
+      });
+    }
+
+    // ===== start/stop =====
+    function resetTimeline(){
+      breakActive=false; currentBreakStart=null;
+      breakSegments=[]; exerciseMarkers=[]; breakAdjustMinutes=0;
+    }
+    function setWorkStart(mins, fromEdit=false){
+      // Jeśli poprzednia dniówka jest "zamknięta" (endWorkMinutes ustawiony) - to znaczy że
+      // teraz startuję nową dniówkę. Czyścimy wszystkie dane poprzedniej dniówki PRZED startem.
+      if(endWorkMinutes!==null){
+        // zapamiętaj końcowy licznik na jutro (jeśli jeszcze nie zapisany)
+        if(counterEnd!==null && lastCounterEnd!==counterEnd) lastCounterEnd=counterEnd;
+        resetDayAfterExport();
+      }
+      startWorkMinutes=mins;
+      endWorkMinutes=null;
+      lastExerciseMinutes = fromEdit ? nowMinutes() : mins;
+      resetTimeline();
+      document.getElementById('workBtn').classList.add('on');
+      workDate = todayISO();
+      saveState(); renderAll();
+    }
+    async function endWork(){
+      endWorkMinutes=nowMinutes();
+      if(breakActive && currentBreakStart!==null){
+        breakSegments.push({ start:currentBreakStart, end:endWorkMinutes });
+      }
+      breakActive=false; currentBreakStart=null;
+      document.getElementById('workBtn').classList.remove('on');
+      // zapamiętaj końcowy licznik na jutro
+      if(counterEnd!==null) lastCounterEnd=counterEnd;
+      saveState(); renderAll();
+
+      // Eksport - dane zostają na ekranie po sukcesie. Reset nastąpi dopiero przy nowym START.
+      const url=localStorage.getItem(LS_APPSCRIPT);
+      if(url){
+        showToast('Eksport...','ok');
+        const ok=await doExport(url);
+        if(ok){
+          showToast('Eksport OK. Dane pozostają na ekranie.','ok');
+          saveState(); renderAll();
+        } else {
+          showToast('Eksport nieudany. Spróbuj ponownie.','err');
+        }
+      } else {
+        showToast('Praca zakończona. URL eksportu nie skonfigurowany.','err');
+      }
+    }
+    function resetDayAfterExport(){
+      startWorkMinutes=null; endWorkMinutes=null;
+      lastExerciseMinutes=null;
+      breakActive=false; currentBreakStart=null;
+      breakSegments=[]; exerciseMarkers=[]; breakAdjustMinutes=0;
+      workDate=null;
+      PROVIDERS.forEach(p=>revenues[p.key]=0);
+      counterStart=null; counterEnd=null; privKmTotal=0;
+      potUsedToday=false;
+      // Reset garnka - nawet jeśli był w trakcie grzania albo alarmu z wczoraj
+      potStartedAt=null; potAckedDone=false;
+      // Punkt 7: cel godzinowy wraca do domyślnych 8h
+      workTargetMinutes=480;
+    }
+    function softReset(){
+      // Pełny reset bez eksportu - na potrzeby testowania / przypadkowego uruchomienia
+      resetDayAfterExport();
+      // Także garnek - jakby był aktywny
+      potStartedAt=null; potAckedDone=false;
+      saveState(); renderAll();
+    }
+
+    async function doExport(url){
+      try{
+        const km_total = (counterStart!==null && counterEnd!==null) ? (counterEnd-counterStart) : 0;
+        const km_zaw = Math.max(0, km_total - privKmTotal);
+        const totalInt = Math.floor(getTotalRevenueGroszy()/100);
+        const net = getNetWorkMinutes();
+        const perHour = net>0 ? Math.round(totalInt*60/net) : 0;
+        const perKm = km_zaw>0 ? (totalInt/km_zaw) : 0;
+
+        const payload = {
+          date: workDate || todayISO(),
+          start: startWorkMinutes!==null?formatHHMM(startWorkMinutes):'',
+          end: endWorkMinutes!==null?formatHHMM(endWorkMinutes):'',
+          work_duration: minutesToHHMM(Math.max(0,net)),
+          break_duration: minutesToHHMM(getTotalBreakMinutes(true)),
+          counter_start: counterStart!==null?counterStart:'',
+          counter_end: counterEnd!==null?counterEnd:'',
+          km_priv: privKmTotal,
+          km_zaw: km_zaw,
+          uber: (revenues.uber||0)/100,
+          bolt: (revenues.bolt||0)/100,
+          taxi: (revenues.taxi||0)/100,
+          priv: (revenues.priv||0)/100,
+          freenow: (revenues.freenow||0)/100,
+          agap: (revenues.agap||0)/100,
+          tip: (revenues.tip||0)/100,
+          other: (revenues.other||0)/100,
+          total: totalInt,
+          per_hour: perHour,
+          per_km: Number(perKm.toFixed(2))
+        };
+        await fetch(url, {
+          method:'POST', mode:'no-cors',
+          headers:{ 'Content-Type':'text/plain' },
+          body: JSON.stringify(payload)
+        });
+        return true;
+      }catch(e){ return false; }
+    }
+
+    function showToast(msg, kind='ok'){
+      const t=document.createElement('div');
+      t.className=`toast ${kind}`;
+      t.textContent=msg;
+      document.body.appendChild(t);
+      setTimeout(()=>t.remove(), 3500);
+    }
+
+    // ===== event listeners =====
+
+    // === Helper: setup long-press na przycisku z akcją 3s + akcja na zwykły click ===
+    // - clickAction: krótki klik (uruchomić tylko jeśli długi nie odpalił)
+    // - longAction: 3s przytrzymanie
+    // - canTrigger: opcjonalna funkcja dopuszczalności (np. nie wchodź w edycję gdy END-confirm)
+    function setupLongPress(btn, clickAction, longAction, canTrigger){
+      let pressTimer = null;
+      let pressStarted = 0;
+      let longFired = false;
+      let cancelled = false;
+
+      function start(e){
+        if(canTrigger && !canTrigger(e)) return;
+        if(e && e.target && e.target.closest && e.target.closest('.edit-hint')){ /* hint nie blokuje, jest pointer-events:none, ale zachowawczo */ }
+        cancelled = false;
+        longFired = false;
+        pressStarted = Date.now();
+        btn.classList.add('lp-active');
+        if(navigator.vibrate){ try{ navigator.vibrate([15]); }catch(e){} }
+        pressTimer = setTimeout(()=>{
+          if(cancelled) return;
+          longFired = true;
+          if(navigator.vibrate){ try{ navigator.vibrate([60,40,60]); }catch(e){} }
+          btn.classList.remove('lp-active');
+          longAction();
+        }, 3000);
+      }
+      function endPress(){
+        clearTimeout(pressTimer);
+        btn.classList.remove('lp-active');
+        if(longFired) return;
+        if(cancelled) return;
+        // krótki klik - uruchom tylko jeśli upłynęło < 3s i nie był to longpress
+        clickAction();
+      }
+      function cancel(){
+        cancelled = true;
+        clearTimeout(pressTimer);
+        btn.classList.remove('lp-active');
+      }
+
+      btn.addEventListener('pointerdown', (e)=>{ start(e); });
+      btn.addEventListener('pointerup',   (e)=>{ endPress(); });
+      btn.addEventListener('pointerleave',(e)=>{ cancel(); });
+      btn.addEventListener('pointercancel',(e)=>{ cancel(); });
+    }
+
+    // === Animacja END - fala + odliczanie 5s. Może być red (koniec dniówki) lub yellow (reset). ===
+    let endConfirmActive = false;
+    let endConfirmTimer = null;
+    let endConfirmInterval = null;
+    let endConfirmAction = null;   // funkcja do wywołania przy potwierdzeniu
+
+    function startEndConfirm(opts){
+      if(endConfirmActive) return;
+      opts = opts || {};
+      const variant = opts.variant || 'red';
+      const title = opts.title || 'POTWIERDŹ<br>KONIEC DNIÓWKI';
+      const action = opts.action || endWork;
+      endConfirmActive = true;
+      endConfirmAction = action;
+
+      const ov = document.getElementById('endConfirmOverlay');
+      const ctr = document.getElementById('endConfirmCounter');
+      const ttl = ov.querySelector('.end-confirm-title');
+      ttl.innerHTML = title;
+      ov.classList.remove('hidden','yellow');
+      if(variant === 'yellow') ov.classList.add('yellow');
+
+      // restart animacji fali (re-trigger)
+      const wave = ov.querySelector('.end-wave');
+      wave.style.animation='none';
+      wave.offsetHeight;
+      wave.style.animation='';
+
+      let secs = 5;
+      ctr.textContent = secs;
+      if(navigator.vibrate){ try{ navigator.vibrate([40,40,40]); }catch(e){} }
+
+      endConfirmInterval = setInterval(()=>{
+        secs--;
+        if(secs <= 0){
+          ctr.textContent = '0';
+          cancelEndConfirm({collapse:true});
+        } else {
+          ctr.textContent = secs;
+        }
+      }, 1000);
+
+      endConfirmTimer = setTimeout(()=>{
+        cancelEndConfirm({collapse:true});
+      }, 5000);
+    }
+    function cancelEndConfirm(opts){
+      const collapse = opts && opts.collapse;
+      endConfirmActive = false;
+      endConfirmAction = null;
+      clearTimeout(endConfirmTimer);
+      clearInterval(endConfirmInterval);
+      const ov = document.getElementById('endConfirmOverlay');
+      if(collapse){
+        // Zwiń wstecz (animacja), dopiero potem ukryj
+        ov.classList.add('collapsing');
+        setTimeout(()=>{
+          ov.classList.add('hidden');
+          ov.classList.remove('yellow','collapsing');
+        }, 500);
+      } else {
+        ov.classList.add('hidden');
+        ov.classList.remove('yellow','collapsing');
+      }
+    }
+    function confirmEndAndFinish(){
+      const a = endConfirmAction;
+      cancelEndConfirm();  // bez collapse - natychmiastowe ukrycie
+      if(typeof a === 'function') a();
+    }
+
+    // klik w nakładkę = potwierdzenie
+    document.getElementById('endConfirmOverlay').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      confirmEndAndFinish();
+    });
+
+    // === Long-press na środku tarczy = soft reset (3s) ===
+    // Tworzymy niewidoczną strefę dotykową na środku tarczy
+    (function setupClockResetLongPress(){
+      const clockWrap = document.querySelector('.clock-wrap');
+      if(!clockWrap) return;
+      const zone = document.createElement('div');
+      zone.id = 'clockResetZone';
+      zone.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18%;height:18%;border-radius:50%;z-index:40;cursor:pointer;background:transparent;';
+      clockWrap.appendChild(zone);
+
+      let pressTimer=null, pressStarted=0, longFired=false, cancelled=false;
+      function start(){
+        if(endConfirmActive) return;  // nie startuj resetu gdy już trwa potwierdzenie
+        cancelled=false; longFired=false;
+        pressStarted=Date.now();
+        if(navigator.vibrate){ try{ navigator.vibrate([15]); }catch(e){} }
+        pressTimer=setTimeout(()=>{
+          if(cancelled) return;
+          longFired=true;
+          if(navigator.vibrate){ try{ navigator.vibrate([60,40,60]); }catch(e){} }
+          startEndConfirm({
+            variant:'yellow',
+            title:'POTWIERDŹ<br>RESET',
+            action: softReset
+          });
+        }, 3000);
+      }
+      function endP(){
+        clearTimeout(pressTimer);
+      }
+      function cancel(){
+        cancelled=true;
+        clearTimeout(pressTimer);
+      }
+      zone.addEventListener('pointerdown', start);
+      zone.addEventListener('pointerup', endP);
+      zone.addEventListener('pointerleave', cancel);
+      zone.addEventListener('pointercancel', cancel);
+    })();
+
+    // === WORK button ===
+    setupLongPress(
+      document.getElementById('workBtn'),
+      // krótki klik
+      ()=>{
+        if(endConfirmActive){
+          // klik gdy się pokazuje "POTWIERDŹ" → potwierdzenie
+          confirmEndAndFinish();
+          return;
+        }
+        // Punkt 3: jeśli trwa przerwa - najpierw ją zakończ, potem standardowa procedura
+        if(breakActive && currentBreakStart!==null){
+          const now=nowMinutes();
+          breakSegments.push({ start:currentBreakStart, end:now });
+          breakActive = false;
+          currentBreakStart = null;
+          saveState(); renderAll();
+        }
+        if(startWorkMinutes!==null && endWorkMinutes===null){
+          // praca trwa - włącz zabezpieczenie zamiast od razu kończyć
+          startEndConfirm();
+        } else {
+          // brak pracy lub już zakończona - start nowej
+          setWorkStart(nowMinutes(), false);
+        }
+      },
+      // długi klik 3s = edycja godziny startu
+      ()=> openTimeEditor('start')
+    );
+
+    // === EXERCISE - klik = przywracanie koła z animacją ===
+    document.getElementById('exerciseBtn').addEventListener('click', ()=>{
+      if(startWorkMinutes===null || endWorkMinutes!==null) return;
+      const now=nowMinutes();
+      lastExerciseMinutes=now;
+      exerciseMarkers.push(now);
+      saveState();
+      // Uruchom animację przywracania koła
+      startWheelRestore();
+    });
+
+    // === BREAK ===
+    setupLongPress(
+      document.getElementById('breakBtn'),
+      // krótki klik
+      ()=>{
+        if(startWorkMinutes===null || endWorkMinutes!==null) return;
+        const now=nowMinutes();
+        if(!breakActive){ breakActive=true; currentBreakStart=now; }
+        else {
+          breakActive=false;
+          if(currentBreakStart!==null) breakSegments.push({ start:currentBreakStart, end:now });
+          currentBreakStart=null;
+        }
+        saveState(); renderAll();
+      },
+      // długi klik = korekta sumy przerw
+      ()=> openTimeEditor('breakAdjust')
+    );
+
+    // === POT ===
+    setupLongPress(
+      document.getElementById('potBtn'),
+      // krótki klik
+      ()=>{
+        if(potStartedAt===null){
+          potStartedAt=Date.now();
+          potAckedDone=false;
+        } else {
+          const rem=potRemainingSeconds();
+          if(rem>0){
+            // przerwanie grzania w trakcie
+            potStartedAt=null;
+            potAckedDone=false;
+          } else {
+            // alarm - potwierdzenie wyłączenia grzania
+            potAckedDone=true;
+          }
+        }
+        saveState(); renderAll();
+      },
+      // długi klik = ustaw czas grzania
+      ()=> openTimeEditor('pot')
+    );
+
+    // === MONEY === (otwarcie panelu obrotów)
+    document.getElementById('moneyBtn').addEventListener('click', ()=> openMoneyPanel());
+    // === COIN === (też otwiera panel obrotów - to ten sam panel)
+    document.getElementById('coinBtn').addEventListener('click', ()=> openMoneyPanel());
+
+    // trick: 3x puk w wersję = konfiguracja URL Apps Script
+    let vt=0, vtT=null;
+    document.querySelector('.version').addEventListener('click', ()=>{
+      vt++;
+      clearTimeout(vtT);
+      vtT=setTimeout(()=>vt=0, 800);
+      if(vt>=3){
+        vt=0;
+        const cur=localStorage.getItem(LS_APPSCRIPT)||'';
+        const v=prompt('URL Google Apps Script (Web App):', cur);
+        if(v!==null){
+          localStorage.setItem(LS_APPSCRIPT, v.trim());
+          showToast(v.trim()?'URL zapisany':'URL wyczyszczony', 'ok');
+        }
+      }
+    });
+
+    // ===== PWA =====
+    if('serviceWorker' in navigator){
+      window.addEventListener('load', ()=>{
+        navigator.serviceWorker.register('sw.js').then(reg => {
+          // Sprawdzaj aktualizacje co 60 sek - automatycznie pobiera nowy sw.js
+          setInterval(()=>{ reg.update().catch(()=>{}); }, 60000);
+
+          // Gdy znaleziono nowy SW i jest gotowy do aktywacji - od razu go aktywuj i przeładuj stronę
+          reg.addEventListener('updatefound', ()=>{
+            const newSW = reg.installing;
+            if(!newSW) return;
+            newSW.addEventListener('statechange', ()=>{
+              if(newSW.state === 'installed' && navigator.serviceWorker.controller){
+                // Mamy nowy SW gotowy - poproś o przejęcie kontroli
+                newSW.postMessage({type:'SKIP_WAITING'});
+              }
+            });
+          });
+        }).catch(()=>{});
+
+        // Gdy aktywny SW się zmieni - przeładuj stronę żeby załadować nowy index.html
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+          if(refreshing) return;
+          refreshing = true;
+          window.location.reload();
+        });
+      });
+    }
+    let deferredInstallPrompt=null;
+    const installBtn=document.getElementById('installBtn');
+    window.addEventListener('beforeinstallprompt',(e)=>{
+      e.preventDefault();
+      deferredInstallPrompt=e;
+      installBtn.classList.add('visible');
+    });
+    installBtn.addEventListener('click', async ()=>{
+      if(!deferredInstallPrompt) return;
+      installBtn.classList.remove('visible');
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt=null;
+    });
+    window.addEventListener('appinstalled',()=>{
+      installBtn.classList.remove('visible');
+      deferredInstallPrompt=null;
+    });
+
+    // ===== init =====
+    loadState();
+    if(startWorkMinutes!==null && endWorkMinutes===null){
+      document.getElementById('workBtn').classList.add('on');
+    }
+    buildDots();
+    renderAll();
+    // Pierwszy render rolki może paść jeśli clientHeight=0 przed layoutem.
+    // Po pierwszej klatce wymuszamy ponowny render dla pewności.
+    requestAnimationFrame(()=>{ renderAll(); });
+
+    setInterval(()=>{ blinkState=!blinkState; renderAll(); }, 1000);
+
+    // 100ms: płynna animacja radaru, ognia garnka, przywracania koła
+    setInterval(()=>{
+      if(startWorkMinutes!==null && lastExerciseMinutes!==null && getEffectiveExerciseElapsed()>60){
+        renderRadarSweep();
+      }
+      if(potStartedAt!==null){
+        renderPotButton();
+      }
+      // Animacja przywracania koła trwa 2s - aktualizuj klatki
+      if(_wheelsState.restoring){
+        renderWheels(0);
+      }
+    }, 100);
+
+    // auto-save co minutę
+    setInterval(()=>saveState(), 60000);
+  </script>
+</body>
+</html>

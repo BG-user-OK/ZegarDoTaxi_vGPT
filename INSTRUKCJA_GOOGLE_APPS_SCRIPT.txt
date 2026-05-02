@@ -1,0 +1,195 @@
+INSTRUKCJA KONFIGURACJI EKSPORTU DO GOOGLE SHEETS
+===================================================
+
+Wykonaj jednorazowo — zajmie 5-10 minut. Potem codziennie eksport działa automatycznie,
+bez żadnego klikania.
+
+
+KROK 1 — UTWÓRZ ARKUSZ
+-----------------------
+
+1. Wejdź na https://sheets.google.com
+2. Kliknij duży [+] żeby utworzyć nowy pusty arkusz
+3. Nadaj mu nazwę, np. "Tarcza - dane pracy"
+4. W pierwszym wierszu wpisz nagłówki kolumn w dokładnie takiej kolejności:
+
+   A1: Data
+   B1: Start
+   C1: Koniec
+   D1: Czas pracy (min)
+   E1: Przerwy (min)
+   F1: Licznik pocz.
+   G1: Licznik końc.
+   H1: km PRIV
+   I1: km zawodowe
+   J1: UBER
+   K1: BOLT
+   L1: TAXI
+   M1: PRIV
+   N1: FREENOW
+   O1: AGAP
+   P1: NAPIWEK
+   Q1: INNE
+   R1: SUMA
+   S1: zł/h
+   T1: zł/km
+
+5. Pogrub pierwszy wiersz (opcjonalne, dla czytelności).
+
+
+KROK 2 — DODAJ SKRYPT
+----------------------
+
+1. Mając otwarty arkusz, kliknij w menu: Rozszerzenia → Apps Script
+2. Otworzy się nowa karta z edytorem skryptów
+3. Usuń całą zawartość pliku Code.gs (cokolwiek tam jest)
+4. Wklej DOKŁADNIE taki kod:
+
+------------ KOPIUJ OD TEJ LINII ------------
+
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+
+    sheet.appendRow([
+      data.date || '',
+      data.start || '',
+      data.end || '',
+      data.work_minutes || 0,
+      data.break_minutes || 0,
+      data.counter_start === '' ? '' : data.counter_start,
+      data.counter_end === '' ? '' : data.counter_end,
+      data.km_priv || 0,
+      data.km_zaw || 0,
+      data.uber || 0,
+      data.bolt || 0,
+      data.taxi || 0,
+      data.priv || 0,
+      data.freenow || 0,
+      data.agap || 0,
+      data.tip || 0,
+      data.other || 0,
+      data.total || 0,
+      data.per_hour || 0,
+      data.per_km || 0
+    ]);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: false, error: String(err) }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet() {
+  return ContentService
+    .createTextOutput('Tarcza endpoint działa. Użyj POST.')
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
+------------ KOPIUJ DO TEJ LINII ------------
+
+5. Kliknij ikonę dyskietki (Zapisz) lub Ctrl+S. Nadaj projektowi dowolną nazwę.
+
+
+KROK 3 — WDRÓŻ JAKO APLIKACJĘ WEB
+-----------------------------------
+
+1. W edytorze skryptów kliknij niebieski przycisk "Wdróż" (prawy górny róg)
+2. Wybierz: "Nowe wdrożenie"
+3. Kliknij ikonkę koła zębatego obok "Wybierz typ" i wybierz: "Aplikacja internetowa"
+4. Wypełnij pola:
+   - Opis: może zostać pusty, albo np. "Tarcza"
+   - Wykonaj jako: "Ja (twój_email@gmail.com)"
+   - Kto ma dostęp: "Wszyscy"
+5. Kliknij "Wdróż"
+
+6. Za pierwszym razem Google poprosi o zatwierdzenie uprawnień:
+   - Kliknij "Autoryzuj dostęp"
+   - Wybierz swoje konto Google
+   - Zobaczysz ostrzeżenie "Google nie zweryfikowało tej aplikacji" — to normalne,
+     bo to twój własny prywatny skrypt
+   - Kliknij małe "Zaawansowane" na dole
+   - Kliknij "Przejdź do <nazwa projektu> (niebezpieczne)"
+   - Kliknij "Zezwól"
+
+7. Dostaniesz długi URL w formacie:
+   https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxxx.../exec
+
+   SKOPIUJ TEN URL — będzie potrzebny w następnym kroku.
+   Kliknij "Gotowe".
+
+
+KROK 4 — WPROWADŹ URL DO APLIKACJI
+------------------------------------
+
+1. Otwórz aplikację Tarcza (czy to w przeglądarce czy już zainstalowaną jako PWA)
+2. Znajdź napis "v:1.10" w prawym dolnym rogu
+3. KLIKNIJ W NIEGO 3 RAZY z rzędu (szybko, w ciągu sekundy)
+4. Otworzy się okienko "URL Google Apps Script (Web App):"
+5. Wklej skopiowany URL
+6. Kliknij OK
+
+Na dole powinien pokazać się komunikat "URL zapisany".
+
+
+KROK 5 — TEST
+--------------
+
+Żeby sprawdzić czy wszystko działa:
+
+1. W aplikacji kliknij przycisk START (zielony, lewy górny)
+2. Od razu kliknij go jeszcze raz — zakończysz "pracę" trwającą kilka sekund
+3. Pojawi się toast "Eksport..." a potem "Eksport OK"
+4. Wejdź do swojego arkusza Google — powinien pojawić się nowy wiersz
+
+Jeśli pojawi się "Eksport nieudany":
+- sprawdź czy URL jest poprawny (trzy puknięcia w v:1.10)
+- sprawdź czy w arkuszu Google faktycznie nic nie przybyło (czasem mimo błędu po drodze
+  wiersz jednak się zapisuje — tryb "no-cors" w przeglądarce uniemożliwia odczyt
+  szczegółów odpowiedzi, ale dane mogły dojść)
+
+
+WAŻNE UWAGI
+------------
+
+• Po każdym udanym eksporcie aplikacja automatycznie czyści dane dnia (godziny, obroty,
+  licznik) żeby przygotować się na jutro. Notatki i ostatni licznik końcowy zostają.
+
+• Przy zakończeniu pracy BEZ skonfigurowanego URL pojawi się komunikat
+  "URL eksportu nie skonfigurowany" — dane pozostaną w aplikacji, możesz je
+  potem eksportować ręcznie (patrz niżej) albo po prostu je spisać.
+
+• Jeśli zmienisz skrypt w Apps Script (np. dodasz jakąś nową kolumnę), musisz ZNOWU
+  kliknąć "Wdróż → Zarządzaj wdrożeniami" i wybrać "Edytuj ołówek → Nowa wersja".
+  URL się NIE zmieni.
+
+• Apps Script ma darmowe limity (tysiące wywołań dziennie) — dla jednego eksportu
+  dziennie jesteś bardzo bezpieczny.
+
+
+ROZWIĄZYWANIE PROBLEMÓW
+------------------------
+
+❓ Jak sprawdzić co pamięta aplikacja (jakie mam wpisane obroty, czy URL jest OK)?
+   → Otwórz DevTools przeglądarki (F12 na komputerze) → Application → Local Storage
+     → zobaczysz klucze tarcza_state_v1, tarcza_persist_v1, tarcza_appscript_url.
+   → Na telefonie: łatwiej po prostu spróbować zakończyć pracę — jeśli widzisz
+     toast "Eksport OK" to URL jest dobry.
+
+❓ Jak zmienić URL eksportu?
+   → Znowu 3x puknij w "v:1.10" w prawym dolnym rogu — wpisz nowy URL.
+   → Żeby usunąć URL całkowicie: puknij 3x, zostaw puste pole, OK.
+
+❓ Czy ktoś inny może zobaczyć moje dane?
+   → Nie. Arkusz jest twój prywatny. Skrypt jest twój prywatny. URL nawet
+     ustawiony na "wszyscy" pozwala tylko na WYSŁANIE danych do twojego arkusza —
+     nikt nie może odczytać jego zawartości przez ten URL.
+
+❓ Co jeśli zmienię telefon?
+   → Odtwórz apkę na nowym telefonie, zainstaluj jako PWA, puknij 3x w wersję
+     i wklej ten sam URL. Historia w arkuszu zostaje nietknięta.
