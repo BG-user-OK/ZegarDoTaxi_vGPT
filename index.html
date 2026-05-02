@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_1.0: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_1.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -171,7 +171,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_1.0: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_1.1: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -679,7 +679,7 @@
     /* Pasek ognia półprzezroczysty żeby nie zasłaniał obrazka */
     .pot-fire-bar{
       position:absolute; bottom:0; left:0; right:0;
-      background:linear-gradient(0deg, rgba(122,0,0,.85), rgba(212,32,32,.7));
+      background:linear-gradient(0deg, rgba(255,28,0,.92), rgba(255,96,0,.82));
       border-radius:0 0 14px 14px;
       z-index:2; transition:height 0.8s linear;
       pointer-events:none;
@@ -1352,7 +1352,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_1.0</div>
+  <div class="version">vGPT_1.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -1408,7 +1408,7 @@
     let keypadCounterDigits = [];
     let keypadCursorFromRight = 0;
 
-    const cx=200, cy=200, radius=196;
+    const cx=200, cy=200, radius=200;
     let blinkState = false;
 
     // ===== localStorage =====
@@ -1590,7 +1590,7 @@
       dot.setAttribute('filter','url(#glow)');
       gMin.appendChild(dot);
       // Etykieta minut na zewnątrz
-      const lblR = radius + 18;
+      const lblR = radius + 17;
       const lblX = cx + Math.cos(mRad) * lblR, lblY = cy + Math.sin(mRad) * lblR;
       const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
       lbl.setAttribute('x', lblX.toFixed(2)); lbl.setAttribute('y', lblY.toFixed(2));
