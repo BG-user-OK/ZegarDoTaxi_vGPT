@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_1.4: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_1.5: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -132,13 +132,15 @@
       height:calc(var(--note-size, 60px) * 1.22);
       flex-direction:column;
       justify-content:flex-start;
-      gap:3px;
+      gap:2px;
       padding:5px 4px 3px;
     }
     .note-icon-main{
       flex:0 0 auto;
       min-width:0;
       width:100%;
+      margin-top:auto;
+      margin-bottom:auto;
       text-align:center;
       overflow:hidden;
       text-overflow:clip;
@@ -148,7 +150,7 @@
     .note-time-mini{
       flex:0 0 auto;
       max-width:100%;
-      margin-top:auto;
+      margin-top:0;
       transform:translateY(1px);
       font-size:calc(var(--note-size, 60px) * 0.21);
       line-height:1;
@@ -203,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_1.4: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_1.5: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1195,7 +1197,13 @@
       background:#222; color:#d5d5d5; font-size:16px;
     }
 
+    .note-panel{
+      padding-top:2px;
+      gap:3px;
+    }
     .note-panel h3{
+      margin:0 0 1px;
+      line-height:1;
       color:#f2f2f2;
       font-size:22px;
       letter-spacing:1px;
@@ -1253,6 +1261,11 @@
       align-items:center;
       justify-content:space-between;
       gap:8px;
+    }
+    .note-alarm-row label{
+      flex:1 1 auto;
+      min-width:0;
+      line-height:1.15;
     }
     .note-alarm-toggle{
       border:none;
@@ -1475,7 +1488,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_1.4</div>
+  <div class="version">vGPT_1.5</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2947,6 +2960,7 @@
       let noteAlarmEnabled = ex ? !!storedAlarmTime : true;
       const alerts = (ex && Array.isArray(ex.alerts)) ? ex.alerts.slice() : [0];
       const customOffsets = normalizeNoteOffsets(ex && Array.isArray(ex.customOffsets) ? ex.customOffsets : null);
+      const currentTimeLabel = formatHHMM(nowMinutes());
 
       const recentButtons = recentNoteSymbols.map(sym=>`
         <button type="button" class="recent-symbol-btn" data-symbol="${escapeHtml(sym)}">${escapeHtml(sym)}</button>
@@ -2954,12 +2968,12 @@
 
       showOverlay(`
         <div class="big-panel note-panel">
-          <h3>${ex?'Edytuj notatkę':'Nowa notatka'}</h3>
+          <h3>${ex?'EDIT NOTE':'NEW NOTE'}</h3>
           <div class="note-fields">
             <label>Treść</label>
             <textarea id="noteText" rows="4" placeholder="Np. kupić wodę...">${escapeHtml(text)}</textarea>
             <div class="note-alarm-row">
-              <label style="padding-left:4px;">Godzina alarmu</label>
+              <label style="padding-left:4px;">ALARM TIME (now: ${currentTimeLabel})</label>
               <button type="button" class="note-alarm-toggle" id="noteAlarmToggle">Alarm</button>
             </div>
             <div class="note-time-control" id="noteTimeControl">
