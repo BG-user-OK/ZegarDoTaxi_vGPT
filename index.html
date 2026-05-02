@@ -166,12 +166,13 @@
     .controls{
       width:min(96vw, 620px);
       display:grid; grid-template-columns:repeat(3, 1fr);
-      grid-auto-rows:1fr; gap:6px;
+      grid-auto-rows:auto; column-gap:6px; row-gap:2px;
       align-items:end;
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      aspect-ratio:1/1.5 !important;
+      /* vGPT_1.0: matches the size and baseline of the other top-row buttons. */
+      aspect-ratio:1/1 !important;
       align-self:end;
     }
 
@@ -1407,7 +1408,7 @@
     let keypadCounterDigits = [];
     let keypadCursorFromRight = 0;
 
-    const cx=200, cy=200, radius=180;
+    const cx=200, cy=200, radius=196;
     let blinkState = false;
 
     // ===== localStorage =====
@@ -1589,7 +1590,7 @@
       dot.setAttribute('filter','url(#glow)');
       gMin.appendChild(dot);
       // Etykieta minut na zewnątrz
-      const lblR = radius + 22;
+      const lblR = radius + 18;
       const lblX = cx + Math.cos(mRad) * lblR, lblY = cy + Math.sin(mRad) * lblR;
       const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
       lbl.setAttribute('x', lblX.toFixed(2)); lbl.setAttribute('y', lblY.toFixed(2));
