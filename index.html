@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_1.3: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_1.4: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -129,11 +129,11 @@
     .note-sticker:active{ transform:scale(.96); }
     .note-sticker.with-time{
       width:var(--note-size, 68px);
-      height:calc(var(--note-size, 60px) * 1.14);
+      height:calc(var(--note-size, 60px) * 1.22);
       flex-direction:column;
-      justify-content:center;
-      gap:2px;
-      padding:3px 4px;
+      justify-content:flex-start;
+      gap:3px;
+      padding:5px 4px 3px;
     }
     .note-icon-main{
       flex:0 0 auto;
@@ -148,7 +148,9 @@
     .note-time-mini{
       flex:0 0 auto;
       max-width:100%;
-      font-size:calc(var(--note-size, 60px) * 0.22);
+      margin-top:auto;
+      transform:translateY(1px);
+      font-size:calc(var(--note-size, 60px) * 0.21);
       line-height:1;
       font-weight:900;
       color:#2c2100;
@@ -201,7 +203,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_1.3: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_1.4: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1272,6 +1274,14 @@
       font-size:18px;
       font-weight:900;
       cursor:pointer;
+      background:#2a2a2a;
+      color:#eeeeee;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    .alert-btn.on{
+      background:#5a4a18;
+      color:#ffd848;
+      box-shadow:inset 0 0 0 2px rgba(255,216,72,.45), 0 0 12px rgba(255,216,72,.25);
     }
     .recent-symbols{
       display:flex;
@@ -1465,7 +1475,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_1.3</div>
+  <div class="version">vGPT_1.4</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2991,7 +3001,7 @@
         </div>
       `);
 
-      const currentAlerts = alerts.slice();
+      const currentAlerts = [...new Set(alerts.map(x=>parseInt(x,10)).filter(x=>Number.isFinite(x)))];
       const currentOffsets = customOffsets.slice();
 
       function refreshAlarmUi(){
@@ -3003,20 +3013,17 @@
         tgl.textContent = noteAlarmEnabled ? 'Alarm ON' : 'Bez alarmu';
         ctrl.classList.toggle('off', !noteAlarmEnabled);
       }
-      function enableAlarm(){
+      function enableAlarm(addDefault=true){
         noteAlarmEnabled = true;
-        if(currentAlerts.length === 0) currentAlerts.push(0);
+        if(addDefault && currentAlerts.length === 0) currentAlerts.push(0);
       }
       function styleAlertButton(btn){
         const off = parseInt(btn.dataset.offset, 10);
+        btn.setAttribute('aria-pressed', currentAlerts.includes(off) ? 'true' : 'false');
         if(currentAlerts.includes(off)){
           btn.classList.add('on');
-          btn.style.background='#5a4a18';
-          btn.style.color='#ffd848';
         } else {
           btn.classList.remove('on');
-          btn.style.background='#2a2a2a';
-          btn.style.color='#eeeeee';
         }
       }
 
@@ -3045,7 +3052,7 @@
         btn.addEventListener('click', (e)=>{
           e.stopPropagation();
           if(btn.dataset._longFired === '1'){ btn.dataset._longFired=''; return; }
-          enableAlarm();
+          enableAlarm(false);
           const off = parseInt(btn.dataset.offset, 10);
           const i = currentAlerts.indexOf(off);
           if(i >= 0) currentAlerts.splice(i,1);
