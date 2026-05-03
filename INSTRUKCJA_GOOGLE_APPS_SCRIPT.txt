@@ -1,8 +1,8 @@
-INSTRUKCJA KONFIGURACJI EKSPORTU DO GOOGLE SHEETS - vGPT_1.9
+INSTRUKCJA KONFIGURACJI EKSPORTU DO GOOGLE SHEETS - vGPT_1.9.1
 =============================================================
 
-Ta wersja instrukcji dotyczy aplikacji Tarcza czasu pracy vGPT_1.9.
-Wersja vGPT_1.9 jest oparta na wcześniej rozwijanej wersji v:1.28 stworzonej przez inne AI.
+Ta wersja instrukcji dotyczy aplikacji Tarcza czasu pracy vGPT_1.9.1.
+Wersja vGPT_1.9.1 jest oparta na wcześniej rozwijanej wersji v:1.28 stworzonej przez inne AI.
 
 CEL
 ---
@@ -28,34 +28,36 @@ Przykłady:
 WYMAGANA KOLEJNOŚĆ KOLUMN
 -------------------------
 
-Skrypt zapisuje dane dokładnie do kolumn A:U:
+Skrypt zapisuje dane dokładnie do kolumn A:V:
 
   A  Data
-  B  SUMA
-  C  zł/h
-  D  zł/km
-  E  Czas pracy
-  F  Start
-  G  Koniec
-  H  Przerwy
-  I  Licznik pocz.
-  J  Licznik końc.
-  K  km zawodowe
-  L  km PRIV
-  M  UBER
-  N  BOLT
-  O  TAXI
-  P  PRIV
-  Q  FREENOW
-  R  AGAP
-  S  NAPIWEK
-  T  INNE
-  U  świnka
+  B  Dzień tygodnia (formuła odwołująca się do daty z kolumny A)
+  C  SUMA
+  D  zł/h
+  E  zł/km
+  F  Czas pracy
+  G  Start
+  H  Koniec
+  I  Przerwy
+  J  Licznik pocz.
+  K  Licznik końc.
+  L  km zawodowe
+  M  km PRIV
+  N  UBER
+  O  BOLT
+  P  TAXI
+  Q  PRIV
+  R  FREENOW
+  S  AGAP
+  T  NAPIWEK
+  U  INNE
+  V  świnka
 
 WAŻNE:
 - Skrypt NIE modyfikuje wiersza 1.
 - Skrypt NIE ustawia kolorów, fontów, szerokości kolumn ani innych formatów.
 - Skrypt wpisuje tylko wartości i formuły do odpowiedniego wiersza dnia.
+- W kolumnie B skrypt wpisuje formułę typu =A2, =A3 itd.; formatowanie arkusza pokazuje z niej dzień tygodnia.
 - SUMA, zł/h i zł/km są formułami, więc po ręcznej zmianie kwoty dostawcy arkusz sam przeliczy wyniki.
 - Formuły zł/h i zł/km używają średnika jako separatora argumentów, zgodnie z polską lokalizacją Google Sheets.
 
@@ -109,7 +111,7 @@ JAK WKLEIĆ NOWY SKRYPT
 4. Usuń całą starą zawartość pliku.
 5. Skopiuj całą zawartość pliku:
 
-   GOOGLE_APPS_SCRIPT_vGPT_1.9.txt
+   GOOGLE_APPS_SCRIPT_vGPT_1.9.1.txt
 
 6. Wklej ją do Code.gs.
 7. Zapisz projekt.
@@ -123,11 +125,11 @@ URL aplikacji webowej nie powinien się zmienić.
 WAŻNE PO AKTUALIZACJI
 ---------------------
 
-- W aplikacji vGPT_1.9 działa źródło przychodu: ŚWINKA.
+- W aplikacji vGPT_1.9.1 działa źródło przychodu: ŚWINKA.
 - Ikona tego źródła powinna znajdować się w:
 
   Photos/swinka.png
 
 - Jeśli pliku ikony jeszcze nie ma, aplikacja nadal działa i pokazuje tekst ŚWINKA.
-- Kolumna U w arkuszu odpowiada za wartość ŚWINKA.
-- Formuła SUMA w kolumnie B sumuje kolumny M:U.
+- Kolumna V w arkuszu odpowiada za wartość ŚWINKA.
+- Formuła SUMA w kolumnie C sumuje kolumny N:V.
