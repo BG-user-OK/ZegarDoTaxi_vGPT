@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_1.6: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_1.7: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_1.6: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_1.7: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -815,13 +815,13 @@
       transform:translate(-50%,-50%);
       z-index:20;
       text-align:center; pointer-events:none;
-      font-size:clamp(20px,5.6vw,32px);
+      font-size:clamp(20px,5.4vw,32px);
       font-weight:800;
       color:var(--dial-number);
       line-height:1.2;
       text-shadow:0 0 8px rgba(220,220,225,.55),0 0 16px rgba(200,200,210,.35);
-      /* Ograniczenie do czarnego koła w SVG (r=70) - dopasować do circle w SVG */
-      width:32%; height:32%;
+      /* Ograniczenie do czarnego koła w SVG (r=75) - zgodne z wewnętrznym promieniem wskazówki godzinowej. */
+      width:45%; height:45%;
       border-radius:50%;
       overflow:hidden;
       display:flex; flex-direction:column;
@@ -1255,12 +1255,12 @@
       margin-bottom:8px;
     }
     .note-now-time{
-      color:#ffffff;
+      color:#48e86f;
       font-size:clamp(42px, 13vw, 72px);
       font-weight:900;
       line-height:1;
       font-variant-numeric:tabular-nums;
-      text-shadow:0 0 14px rgba(255,255,255,.22);
+      text-shadow:0 0 14px rgba(72,232,111,.32);
     }
     .note-alarm-picker{
       min-width:0;
@@ -1338,7 +1338,7 @@
       display:flex;
       flex-wrap:wrap;
       gap:6px;
-      max-height:132px;
+      max-height:190px;
       overflow-y:auto;
       padding:2px 0 0;
     }
@@ -1411,7 +1411,7 @@
         <g id="forecastHand"></g>
         <g id="dots"></g>
         <!-- Czarne koło pod datą - przykrywa wszystkie kolory tarczy w środku, datę pokazuje na czystym tle -->
-        <circle cx="200" cy="200" r="70" fill="#000" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+        <circle cx="200" cy="200" r="75" fill="#000" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
       </svg>
 
       <div class="clock-center">
@@ -1526,7 +1526,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_1.6</div>
+  <div class="version">vGPT_1.7</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3044,7 +3044,7 @@
               `).join('')}
             </div>
           </div>
-          <div style="flex:1;"></div>
+          <div style="height:6px;flex:0 0 auto;"></div>
           <div class="note-fields">
             <label>Symbol widoczny na karteczce (1-4 znaki)</label>
             <input id="noteIcon" class="icon-input" maxlength="4" value="${escapeHtml(icon)}" placeholder="💧" />
