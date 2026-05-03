@@ -1,8 +1,8 @@
-INSTRUKCJA KONFIGURACJI EKSPORTU DO GOOGLE SHEETS - vGPT_1.8
+INSTRUKCJA KONFIGURACJI EKSPORTU DO GOOGLE SHEETS - vGPT_1.9
 =============================================================
 
-Ta wersja instrukcji dotyczy aplikacji Tarcza czasu pracy vGPT_1.8.
-Wersja vGPT_1.8 jest oparta na wcześniej rozwijanej wersji v:1.28 stworzonej przez inne AI.
+Ta wersja instrukcji dotyczy aplikacji Tarcza czasu pracy vGPT_1.9.
+Wersja vGPT_1.9 jest oparta na wcześniej rozwijanej wersji v:1.28 stworzonej przez inne AI.
 
 CEL
 ---
@@ -57,6 +57,7 @@ WAŻNE:
 - Skrypt NIE ustawia kolorów, fontów, szerokości kolumn ani innych formatów.
 - Skrypt wpisuje tylko wartości i formuły do odpowiedniego wiersza dnia.
 - SUMA, zł/h i zł/km są formułami, więc po ręcznej zmianie kwoty dostawcy arkusz sam przeliczy wyniki.
+- Formuły zł/h i zł/km używają średnika jako separatora argumentów, zgodnie z polską lokalizacją Google Sheets.
 
 
 LOGIKA WIERSZA
@@ -108,7 +109,7 @@ JAK WKLEIĆ NOWY SKRYPT
 4. Usuń całą starą zawartość pliku.
 5. Skopiuj całą zawartość pliku:
 
-   GOOGLE_APPS_SCRIPT_vGPT_1.8.txt
+   GOOGLE_APPS_SCRIPT_vGPT_1.9.txt
 
 6. Wklej ją do Code.gs.
 7. Zapisz projekt.
@@ -122,7 +123,7 @@ URL aplikacji webowej nie powinien się zmienić.
 WAŻNE PO AKTUALIZACJI
 ---------------------
 
-- W aplikacji vGPT_1.8 dodano nowe źródło przychodu: ŚWINKA.
+- W aplikacji vGPT_1.9 działa źródło przychodu: ŚWINKA.
 - Ikona tego źródła powinna znajdować się w:
 
   Photos/swinka.png
