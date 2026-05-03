@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_1.7: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_1.8: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_1.7: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_1.8: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -996,6 +996,32 @@
       padding:22px 14px;
       isolation:isolate;
     }
+    .money-panel{
+      height:min(99dvh, 860px);
+      max-height:99vh;
+      padding:4px 8px 6px;
+    }
+    .money-panel .providers-list{
+      gap:4px;
+      padding:16px 12px 12px;
+    }
+    .money-panel .provider-row{
+      min-height:46px;
+    }
+    .money-panel .prov-btn{
+      min-height:42px;
+      font-size:17px;
+    }
+    .money-panel .prov-amount{
+      font-size:22px;
+    }
+    .money-panel .panel-actions .cancel-btn,
+    .money-panel .panel-actions .ok-btn{
+      width:86px !important;
+      height:86px !important;
+      font-size:42px !important;
+      border-radius:18px !important;
+    }
     /* Dwie tablice w tle - srebrna (lewa) i złota (prawa) */
     .board-bg{
       position:absolute;
@@ -1526,7 +1552,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_1.7</div>
+  <div class="version">vGPT_1.8</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -1541,7 +1567,8 @@
       { key:'freenow', label:'FREENOW', bg:'#000000', fg:'#ff3838' },
       { key:'agap',    label:'AGAP',    bg:'#ff8a0a', fg:'#000000' },
       { key:'tip',     label:'NAPIWEK', bg:'#9adf9a', fg:'#0d3b0d' },
-      { key:'other',   label:'INNE',    bg:'#555555', fg:'#ffffff' }
+      { key:'other',   label:'INNE',    bg:'#555555', fg:'#ffffff' },
+      { key:'swinka',  label:'ŚWINKA',  bg:'#f7a7c7', fg:'#2b0715' }
     ];
 
     let startWorkMinutes = null;
@@ -2686,7 +2713,7 @@
           <div class="prov-amount ${cAny?'':'empty'}">${counterDisplay !== null ? counterDisplay : '—'}</div>
         </div>`;
       showOverlay(`
-        <div class="big-panel">
+        <div class="big-panel money-panel">
           <h3>Obroty dnia</h3>
           <div class="providers-list">
             <div class="board-bg board-silver"><span class="screw-bl"></span><span class="screw-br"></span></div>
@@ -3263,33 +3290,26 @@
       try{
         const km_total = (counterStart!==null && counterEnd!==null) ? (counterEnd-counterStart) : 0;
         const km_zaw = Math.max(0, km_total - privKmTotal);
-        const totalInt = Math.floor(getTotalRevenueGroszy()/100);
         const net = getNetWorkMinutes();
-        const perHour = net>0 ? Math.round(totalInt*60/net) : 0;
-        const perKm = km_zaw>0 ? (totalInt/km_zaw) : 0;
-
+        const breakMinutes = getTotalBreakMinutes(true);
         const payload = {
-          date: workDate || todayISO(),
+          date: todayISO(),
+          work_date: workDate || todayISO(),
           start: startWorkMinutes!==null?formatHHMM(startWorkMinutes):'',
           end: endWorkMinutes!==null?formatHHMM(endWorkMinutes):'',
           work_duration: minutesToHHMM(Math.max(0,net)),
-          break_duration: minutesToHHMM(getTotalBreakMinutes(true)),
+          work_minutes: Math.max(0,net),
+          break_duration: minutesToHHMM(breakMinutes),
+          break_minutes: breakMinutes,
           counter_start: counterStart!==null?counterStart:'',
           counter_end: counterEnd!==null?counterEnd:'',
           km_priv: privKmTotal,
-          km_zaw: km_zaw,
-          uber: (revenues.uber||0)/100,
-          bolt: (revenues.bolt||0)/100,
-          taxi: (revenues.taxi||0)/100,
-          priv: (revenues.priv||0)/100,
-          freenow: (revenues.freenow||0)/100,
-          agap: (revenues.agap||0)/100,
-          tip: (revenues.tip||0)/100,
-          other: (revenues.other||0)/100,
-          total: totalInt,
-          per_hour: perHour,
-          per_km: Number(perKm.toFixed(2))
+          km_zaw: km_zaw
         };
+
+        PROVIDERS.forEach(p => {
+          payload[p.key] = (revenues[p.key]||0)/100;
+        });
         await fetch(url, {
           method:'POST', mode:'no-cors',
           headers:{ 'Content-Type':'text/plain' },
