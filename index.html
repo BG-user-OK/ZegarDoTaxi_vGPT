@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_2.4: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_2.5: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_2.4: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_2.5: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1625,7 +1625,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_2.4</div>
+  <div class="version">vGPT_2.5</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2120,6 +2120,13 @@
       restoreFromAngle: 0,
       restoreStartTime: 0
     };
+    const WHEEL_VISUAL_HOLD_MINUTES = 3.5;
+
+    function getWheelVanishAngle(elapsedMinutes){
+      const activeSpan = 60 - WHEEL_VISUAL_HOLD_MINUTES;
+      const visualElapsed = Math.max(0, elapsedMinutes - WHEEL_VISUAL_HOLD_MINUTES);
+      return Math.min(360, (visualElapsed / activeSpan) * 360);
+    }
 
     // Rysuje SVG path sektora od 12:00 do `vanishedDeg` (zgodnie ze wskazówkami).
     // Sektor pełny = czarny, plus krawędź soft (filter blur na końcu).
@@ -2246,7 +2253,7 @@
       }
       exBtn.classList.remove('overage','fading-overage');
 
-      const ang = Math.min(360, elapsedFrac * 6);
+      const ang = getWheelVanishAngle(elapsedFrac);
       paintWheelMask(ang);
     }
 
@@ -2269,7 +2276,7 @@
         const elapsedFrac = (startWorkMinutes && lastExerciseMinutes!==null && endWorkMinutes===null)
           ? getEffectiveExerciseElapsedFractional()
           : 0;
-        const currentAngle = Math.min(360, elapsedFrac * 6);
+        const currentAngle = getWheelVanishAngle(elapsedFrac);
         _wheelsState.restoring = true;
         _wheelsState.restoreFromAngle = currentAngle;
         _wheelsState.restoreStartTime = Date.now();
