@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_2.0: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_2.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_2.0: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_2.1: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -598,6 +598,10 @@
     .end-confirm-content{
       position:relative;
       z-index:51;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
       text-align:center;
       color:#fff;
       opacity:0;
@@ -625,38 +629,56 @@
       color:rgba(255,230,230,.92);
       margin-top:6px;
     }
+    .end-confirm-hint:empty{ display:none; }
     .end-confirm-choice{
       display:none;
-      flex-direction:column;
-      gap:10px;
-      margin-top:8px;
-      width:min(72vw, 270px);
     }
+    .end-confirm-overlay.choice-mode .end-confirm-content{
+      width:100%;
+      height:100%;
+      display:grid;
+      grid-template-rows:30% 45% 25%;
+      align-items:center;
+      justify-items:center;
+      padding:24px 34px 30px;
+    }
+    .end-confirm-overlay.choice-mode .end-confirm-title,
+    .end-confirm-overlay.choice-mode .end-confirm-hint{ display:none; }
     .end-confirm-overlay.choice-mode .end-confirm-choice{
-      display:flex;
+      display:contents;
     }
     .end-confirm-overlay.choice-mode .end-confirm-counter{
-      font-size:clamp(44px, 13vw, 76px);
-      margin:2px 0;
-    }
-    .end-confirm-overlay.choice-mode .end-confirm-title{
-      font-size:clamp(16px, 4vw, 22px);
-      margin-bottom:4px;
+      grid-row:3;
+      align-self:end;
+      font-size:clamp(42px, 12vw, 72px);
+      margin:0;
     }
     .end-choice-btn{
       border:none;
-      border-radius:12px;
-      padding:12px 10px;
-      min-height:54px;
+      border-radius:10px;
+      padding:10px 12px;
       font-size:clamp(14px, 3.6vw, 18px);
       font-weight:900;
       line-height:1.12;
-      color:#05283a;
-      background:rgba(255,255,255,.82);
-      box-shadow:0 4px 14px rgba(0,0,0,.28), inset 0 0 0 2px rgba(5,40,58,.12);
+      box-shadow:0 4px 14px rgba(0,0,0,.28), inset 0 0 0 2px rgba(0,0,0,.08);
+    }
+    .end-choice-btn.reset{
+      grid-row:1;
+      align-self:end;
+      width:min(58vw, 190px);
+      min-height:54px;
+      color:#5c0505;
+      background:#ff3333;
     }
     .end-choice-btn.continue{
-      background:linear-gradient(180deg,#e8fbff,#9feaff);
+      grid-row:2;
+      align-self:center;
+      width:min(76vw, 300px);
+      min-height:112px;
+      border-radius:12px;
+      font-size:clamp(19px, 5vw, 27px);
+      color:#0b4419;
+      background:#9cff9c;
     }
 
     .work-btn{ background:linear-gradient(180deg,var(--btn-work-off-1),var(--btn-work-off-2)); }
@@ -1458,13 +1480,13 @@
       <div class="end-confirm-overlay hidden" id="endConfirmOverlay">
         <div class="end-wave"></div>
         <div class="end-confirm-content">
-          <div class="end-confirm-title">POTWIERDŹ<br>KONIEC DNIÓWKI</div>
+          <div class="end-confirm-title">KONIEC DNIÓWKI?</div>
           <div class="end-confirm-counter" id="endConfirmCounter">5</div>
           <div class="end-confirm-choice" id="endConfirmChoice">
             <button class="end-choice-btn reset" type="button" data-restart-choice="reset">Startujesz?<br>(czyścimy dane!)</button>
             <button class="end-choice-btn continue" type="button" data-restart-choice="continue">Wracasz do roboty?</button>
           </div>
-          <div class="end-confirm-hint">stuknij aby zakończyć</div>
+          <div class="end-confirm-hint"></div>
         </div>
       </div>
       <svg class="clock-svg" viewBox="-30 -30 460 460" aria-hidden="true">
@@ -1598,7 +1620,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_2.0</div>
+  <div class="version">vGPT_2.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3288,8 +3310,8 @@
       startEndConfirm({
         variant:'blue',
         mode:'choice',
-        title:'START PO<br>ZAKOŃCZONEJ PRACY',
-        hint:'wybierz w 5 sekund',
+        title:'',
+        hint:'',
         choices:{
           reset:()=>setWorkStart(nowMinutes(), false),
           continue:()=>continueEndedWorkday()
@@ -3471,10 +3493,10 @@
       if(endConfirmActive) return;
       opts = opts || {};
       const variant = opts.variant || 'red';
-      const title = opts.title || 'POTWIERDŹ<br>KONIEC DNIÓWKI';
+      const title = opts.title ?? 'KONIEC DNIÓWKI?';
       const action = opts.action || endWork;
       const mode = opts.mode || 'confirm';
-      const hint = opts.hint || 'stuknij aby zakończyć';
+      const hint = opts.hint ?? '';
       endConfirmActive = true;
       endConfirmAction = action;
       endConfirmMode = mode;
@@ -3585,7 +3607,7 @@
           if(navigator.vibrate){ try{ navigator.vibrate([60,40,60]); }catch(e){} }
           startEndConfirm({
             variant:'yellow',
-            title:'POTWIERDŹ<br>RESET',
+            title:'POTWIERDŹ RESET',
             action: softReset
           });
         }, 3000);
