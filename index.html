@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_3.2: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_3.3: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -163,7 +163,7 @@
     }
 
     .clock-wrap{
-      width:min(94vw, 64vh); aspect-ratio:1/1;
+      width:min(97vw, 67vh); aspect-ratio:1/1;
       position:relative; display:flex; align-items:center; justify-content:center;
       margin:8px 0;
     }
@@ -180,12 +180,12 @@
       display:flex; align-items:center; justify-content:center;
       pointer-events:none;
     }
-    .clock-face{ width:73%; height:73%; border-radius:50%; position:relative; }
+    .clock-face{ width:75%; height:75%; border-radius:50%; position:relative; }
     .number{
       position:absolute; left:50%; top:50%;
       transform:translate(-50%,-50%);
       color:var(--dial-number); font-weight:900;
-      font-size:clamp(45px, 12vw, 84px);
+      font-size:clamp(47px, 12.6vw, 88px);
       line-height:1; letter-spacing:-1.2px;
       transition:color .3s ease, text-shadow .3s ease;
     }
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_3.2: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_3.3: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -388,8 +388,8 @@
       flex:0 0 auto;
       display:flex; align-items:center; justify-content:center;
       font-weight:900;
-      color:#f4ffe8;
-      text-shadow:0 1px 0 rgba(0,0,0,.5);
+      color:var(--work-green);
+      text-shadow:0 1px 0 rgba(0,0,0,.55), 0 0 8px rgba(56,200,102,.34);
       border-bottom:2.5px solid rgba(88,232,120,.55);
       box-sizing:border-box;
       /* font-size i height ustawia JS dynamicznie */
@@ -1678,7 +1678,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_3.2</div>
+  <div class="version">vGPT_3.3</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -1946,21 +1946,21 @@
       // === Kropka minut na obwodzie + liczba minut na zewnątrz ===
       // Kropka pokazuje aktualną minutę i nie porusza się w obrębie minuty.
       const mRad = (minDeg - 90) * Math.PI / 180;
-      const dotR = radius;
-      const dotX = cx + Math.cos(mRad) * dotR, dotY = cy + Math.sin(mRad) * dotR;
-      const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
-      dot.setAttribute('cx', dotX.toFixed(2)); dot.setAttribute('cy', dotY.toFixed(2));
-      dot.setAttribute('r','7'); dot.setAttribute('fill','#ffffff');
-      dot.setAttribute('filter','url(#glow)');
-      gMin.appendChild(dot);
       // Etykieta minut na zewnątrz
-      const lblR = radius + 23;
+      const lblR = radius;
       const lblX = cx + Math.cos(mRad) * lblR, lblY = cy + Math.sin(mRad) * lblR;
+      const lblBg = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      lblBg.setAttribute('cx', lblX.toFixed(2)); lblBg.setAttribute('cy', lblY.toFixed(2));
+      lblBg.setAttribute('r','22');
+      lblBg.setAttribute('fill','#000');
+      lblBg.setAttribute('stroke','rgba(255,255,255,.22)');
+      lblBg.setAttribute('stroke-width','1.5');
+      gMin.appendChild(lblBg);
       const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
       lbl.setAttribute('x', lblX.toFixed(2)); lbl.setAttribute('y', lblY.toFixed(2));
       lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('dominant-baseline','central');
-      lbl.setAttribute('fill','#fff'); lbl.setAttribute('font-size','22');
-      lbl.setAttribute('font-weight','800'); lbl.setAttribute('font-family','inherit');
+      lbl.setAttribute('fill','#fff'); lbl.setAttribute('font-size','33');
+      lbl.setAttribute('font-weight','900'); lbl.setAttribute('font-family','inherit');
       lbl.setAttribute('opacity','0.95');
       lbl.textContent = String(m);
       gMin.appendChild(lbl);
@@ -2498,16 +2498,16 @@
 
       // Każda cyfra ma height = 55% wysokości okna - dzięki temu sąsiadująca cyfra
       // jest widoczna częściowo (efekt "rolki", gdzie cyfra wypiera następną).
-      const digitH = Math.round(h * 0.55);
+      const digitH = Math.round(h * 0.68);
 
       // Ustaw wysokość każdej cyfry i font proporcjonalnie do digitH
       if(inner.dataset.lastH !== String(h)){
         inner.querySelectorAll('.work-roller-digit').forEach(d => {
           d.style.height = digitH + 'px';
           if(d.classList.contains('two-digit')){
-            d.style.fontSize = Math.floor(digitH * 0.78) + 'px';
+            d.style.fontSize = Math.floor(digitH * 0.76) + 'px';
           } else {
-            d.style.fontSize = Math.floor(digitH * 0.92) + 'px';
+            d.style.fontSize = Math.floor(digitH * 0.98) + 'px';
           }
         });
         inner.dataset.lastH = String(h);
