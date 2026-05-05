@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_3.8: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_3.9: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_3.8: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_3.9: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -876,14 +876,34 @@
       position:absolute;
       inset:0;
       z-index:3;
-      background:linear-gradient(180deg, #c01515, #6a0808);
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.15),
-        inset 0 -10px 18px rgba(0,0,0,.45),
-        0 0 22px rgba(255,40,40,.35);
+      background:#000;
+      box-shadow:none;
       display:none;
       border-radius:16px;
       transition:opacity 0.6s ease;
+    }
+    .overage-display .work-roller{
+      left:3%;
+      right:3%;
+      height:94%;
+      background:linear-gradient(180deg, #ffc04a 0%, var(--overtime-orange) 50%, #d46a00 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,210,100,.42),
+        inset 0 8px 14px rgba(255,255,255,.16),
+        inset 0 -12px 16px rgba(83,32,0,.34),
+        0 0 16px rgba(255,154,31,.24);
+      -webkit-mask-image:linear-gradient(180deg,
+        transparent 0%,
+        rgba(0,0,0,.2) 6%,
+        black 17%, black 83%,
+        rgba(0,0,0,.2) 94%,
+        transparent 100%);
+      mask-image:linear-gradient(180deg,
+        transparent 0%,
+        rgba(0,0,0,.2) 6%,
+        black 17%, black 83%,
+        rgba(0,0,0,.2) 94%,
+        transparent 100%);
     }
     .exercise-btn.overage .overage-display{
       display:block;
@@ -912,9 +932,11 @@
       opacity:0;
     }
     .overage-display .work-roller-digit{
-      color:#fff !important;
-      text-shadow:0 0 6px rgba(255,180,180,.6);
-      border-bottom:2.5px solid rgba(255,200,200,.45);
+      color:#8a0000 !important;
+      text-shadow:
+        0 1px 0 rgba(255,210,70,.42),
+        0 0 7px rgba(160,0,0,.42);
+      border-bottom:2.5px solid rgba(128,0,0,.36);
     }
     .exercise-btn.flash{
       background:linear-gradient(180deg,var(--btn-ex-on-1),var(--btn-ex-on-2));
@@ -1685,7 +1707,7 @@
         </svg>
         <div class="wheel-restore-cover" id="wheelRestoreCover" aria-hidden="true"></div>
         <div class="overage-display" id="overageDisplay">
-          <div class="work-roller" style="position:absolute;top:50%;left:6%;right:6%;transform:translateY(-50%);height:80%;background:rgba(0,0,0,.55);">
+          <div class="work-roller">
             <div class="work-roller-inner" id="overageRollerInner"></div>
           </div>
         </div>
@@ -1728,7 +1750,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_3.8</div>
+  <div class="version">vGPT_3.9</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2488,20 +2510,29 @@
       }
 
       const h = roller.clientHeight;
-      if(!h) return;
+      const w = roller.clientWidth;
+      if(!h || !w) return;
 
-      const digitH = Math.round(h * 0.55);
+      const digitH = Math.round(h * 0.72);
 
-      if(inner.dataset.lastH !== String(h)){
+      if(inner.dataset.lastH !== String(h) || inner.dataset.lastW !== String(w)){
         inner.querySelectorAll('.work-roller-digit').forEach(d => {
           d.style.height = digitH + 'px';
-          // Dla 3-cyfrowych - mniejsza czcionka
           const n = parseInt(d.textContent, 10);
-          d.style.fontSize = (n >= 100
-            ? Math.floor(digitH * 0.52)
-            : Math.floor(digitH * 0.78)) + 'px';
+          const digits = String(n).length;
+          let fontSize;
+          if(digits >= 3){
+            fontSize = Math.min(digitH * 0.82, w * 0.50);
+          } else if(digits === 2){
+            fontSize = Math.min(digitH * 0.98, w * 0.76);
+          } else {
+            fontSize = Math.min(digitH * 1.18, w * 0.92);
+          }
+          d.style.fontSize = Math.floor(fontSize) + 'px';
+          d.style.letterSpacing = '0';
         });
         inner.dataset.lastH = String(h);
+        inner.dataset.lastW = String(w);
       }
 
       const clamped = Math.min(MAX_MIN, Math.max(0, minutes));
