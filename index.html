@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_3.0: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_3.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_3.0: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_3.1: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -314,9 +314,7 @@
       pointer-events:none;
     }
     .work-left{
-      position:absolute;
-      inset:0;
-      padding:0;
+      display:none;
     }
     .work-time-top{
       position:absolute;
@@ -351,9 +349,9 @@
     }
     .work-roller{
       position:absolute;
-      top:58%; left:7%; right:7%;
+      top:50%; left:4%; right:4%;
       transform:translateY(-50%);
-      height:78%;
+      height:94%;
       z-index:1;
       background:rgba(0,0,0,.55);
       border-radius:8px;
@@ -921,7 +919,7 @@
       font-size:clamp(20px,5.4vw,32px);
       font-weight:800;
       color:var(--dial-number);
-      line-height:1.2;
+      line-height:1.05;
       text-shadow:0 0 8px rgba(220,220,225,.55),0 0 16px rgba(200,200,210,.35);
       /* Ograniczenie do czarnego koła w SVG (r=75) - zgodne z wewnętrznym promieniem wskazówki godzinowej. */
       width:45%; height:45%;
@@ -929,8 +927,33 @@
       overflow:hidden;
       display:flex; flex-direction:column;
       align-items:center; justify-content:center;
-      padding:6px;
+      gap:2px;
+      padding:5px 7px;
       box-sizing:border-box;
+    }
+    .date-line{
+      max-width:100%;
+      overflow:hidden;
+      text-overflow:clip;
+      white-space:nowrap;
+    }
+    .date-day,
+    .date-value{
+      line-height:1.05;
+    }
+    .date-work-time{
+      color:rgba(255,255,255,.95);
+      font-size:clamp(16px,4.2vw,22px);
+      font-weight:900;
+      line-height:1;
+      letter-spacing:-.5px;
+      text-shadow:0 1px 0 rgba(0,0,0,.35),0 0 8px rgba(255,255,255,.35);
+    }
+    .date-center.has-work-end{
+      font-size:clamp(18px,4.8vw,29px);
+    }
+    .date-center.has-work-end .date-work-time{
+      font-size:clamp(15px,3.9vw,21px);
     }
 
     .money-btn{ background:linear-gradient(180deg,var(--btn-money-1),var(--btn-money-2)); }
@@ -1576,11 +1599,6 @@
       <button class="btn work-btn" id="workBtn" type="button">
         <div class="lp-ring"></div>
         <div class="work-split">
-          <div class="work-left">
-            <div class="work-time-top" id="workStartMini">--:--</div>
-            <div class="work-icon-row"></div>
-            <div class="work-time-bot" id="workEndMini"></div>
-          </div>
           <div class="work-right">
             <div class="work-roller">
               <div class="work-roller-inner" id="workRollerInner">
@@ -1660,7 +1678,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_3.0</div>
+  <div class="version">vGPT_3.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2130,15 +2148,11 @@
     // ===== przyciski =====
     function renderButtons(){
       const workBtn=document.getElementById('workBtn');
-      const workStartMini=document.getElementById('workStartMini');
-      const workEndMini=document.getElementById('workEndMini');
       const exBtn=document.getElementById('exerciseBtn');
       const breakTopZone=document.getElementById('breakTopZone');
       const breakBotZone=document.getElementById('breakBotZone');
 
       if(startWorkMinutes===null){
-        workStartMini.textContent='--:--';
-        workEndMini.textContent='';
         breakTopZone.textContent='';
         breakBotZone.textContent='';
         workBtn.classList.remove('overtime');
@@ -2148,8 +2162,6 @@
         const net=getNetWorkMinutes();
         const ex=getEffectiveExerciseElapsed();
         const totalBreak=getTotalBreakMinutes(true);
-        workStartMini.textContent=formatHHMM(startWorkMinutes);
-        workEndMini.textContent=endWorkMinutes!==null?formatHHMM(endWorkMinutes):'';
         // Punkt 2: gdy pauza aktywna - pokaż tylko dolny (bieżąca pauza); gdy nieaktywna - tylko górny (suma)
         if(breakActive){
           breakTopZone.textContent = '';
@@ -2798,7 +2810,19 @@
       const days = ['niedziela','poniedziałek','wtorek','środa','czwartek','piątek','sobota'];
       const months = ['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
       const d = new Date();
-      el.innerHTML = `<div>${days[d.getDay()]}</div><div>${d.getDate()} ${months[d.getMonth()]}</div>`;
+      const startLine = startWorkMinutes!==null
+        ? `<div class="date-line date-work-time">${formatHHMM(startWorkMinutes)}</div>`
+        : '';
+      const endLine = startWorkMinutes!==null && endWorkMinutes!==null
+        ? `<div class="date-line date-work-time">${formatHHMM(endWorkMinutes)}</div>`
+        : '';
+      el.classList.toggle('has-work-start', startWorkMinutes!==null);
+      el.classList.toggle('has-work-end', startWorkMinutes!==null && endWorkMinutes!==null);
+      el.innerHTML =
+        `${startLine}` +
+        `<div class="date-line date-day">${days[d.getDay()]}</div>` +
+        `<div class="date-line date-value">${d.getDate()} ${months[d.getMonth()]}</div>` +
+        `${endLine}`;
     }
 
     // === Bateria w prawym górnym rogu ===
@@ -3497,6 +3521,7 @@
       document.getElementById('workBtn').classList.add('on');
       workDate = todayISO();
       saveState(); renderAll();
+      syncWorkWakeLock();
     }
     function askEndedWorkdayStartChoice(){
       startEndConfirm({
@@ -3533,6 +3558,7 @@
 
       document.getElementById('workBtn').classList.add('on');
       saveState(); renderAll();
+      syncWorkWakeLock();
     }
     async function endWork(){
       endWorkMinutes=nowMinutes();
@@ -3544,6 +3570,7 @@
       // zapamiętaj końcowy licznik na jutro
       if(counterEnd!==null) lastCounterEnd=counterEnd;
       saveState(); renderAll();
+      syncWorkWakeLock();
 
       // Eksport - dane zostają na ekranie po sukcesie. Reset nastąpi dopiero przy nowym START.
       const url=localStorage.getItem(LS_APPSCRIPT);
@@ -3573,6 +3600,7 @@
       potStartedAt=null; potAckedDone=false;
       // Punkt 7: cel godzinowy wraca do domyślnych 8h
       workTargetMinutes=480;
+      syncWorkWakeLock();
     }
     function softReset(){
       // Pełny reset bez eksportu - na potrzeby testowania / przypadkowego uruchomienia
@@ -3624,6 +3652,50 @@
       document.body.appendChild(t);
       setTimeout(()=>t.remove(), 3500);
     }
+
+    let workWakeLock = null;
+    let workWakeLockWanted = false;
+
+    function shouldKeepWorkAwake(){
+      return startWorkMinutes!==null && endWorkMinutes===null;
+    }
+    async function requestWorkWakeLock(){
+      if(!('wakeLock' in navigator)) return;
+      if(!window.isSecureContext) return;
+      if(document.visibilityState !== 'visible') return;
+      if(workWakeLock && !workWakeLock.released) return;
+      try{
+        const lock = await navigator.wakeLock.request('screen');
+        if(!workWakeLockWanted || !shouldKeepWorkAwake()){
+          try{ await lock.release(); }catch(e){}
+          return;
+        }
+        workWakeLock = lock;
+        lock.addEventListener('release', ()=>{
+          if(workWakeLock === lock) workWakeLock = null;
+          if(workWakeLockWanted && shouldKeepWorkAwake() && document.visibilityState === 'visible'){
+            setTimeout(()=>requestWorkWakeLock(), 250);
+          }
+        });
+      }catch(e){
+        workWakeLock = null;
+      }
+    }
+    async function releaseWorkWakeLock(){
+      const lock = workWakeLock;
+      workWakeLock = null;
+      if(lock && !lock.released){
+        try{ await lock.release(); }catch(e){}
+      }
+    }
+    function syncWorkWakeLock(){
+      workWakeLockWanted = shouldKeepWorkAwake();
+      if(workWakeLockWanted) requestWorkWakeLock();
+      else releaseWorkWakeLock();
+    }
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.visibilityState === 'visible') syncWorkWakeLock();
+    });
 
     // ===== event listeners =====
 
@@ -3983,6 +4055,7 @@
     }
     buildDots();
     renderAll();
+    syncWorkWakeLock();
     // Pierwszy render rolki może paść jeśli clientHeight=0 przed layoutem.
     // Po pierwszej klatce wymuszamy ponowny render dla pewności.
     requestAnimationFrame(()=>{ renderAll(); });
