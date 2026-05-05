@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_2.6: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_2.7: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_2.6: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_2.7: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -822,6 +822,7 @@
       width:100%; height:100%;
       object-fit:contain;
       pointer-events:none;
+      z-index:1;
       filter:drop-shadow(0 0 10px rgba(220,220,235,.5));
       /* Maska sterowana z JS - przez clip-path lub przez nakładkę SVG.
          Tutaj samo CSS bez maski, JS rysuje overlay. */
@@ -858,6 +859,18 @@
     }
     .exercise-btn.overage .wheel-image,
     .exercise-btn.overage .wheel-mask-overlay{
+      display:none;
+    }
+    .exercise-btn.restore-overage .overage-display{
+      display:block;
+      opacity:1;
+      z-index:1;
+    }
+    .exercise-btn.restore-overage .wheel-image{
+      display:block;
+      z-index:2;
+    }
+    .exercise-btn.restore-overage .wheel-mask-overlay{
       display:none;
     }
     /* Stan "fading-overage": czerwony moduł gaśnie do czerni przed pojawieniem się koła z animacją odwrotną */
@@ -1625,7 +1638,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_2.6</div>
+  <div class="version">vGPT_2.7</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2164,17 +2177,59 @@
       const visualElapsed = Math.max(0, elapsedMinutes - WHEEL_VISUAL_HOLD_MINUTES);
       return Math.min(360, (visualElapsed / activeSpan) * 360);
     }
+    function clearWheelImageMask(){
+      const wheel=document.getElementById('wheelImage');
+      if(!wheel) return;
+      wheel.style.webkitMaskImage='';
+      wheel.style.maskImage='';
+      wheel.style.webkitMaskSize='';
+      wheel.style.maskSize='';
+    }
+    function paintWheelRestoreOverageMask(vanishedDeg){
+      const wheel=document.getElementById('wheelImage');
+      if(!wheel) return;
+      const angle=Math.max(0, Math.min(360, vanishedDeg));
+      wheel.style.webkitMaskSize='100% 100%';
+      wheel.style.maskSize='100% 100%';
+      if(angle<=0){
+        clearWheelImageMask();
+        return;
+      }
+      if(angle>=360){
+        wheel.style.webkitMaskImage='linear-gradient(transparent, transparent)';
+        wheel.style.maskImage='linear-gradient(transparent, transparent)';
+        return;
+      }
+      const mist=36;
+      const revealStart=Math.max(0, angle - mist * 0.5);
+      const revealFull=Math.min(360, angle + mist * 0.5);
+      const mask =
+        `conic-gradient(from 0deg at 50% 50%, ` +
+        `rgba(0,0,0,0) 0deg, ` +
+        `rgba(0,0,0,0) ${revealStart.toFixed(2)}deg, ` +
+        `rgba(0,0,0,.95) ${revealFull.toFixed(2)}deg, ` +
+        `rgba(0,0,0,1) 360deg)`;
+      wheel.style.webkitMaskImage=mask;
+      wheel.style.maskImage=mask;
+    }
 
     // Rysuje SVG path sektora od 12:00 do `vanishedDeg` (zgodnie ze wskazówkami).
     // Sektor pełny = czarny, plus krawędź soft (filter blur na końcu).
     function paintWheelMask(vanishedDeg){
       {
         const overlay = document.getElementById('wheelMaskOverlay');
+        const exBtn = document.getElementById('exerciseBtn');
         const sector = document.getElementById('wheelVanishSector');
         const edge = document.getElementById('wheelVanishEdge');
         if(sector) sector.setAttribute('d', '');
         if(edge) edge.setAttribute('d', '');
         if(!overlay) return;
+        if(exBtn && exBtn.classList.contains('restore-overage')){
+          overlay.style.background = 'none';
+          paintWheelRestoreOverageMask(vanishedDeg);
+          return;
+        }
+        clearWheelImageMask();
 
         if(vanishedDeg <= 0){
           overlay.style.background = 'none';
@@ -2266,7 +2321,8 @@
         if(dt >= RESTORE_DUR){
           _wheelsState.restoring = false;
           paintWheelMask(0);
-          exBtn.classList.remove('overage','fading-overage');
+          clearWheelImageMask();
+          exBtn.classList.remove('overage','fading-overage','restore-overage');
           return;
         }
         const progress = dt / RESTORE_DUR;
@@ -2288,7 +2344,8 @@
         renderOverageRoller(overFrac);
         return;
       }
-      exBtn.classList.remove('overage','fading-overage');
+      clearWheelImageMask();
+      exBtn.classList.remove('overage','fading-overage','restore-overage');
 
       const ang = getWheelVanishAngle(elapsedFrac);
       paintWheelMask(ang);
@@ -2299,21 +2356,19 @@
       const exBtn = document.getElementById('exerciseBtn');
 
       if(exBtn.classList.contains('overage')){
-        // Najpierw fade czerwonego do czerni (0.6s)
-        exBtn.classList.add('fading-overage');
-        setTimeout(()=>{
-          exBtn.classList.remove('overage','fading-overage');
-          _wheelsState.restoring = true;
-          _wheelsState.restoreFromAngle = 360;
-          _wheelsState.restoreStartTime = Date.now();
-          renderWheels(0);
-        }, 600);
+        exBtn.classList.remove('fading-overage');
+        exBtn.classList.add('restore-overage');
+        _wheelsState.restoring = true;
+        _wheelsState.restoreFromAngle = 360;
+        _wheelsState.restoreStartTime = Date.now();
+        renderWheels(0);
       } else {
         // Z bieżącego stanu zanikania - zacznij animację wstecz
         const elapsedFrac = (startWorkMinutes && lastExerciseMinutes!==null && endWorkMinutes===null)
           ? getEffectiveExerciseElapsedFractional()
           : 0;
         const currentAngle = getWheelVanishAngle(elapsedFrac);
+        exBtn.classList.remove('restore-overage');
         _wheelsState.restoring = true;
         _wheelsState.restoreFromAngle = currentAngle;
         _wheelsState.restoreStartTime = Date.now();
