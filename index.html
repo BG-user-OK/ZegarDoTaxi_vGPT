@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_2.5: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_2.6: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_2.5: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_2.6: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1625,7 +1625,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_2.5</div>
+  <div class="version">vGPT_2.6</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -1771,11 +1771,46 @@
       const large=diff>360?1:0;
       return `M ${cx} ${cy} L ${p1.x} ${p1.y} A ${r} ${r} 0 ${large} 1 ${p2.x} ${p2.y} Z`;
     }
+    function createSectorPathBySpan(sM,spanM,r){
+      if(spanM<=0) return '';
+      if(spanM>=720){
+        return `M ${cx-r} ${cy} A ${r} ${r} 0 1 0 ${cx+r} ${cy} A ${r} ${r} 0 1 0 ${cx-r} ${cy} Z`;
+      }
+      const eM=sM+spanM;
+      const p1=polarToCartesian(cx,cy,r,angleFromMinutes(sM));
+      const p2=polarToCartesian(cx,cy,r,angleFromMinutes(eM));
+      const large=spanM>360?1:0;
+      return `M ${cx} ${cy} L ${p1.x} ${p1.y} A ${r} ${r} 0 ${large} 1 ${p2.x} ${p2.y} Z`;
+    }
     function svgFilledPath(d,c,o=1,extra={}){
       const p=document.createElementNS('http://www.w3.org/2000/svg','path');
       p.setAttribute('d',d); p.setAttribute('fill',c); p.setAttribute('opacity',o);
       Object.keys(extra).forEach(k=>p.setAttribute(k,extra[k]));
       return p;
+    }
+    const WORK_GREEN_LAP_COLOR = '#166f33';
+    const OVERTIME_ORANGE_LAP_COLOR = '#9a4b05';
+    const BREAK_LAP_COLOR = '#666666';
+
+    function appendLapAwareSector(g,sAbs,eAbs,r,baseColor,lapColor,baseOpacity=1,lapOpacity=1,minLap=0,maxLap=Infinity){
+      if(startWorkMinutes===null || !g || eAbs<=sAbs) return;
+      const workStart=startWorkMinutes;
+      let cursor=sAbs;
+      while(cursor<eAbs){
+        const lapIndex=Math.max(0, Math.floor((cursor-workStart)/720));
+        const lapEnd=workStart+(lapIndex+1)*720;
+        const segEnd=Math.min(eAbs,lapEnd);
+        const d=createSectorPathBySpan(cursor,segEnd-cursor,r);
+        if(d && lapIndex>=minLap && lapIndex<=maxLap){
+          const isOverlapLap=lapIndex>0;
+          g.appendChild(svgFilledPath(
+            d,
+            isOverlapLap ? lapColor : baseColor,
+            isOverlapLap ? lapOpacity : baseOpacity
+          ));
+        }
+        cursor=segEnd;
+      }
     }
     function svgLine(x1,y1,x2,y2,c,w,dash=''){
       const l=document.createElementNS('http://www.w3.org/2000/svg','line');
@@ -1975,9 +2010,9 @@
       const now=effectiveNow();
       const forecastEnd=getForecastEndMinutes();
       const net=getNetWorkMinutes();
+      const nowAbs=startWorkMinutes + diffMinutes(startWorkMinutes,now);
 
-      const base=createSectorPath(startWorkMinutes,now,radius);
-      if(base) wf.appendChild(svgFilledPath(base,'var(--work-green)',0.62));
+      appendLapAwareSector(wf,startWorkMinutes,nowAbs,radius,'var(--work-green)',WORK_GREEN_LAP_COLOR,0.62,0.82);
 
       if(lastExerciseMinutes!==null && getEffectiveExerciseElapsed()>60){
         const sectorStart = getRedSectorStart();
@@ -1985,8 +2020,7 @@
         if(red) nef.appendChild(svgFilledPath(red,'var(--no-exercise-red)',0.78));
       }
       if(net>workTargetMinutes && forecastEnd!==null){
-        const s=createSectorPath(forecastEnd,now,radius);
-        if(s) ov.appendChild(svgFilledPath(s,'var(--overtime-orange)',0.88));
+        appendLapAwareSector(ov,forecastEnd,nowAbs,radius,'var(--overtime-orange)',OVERTIME_ORANGE_LAP_COLOR,0.88,0.95);
       }
     }
 
@@ -2024,12 +2058,15 @@
       const bf=document.getElementById('breakFill');
       clearChildren(bf);
       for(const seg of breakSegments){
-        const d=createSectorPath(seg.start,seg.end,radius);
-        if(d) bf.appendChild(svgFilledPath(d,'var(--break-cut)',1));
+        const sAbs=startWorkMinutes!==null ? startWorkMinutes + diffMinutes(startWorkMinutes,seg.start) : seg.start;
+        const eAbs=sAbs + diffMinutes(seg.start,seg.end);
+        appendLapAwareSector(bf,sAbs,eAbs,radius,'var(--break-cut)',BREAK_LAP_COLOR,1,0.96);
       }
       if(breakActive&&currentBreakStart!==null){
-        const d=createSectorPath(currentBreakStart,effectiveNow(),radius);
-        if(d) bf.appendChild(svgFilledPath(d,'var(--break-cut)',1));
+        const now=effectiveNow();
+        const sAbs=startWorkMinutes!==null ? startWorkMinutes + diffMinutes(startWorkMinutes,currentBreakStart) : currentBreakStart;
+        const eAbs=sAbs + diffMinutes(currentBreakStart,now);
+        appendLapAwareSector(bf,sAbs,eAbs,radius,'var(--break-cut)',BREAK_LAP_COLOR,1,0.96);
       }
     }
 
