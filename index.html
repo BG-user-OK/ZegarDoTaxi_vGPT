@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_3.5: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_3.6: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_3.5: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_3.6: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1288,24 +1288,59 @@
       display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;
     }
     .keypad button{
+      --key-bg:#1a1a1a;
+      position:relative;
+      overflow:hidden;
       border:none; border-radius:12px;
-      background:#1a1a1a; color:#f0f0f0;
+      background:var(--key-bg); color:#f0f0f0;
       font-size:28px; font-weight:700;
       padding:18px 0;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+      touch-action:none;
+    }
+    .keypad button > span{
+      position:relative;
+      z-index:2;
+      pointer-events:none;
+    }
+    .keypad button::before,
+    .keypad button::after{
+      content:'';
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:170%;
+      aspect-ratio:1/1;
+      border-radius:50%;
+      transform:translate(-50%,-50%) scale(0);
+      pointer-events:none;
+      z-index:1;
+    }
+    .keypad button::before{ background:#ffffff; opacity:0; }
+    .keypad button::after{ background:var(--key-bg); opacity:0; }
+    .keypad button.key-flash::before{ animation:keyFlashWhite .86s ease-out forwards; }
+    .keypad button.key-flash::after{ animation:keyFlashReturn .86s ease-out forwards; }
+    @keyframes keyFlashWhite{
+      0%{ opacity:.95; transform:translate(-50%,-50%) scale(0); }
+      44%{ opacity:1; transform:translate(-50%,-50%) scale(1.18); }
+      100%{ opacity:1; transform:translate(-50%,-50%) scale(1.18); }
+    }
+    @keyframes keyFlashReturn{
+      0%,44%{ opacity:0; transform:translate(-50%,-50%) scale(0); }
+      45%{ opacity:1; transform:translate(-50%,-50%) scale(0); }
+      100%{ opacity:1; transform:translate(-50%,-50%) scale(1.18); }
     }
     .keypad button:active{
       transform:scale(.97);
-      background:#5a5a5a !important;
       color:#fff !important;
       box-shadow:
         inset 0 0 0 2px rgba(255,255,255,.4),
         0 0 18px rgba(255,255,255,.5),
         0 0 6px rgba(255,255,255,.7) !important;
     }
-    .keypad .key-back{ background:#2a1e0e; color:#ffc48a; }
-    .keypad .key-ok{ background:linear-gradient(180deg,var(--ok),var(--ok-dark)); }
-    .keypad .key-cancel{ background:linear-gradient(180deg,var(--red),var(--red-dark)); }
+    .keypad .key-back{ --key-bg:#2a1e0e; background:var(--key-bg); color:#ffc48a; }
+    .keypad .key-ok{ --key-bg:linear-gradient(180deg,var(--ok),var(--ok-dark)); background:var(--key-bg); }
+    .keypad .key-cancel{ --key-bg:linear-gradient(180deg,var(--red),var(--red-dark)); background:var(--key-bg); }
 
     .keypad-display{
       background:#111; border-radius:12px;
@@ -1678,7 +1713,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_3.5</div>
+  <div class="version">vGPT_3.6</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3100,22 +3135,49 @@
           <div class="keypad-label">${lab}</div>
           <div class="keypad-display">${disp}</div>
           ${keypadMode==='counter' && keypadContext.field==='end'
-            ? `<div style="text-align:center;font-size:17px;font-weight:700;color:#aaa;padding:2px 0 4px;">${liveKmPreview()}</div>`
+            ? `<div class="keypad-live-preview" style="text-align:center;font-size:17px;font-weight:700;color:#aaa;padding:2px 0 4px;">${liveKmPreview()}</div>`
             : ''}
           <div class="keypad" style="flex:1;">
-            <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
-            <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
-            <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
-            <button class="key-cancel" data-k="cancel">✕</button>
-            <button data-k="0">0</button>
-            <button class="key-ok" data-k="ok">✓</button>
-            <button class="key-back" data-k="back" style="grid-column:span 3;">← Cofnij</button>
+            <button data-k="1"><span>1</span></button><button data-k="2"><span>2</span></button><button data-k="3"><span>3</span></button>
+            <button data-k="4"><span>4</span></button><button data-k="5"><span>5</span></button><button data-k="6"><span>6</span></button>
+            <button data-k="7"><span>7</span></button><button data-k="8"><span>8</span></button><button data-k="9"><span>9</span></button>
+            <button class="key-cancel" data-k="cancel"><span>✕</span></button>
+            <button data-k="0"><span>0</span></button>
+            <button class="key-ok" data-k="ok"><span>✓</span></button>
+            <button class="key-back" data-k="back" style="grid-column:span 3;"><span>← Cofnij</span></button>
           </div>
         </div>
       `);
       overlay.querySelectorAll('[data-k]').forEach(b=>{
-        b.addEventListener('click',(e)=>{ e.stopPropagation(); keypadPress(b.dataset.k); });
+        b.addEventListener('pointerdown',(e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          flashKeypadKey(b);
+          keypadPress(b.dataset.k);
+        });
+        b.addEventListener('click',(e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+        });
       });
+    }
+    function flashKeypadKey(btn){
+      clearTimeout(btn._flashTimer);
+      btn.classList.remove('key-flash');
+      void btn.offsetWidth;
+      btn.classList.add('key-flash');
+      btn._flashTimer = setTimeout(()=>btn.classList.remove('key-flash'), 900);
+    }
+    function updateKeypadDisplay(){
+      const display = overlay.querySelector('.keypad-display');
+      if(!display) return;
+      if(keypadMode==='amount'){
+        display.innerHTML = formatAmountDisplay(parseInt(keypadRaw||'0',10));
+      } else if(keypadMode==='counter'){
+        display.innerHTML = keypadCounterDigits.map((d,i)=> i===5?`<span class="underline">${d}</span>`:String(d)).join('');
+        const live = overlay.querySelector('.keypad-live-preview');
+        if(live) live.textContent = liveKmPreview();
+      }
     }
     function keypadPress(k){
       if(k==='cancel'){
@@ -3134,7 +3196,7 @@
             rebuildCounterDisplay();
           }
         }
-        renderKeypad(); return;
+        updateKeypadDisplay(); return;
       }
       if(/^[0-9]$/.test(k)){
         if(keypadMode==='amount'){
@@ -3150,7 +3212,7 @@
             return;
           }
         }
-        renderKeypad();
+        updateKeypadDisplay();
       }
     }
     // Buduje keypadCounterDigits jako: hint z lewej (na pozycjach niezastąpionych) + entered z prawej
