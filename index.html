@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_2.9: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_3.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_2.9: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_3.0: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -845,6 +845,19 @@
       transform-origin:center;
       will-change:background;
     }
+    .wheel-restore-cover{
+      position:absolute;
+      inset:0;
+      width:100%; height:100%;
+      pointer-events:none;
+      z-index:2;
+      display:none;
+      background:#000;
+      filter:blur(1.6px);
+      transform:scale(1.035);
+      transform-origin:center;
+      will-change:-webkit-mask-image,mask-image;
+    }
     /* Czerwony moduł nadwyżki - jak dotychczas */
     .overage-display{
       position:absolute;
@@ -873,7 +886,10 @@
     }
     .exercise-btn.restore-overage .wheel-image{
       display:block;
-      z-index:2;
+      z-index:3;
+    }
+    .exercise-btn.restore-overage .wheel-restore-cover{
+      display:block;
     }
     .exercise-btn.restore-overage .wheel-mask-overlay{
       display:none;
@@ -1599,6 +1615,7 @@
             <feGaussianBlur stdDeviation="3"/>
           </filter>
         </svg>
+        <div class="wheel-restore-cover" id="wheelRestoreCover" aria-hidden="true"></div>
         <div class="overage-display" id="overageDisplay">
           <div class="work-roller" style="position:absolute;top:50%;left:6%;right:6%;transform:translateY(-50%);height:80%;background:rgba(0,0,0,.55);">
             <div class="work-roller-inner" id="overageRollerInner"></div>
@@ -1643,7 +1660,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_2.9</div>
+  <div class="version">vGPT_3.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2183,26 +2200,35 @@
       return Math.min(360, (visualElapsed / activeSpan) * 360);
     }
     function clearWheelImageMask(){
-      const wheel=document.getElementById('wheelImage');
-      if(!wheel) return;
-      wheel.style.webkitMaskImage='';
-      wheel.style.maskImage='';
-      wheel.style.webkitMaskSize='';
-      wheel.style.maskSize='';
+      ['wheelImage','wheelRestoreCover'].forEach((id)=>{
+        const el=document.getElementById(id);
+        if(!el) return;
+        el.style.webkitMaskImage='';
+        el.style.maskImage='';
+        el.style.webkitMaskSize='';
+        el.style.maskSize='';
+      });
     }
     function paintWheelRestoreOverageMask(vanishedDeg){
       const wheel=document.getElementById('wheelImage');
-      if(!wheel) return;
+      const cover=document.getElementById('wheelRestoreCover');
+      if(!wheel && !cover) return;
       const angle=Math.max(0, Math.min(360, vanishedDeg));
-      wheel.style.webkitMaskSize='100% 100%';
-      wheel.style.maskSize='100% 100%';
+      const applyMask=(mask)=>{
+        [wheel,cover].forEach((el)=>{
+          if(!el) return;
+          el.style.webkitMaskSize='100% 100%';
+          el.style.maskSize='100% 100%';
+          el.style.webkitMaskImage=mask;
+          el.style.maskImage=mask;
+        });
+      };
       if(angle<=0){
         clearWheelImageMask();
         return;
       }
       if(angle>=360){
-        wheel.style.webkitMaskImage='linear-gradient(transparent, transparent)';
-        wheel.style.maskImage='linear-gradient(transparent, transparent)';
+        applyMask('linear-gradient(transparent, transparent)');
         return;
       }
       const mist=36;
@@ -2211,11 +2237,10 @@
       const mask =
         `conic-gradient(from 0deg at 50% 50%, ` +
         `rgba(0,0,0,0) 0deg, ` +
-        `rgba(0,0,0,0) ${revealStart.toFixed(2)}deg, ` +
-        `rgba(0,0,0,.95) ${revealFull.toFixed(2)}deg, ` +
-        `rgba(0,0,0,1) 360deg)`;
-      wheel.style.webkitMaskImage=mask;
-      wheel.style.maskImage=mask;
+         `rgba(0,0,0,0) ${revealStart.toFixed(2)}deg, ` +
+         `rgba(0,0,0,.95) ${revealFull.toFixed(2)}deg, ` +
+         `rgba(0,0,0,1) 360deg)`;
+      applyMask(mask);
     }
 
     // Rysuje SVG path sektora od 12:00 do `vanishedDeg` (zgodnie ze wskazówkami).
