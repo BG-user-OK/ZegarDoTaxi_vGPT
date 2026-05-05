@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_3.6: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_3.7: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_3.6: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_3.7: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1318,16 +1318,16 @@
     }
     .keypad button::before{ background:#ffffff; opacity:0; }
     .keypad button::after{ background:var(--key-bg); opacity:0; }
-    .keypad button.key-flash::before{ animation:keyFlashWhite .86s ease-out forwards; }
-    .keypad button.key-flash::after{ animation:keyFlashReturn .86s ease-out forwards; }
+    .keypad button.key-flash::before{ animation:keyFlashWhite .46s ease-out forwards; }
+    .keypad button.key-flash::after{ animation:keyFlashReturn .46s ease-out forwards; }
     @keyframes keyFlashWhite{
       0%{ opacity:.95; transform:translate(-50%,-50%) scale(0); }
-      44%{ opacity:1; transform:translate(-50%,-50%) scale(1.18); }
+      45%{ opacity:1; transform:translate(-50%,-50%) scale(1.18); }
       100%{ opacity:1; transform:translate(-50%,-50%) scale(1.18); }
     }
     @keyframes keyFlashReturn{
-      0%,44%{ opacity:0; transform:translate(-50%,-50%) scale(0); }
-      45%{ opacity:1; transform:translate(-50%,-50%) scale(0); }
+      0%,47%{ opacity:0; transform:translate(-50%,-50%) scale(0); }
+      48%{ opacity:1; transform:translate(-50%,-50%) scale(0); }
       100%{ opacity:1; transform:translate(-50%,-50%) scale(1.18); }
     }
     .keypad button:active{
@@ -1713,7 +1713,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_3.6</div>
+  <div class="version">vGPT_3.7</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3166,7 +3166,7 @@
       btn.classList.remove('key-flash');
       void btn.offsetWidth;
       btn.classList.add('key-flash');
-      btn._flashTimer = setTimeout(()=>btn.classList.remove('key-flash'), 900);
+      btn._flashTimer = setTimeout(()=>btn.classList.remove('key-flash'), 500);
     }
     function updateKeypadDisplay(){
       const display = overlay.querySelector('.keypad-display');
