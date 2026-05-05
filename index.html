@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_3.9: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_4.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_3.9: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_4.0: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1274,47 +1274,123 @@
       overflow:hidden;
       text-align:center;
       min-height:46px;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.12) 0%, transparent 42%),
+        linear-gradient(180deg, #24262a 0%, #101115 55%, #050506 100%) !important;
+      color:#d5d7da !important;
       box-shadow:
-        0 2px 4px rgba(0,0,0,.5),
-        inset 0 1px 0 rgba(255,255,255,.15);
+        inset 0 4px 9px rgba(0,0,0,.75),
+        inset 0 -1px 0 rgba(255,255,255,.08),
+        0 1px 0 rgba(255,255,255,.18);
+      transition:filter .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .prov-btn::before{
+      content:'';
+      position:absolute;
+      inset:4px;
+      border-radius:6px;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,.42), rgba(255,255,255,.035) 42%, rgba(0,0,0,.46)),
+        radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.08), transparent 56%);
+      box-shadow:
+        inset 0 3px 8px rgba(0,0,0,.82),
+        inset 0 -1px 2px rgba(255,255,255,.08);
+      pointer-events:none;
     }
     .prov-img{
       position:absolute;
       left:50%; top:50%;
       transform:translate(-50%,-50%);
-      height:100%;
+      height:auto;
       width:auto;
-      max-width:none;
+      max-width:82%;
+      max-height:74%;
       object-fit:contain;
       pointer-events:none;
       display:none;
+      z-index:2;
+      opacity:.34;
+      filter:grayscale(.25) saturate(.65) brightness(.46) contrast(.95);
+      transition:opacity .2s ease, filter .2s ease, transform .2s ease;
     }
     .prov-btn.has-img{
-      background:transparent !important;
-      border-radius:0;
+      border-radius:8px;
       justify-content:center;
       padding:0;
-      box-shadow:none;
     }
     .prov-btn.has-img .prov-img{ display:block; }
     .prov-btn.has-img .prov-label{ display:none; }
+    .prov-btn.filled{
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.2) 0%, transparent 44%),
+        linear-gradient(180deg, #303338 0%, #15171b 58%, #070708 100%) !important;
+      box-shadow:
+        inset 0 4px 9px rgba(0,0,0,.68),
+        inset 0 -1px 0 rgba(255,255,255,.14),
+        0 0 12px rgba(230,235,245,.18);
+    }
+    .prov-btn.filled.has-img .prov-img{
+      opacity:1;
+      filter:saturate(1.12) brightness(1.06) contrast(1.04);
+      transform:translate(-50%,-50%) scale(1.02);
+    }
+    .prov-btn.filled .prov-label{
+      color:#ffffff;
+      text-shadow:0 0 8px rgba(255,255,255,.28);
+    }
+    .prov-btn.empty .prov-label{
+      color:rgba(220,224,230,.48);
+    }
     .prov-label{
       position:relative;
-      z-index:1;
+      z-index:2;
     }
     .prov-amount{
       display:flex; align-items:center; justify-content:flex-end;
       padding:0 14px;
-      background:rgba(0,0,0,.55);
+      background:
+        linear-gradient(180deg, rgba(0,0,0,.64) 0%, rgba(0,0,0,.52) 48%, rgba(0,0,0,.76) 100%);
       border-radius:8px;
       color:#fff;
       font-size:24px; font-weight:900;
       font-variant-numeric:tabular-nums;
       box-shadow:
-        inset 0 2px 4px rgba(0,0,0,.6),
-        0 1px 0 rgba(255,255,255,.2);
+        inset 0 4px 9px rgba(0,0,0,.78),
+        inset 0 -1px 2px rgba(255,230,130,.1),
+        0 1px 0 rgba(255,255,255,.18);
+      transition:background .2s ease, box-shadow .2s ease, color .2s ease;
     }
     .prov-amount.empty{ color:#888; }
+    .prov-amount.filled{
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(255,245,176,.38) 0%, rgba(255,204,70,.18) 34%, transparent 68%),
+        linear-gradient(180deg, rgba(118,76,0,.56) 0%, rgba(52,34,0,.64) 58%, rgba(14,10,0,.82) 100%);
+      color:#fff8d0;
+      box-shadow:
+        inset 0 4px 10px rgba(255,232,126,.22),
+        inset 0 -7px 12px rgba(0,0,0,.55),
+        0 0 11px rgba(255,197,55,.18);
+    }
+    .prov-btn.counter-warning{
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(255,55,55,.62) 0%, rgba(150,0,0,.22) 36%, transparent 72%),
+        linear-gradient(180deg, #2b1111 0%, #120707 56%, #050202 100%) !important;
+      box-shadow:
+        inset 0 5px 11px rgba(255,42,42,.28),
+        inset 0 -1px 0 rgba(255,255,255,.08),
+        0 0 14px rgba(255,45,45,.24);
+      color:#ffffff !important;
+    }
+    .prov-amount.counter-warning{
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(255,42,42,.58) 0%, rgba(165,0,0,.24) 38%, transparent 74%),
+        linear-gradient(180deg, rgba(48,8,8,.7) 0%, rgba(14,3,3,.78) 62%, rgba(0,0,0,.86) 100%);
+      color:#ffffff;
+      box-shadow:
+        inset 0 5px 11px rgba(255,42,42,.32),
+        inset 0 -7px 13px rgba(0,0,0,.62),
+        0 0 12px rgba(255,45,45,.22);
+    }
 
     .panel-actions{
       display:flex; justify-content:space-between; align-items:center;
@@ -1750,7 +1826,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_3.9</div>
+  <div class="version">vGPT_4.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3049,19 +3125,23 @@
     }
     function openMoneyPanel(){
       let rows='';
+      const hasAnyProviderAmount = PROVIDERS.some(p => (revenues[p.key]||0) > 0);
+      const finalCounterMissing = counterEnd === null;
+      const workHasStarted = startWorkMinutes !== null;
       for(const p of PROVIDERS){
         const v=revenues[p.key]||0;
+        const filled = v > 0;
         const disp=v>0?formatAmountDisplay(v):'—';
         const imgSrc = `Photos/${p.key}.png`;
         rows += `
-          <div class="provider-row">
-            <button class="prov-btn" data-prov="${p.key}" style="background:${p.bg};color:${p.fg};">
+          <div class="provider-row ${filled?'provider-filled':'provider-empty'}">
+            <button class="prov-btn ${filled?'filled':'empty'}" data-prov="${p.key}" style="background:${p.bg};color:${p.fg};">
               <img src="${imgSrc}" alt="${p.label}" class="prov-img"
                    onload="this.parentElement.classList.add('has-img')"
                    onerror="this.remove()" />
               <span class="prov-label">${p.label}</span>
             </button>
-            <div class="prov-amount ${v>0?'':'empty'}">${disp}</div>
+            <div class="prov-amount ${filled?'filled':'empty'}">${disp}</div>
           </div>`;
       }
       // Punkt 8: zamiast 'otwórz' pokazuj najwyższy aktualny licznik (końcowy > początkowy > z wczoraj)
@@ -3072,10 +3152,12 @@
         null
       );
       const cAny = counterStart!==null||counterEnd!==null||privKmTotal>0||lastCounterEnd!==null;
+      const counterLabelWarning = workHasStarted && finalCounterMissing;
+      const counterValueWarning = workHasStarted && hasAnyProviderAmount && finalCounterMissing;
       rows += `
         <div class="provider-row" style="margin-top:8px;">
-          <button class="prov-btn" data-prov="__counter" style="background:#2a2a2a;color:#f0f0f0;">LICZNIK</button>
-          <div class="prov-amount ${cAny?'':'empty'}">${counterDisplay !== null ? counterDisplay : '—'}</div>
+          <button class="prov-btn ${counterLabelWarning?'counter-warning':''}" data-prov="__counter" style="background:#2a2a2a;color:#f0f0f0;">LICZNIK</button>
+          <div class="prov-amount ${cAny?'filled':'empty'} ${counterValueWarning?'counter-warning':''}">${counterDisplay !== null ? counterDisplay : '—'}</div>
         </div>`;
       showOverlay(`
         <div class="big-panel money-panel">
