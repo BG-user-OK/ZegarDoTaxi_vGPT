@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_2.7: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_2.8: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_2.7: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_2.8: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1638,7 +1638,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_2.7</div>
+  <div class="version">vGPT_2.8</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2627,6 +2627,31 @@
       }
     }
 
+    function getNoteDisplayTimeMinutes(note){
+      const raw = String(note && note.alarmTime ? note.alarmTime : '');
+      const m = raw.match(/^(\d{1,2}):(\d{2})$/);
+      if(!m) return null;
+      const h = parseInt(m[1],10);
+      const min = parseInt(m[2],10);
+      if(!Number.isFinite(h) || !Number.isFinite(min) || h<0 || h>23 || min<0 || min>59) return null;
+      return h*60 + min;
+    }
+
+    function getSortedNotesForDisplay(){
+      return notes
+        .map((note,index)=>({ note, index, time:getNoteDisplayTimeMinutes(note) }))
+        .sort((a,b)=>{
+          const aNoTime = a.time === null;
+          const bNoTime = b.time === null;
+          if(aNoTime && bNoTime) return a.index - b.index;
+          if(aNoTime) return 1;
+          if(bNoTime) return -1;
+          if(a.time !== b.time) return a.time - b.time;
+          return a.index - b.index;
+        })
+        .map(x=>x.note);
+    }
+
     function renderNotesBar(){
       const bar=document.getElementById('notesBar');
       clearChildren(bar);
@@ -2649,7 +2674,7 @@
 
       // Sprawdź alarmy
       const nowMs = Date.now();
-      for(const n of notes){
+      for(const n of getSortedNotesForDisplay()){
         const b=document.createElement('button');
         b.className='note-sticker filled';
         b.style.setProperty('--note-size', size + 'px');
