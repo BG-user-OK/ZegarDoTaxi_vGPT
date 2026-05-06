@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_4.1: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_4.2: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_4.1: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_4.2: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1309,8 +1309,8 @@
       pointer-events:none;
       display:none;
       z-index:2;
-      opacity:.34;
-      filter:grayscale(.25) saturate(.65) brightness(.46) contrast(.95);
+      opacity:.52;
+      filter:grayscale(.18) saturate(.78) brightness(.66) contrast(1);
       transition:opacity .2s ease, filter .2s ease, transform .2s ease;
     }
     .prov-btn.has-img{
@@ -1826,7 +1826,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_4.1</div>
+  <div class="version">vGPT_4.2</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2110,6 +2110,7 @@
       lbl.setAttribute('fill','#fff'); lbl.setAttribute('font-size','33');
       lbl.setAttribute('font-weight','900'); lbl.setAttribute('font-family','inherit');
       lbl.setAttribute('opacity','0.95');
+      lbl.style.filter = 'drop-shadow(0 0 3px rgba(255,255,255,.72)) drop-shadow(0 0 8px rgba(220,240,255,.34))';
       lbl.textContent = String(m);
       gMin.appendChild(lbl);
 
