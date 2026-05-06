@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_4.2: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_4.3: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -205,7 +205,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_4.2: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_4.3: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -449,6 +449,34 @@
       line-height:1;
       pointer-events:none;
       opacity:.85;
+    }
+    .money-btn.counter-start-warning{
+      box-shadow:
+        0 0 0 2px rgba(255,48,48,.86),
+        0 0 18px rgba(255,0,0,.95),
+        0 0 34px rgba(255,0,0,.68),
+        inset 0 0 22px rgba(255,0,0,.32) !important;
+    }
+    .money-btn.counter-start-warning .money-empty-bag{
+      opacity:1;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(255,34,34,.34), transparent 48%),
+        radial-gradient(circle at 50% 50%, rgba(0,0,0,.32), transparent 62%);
+    }
+    .money-counter-warning-img{
+      max-width:88%;
+      max-height:88%;
+      object-fit:contain;
+      filter:
+        drop-shadow(0 0 8px rgba(255,50,50,.95))
+        drop-shadow(0 0 18px rgba(255,0,0,.7));
+    }
+    .money-counter-warning-fallback{
+      display:none;
+      font-size:clamp(70px, 18vw, 130px);
+      text-shadow:
+        0 0 10px rgba(255,60,60,.9),
+        0 0 24px rgba(255,0,0,.65);
     }
     .money-empty-bag.hidden{ display:none; }
     .money-split{
@@ -1373,23 +1401,38 @@
     }
     .prov-btn.counter-warning{
       background:
-        radial-gradient(ellipse at 50% 0%, rgba(255,55,55,.62) 0%, rgba(150,0,0,.22) 36%, transparent 72%),
-        linear-gradient(180deg, #2b1111 0%, #120707 56%, #050202 100%) !important;
+        radial-gradient(ellipse at 50% 0%, rgba(255,36,36,.96) 0%, rgba(210,0,0,.58) 38%, transparent 76%),
+        linear-gradient(180deg, #3a0505 0%, #170202 56%, #030000 100%) !important;
       box-shadow:
-        inset 0 5px 11px rgba(255,42,42,.28),
-        inset 0 -1px 0 rgba(255,255,255,.08),
-        0 0 14px rgba(255,45,45,.24);
-      color:#ffffff !important;
+        inset 0 7px 16px rgba(255,28,28,.62),
+        inset 0 -8px 14px rgba(0,0,0,.55),
+        inset 0 0 0 1px rgba(255,80,80,.42),
+        0 0 22px rgba(255,0,0,.58);
+      color:#ff3434 !important;
+      text-shadow:
+        0 0 4px rgba(255,255,255,.75),
+        0 0 8px rgba(255,30,30,.98),
+        0 0 18px rgba(255,0,0,.86),
+        0 0 30px rgba(255,0,0,.58);
+    }
+    .prov-btn.counter-warning::before{
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(255,45,45,.86) 0%, rgba(170,0,0,.34) 48%, transparent 78%),
+        linear-gradient(180deg, rgba(85,0,0,.56), rgba(0,0,0,.45) 64%, rgba(0,0,0,.72));
+      box-shadow:
+        inset 0 6px 14px rgba(255,0,0,.46),
+        inset 0 -3px 8px rgba(0,0,0,.7);
     }
     .prov-amount.counter-warning{
       background:
-        radial-gradient(ellipse at 50% 0%, rgba(255,42,42,.58) 0%, rgba(165,0,0,.24) 38%, transparent 74%),
-        linear-gradient(180deg, rgba(48,8,8,.7) 0%, rgba(14,3,3,.78) 62%, rgba(0,0,0,.86) 100%);
+        radial-gradient(ellipse at 50% 0%, rgba(255,34,34,.95) 0%, rgba(205,0,0,.5) 40%, transparent 78%),
+        linear-gradient(180deg, rgba(86,0,0,.86) 0%, rgba(18,0,0,.9) 62%, rgba(0,0,0,.94) 100%);
       color:#ffffff;
       box-shadow:
-        inset 0 5px 11px rgba(255,42,42,.32),
-        inset 0 -7px 13px rgba(0,0,0,.62),
-        0 0 12px rgba(255,45,45,.22);
+        inset 0 9px 18px rgba(255,22,22,.7),
+        inset 0 -9px 15px rgba(0,0,0,.72),
+        inset 0 0 0 1px rgba(255,70,70,.36),
+        0 0 20px rgba(255,0,0,.48);
     }
 
     .panel-actions{
@@ -1826,7 +1869,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_4.2</div>
+  <div class="version">vGPT_4.3</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2110,7 +2153,7 @@
       lbl.setAttribute('fill','#fff'); lbl.setAttribute('font-size','33');
       lbl.setAttribute('font-weight','900'); lbl.setAttribute('font-family','inherit');
       lbl.setAttribute('opacity','0.95');
-      lbl.style.filter = 'drop-shadow(0 0 3px rgba(255,255,255,.72)) drop-shadow(0 0 8px rgba(220,240,255,.34))';
+      lbl.style.filter = 'drop-shadow(0 0 5px rgba(255,255,255,.98)) drop-shadow(0 0 13px rgba(255,255,255,.76)) drop-shadow(0 0 22px rgba(185,220,255,.48))';
       lbl.textContent = String(m);
       gMin.appendChild(lbl);
 
@@ -2738,10 +2781,13 @@
     function getTotalRevenueGroszy(){ let s=0; for(const p of PROVIDERS) s+=revenues[p.key]||0; return s; }
 
     function renderMoneyButton(){
+      const moneyBtn=document.getElementById('moneyBtn');
       const moneyTop=document.getElementById('moneyTop');
       const moneyBot=document.getElementById('moneyBot');
       const coinCell=document.getElementById('coinCell');
       const moneyEmptyBag=document.getElementById('moneyEmptyBag');
+      const startCounterMissingWarning = startWorkMinutes !== null && counterStart === null;
+      if(moneyBtn) moneyBtn.classList.toggle('counter-start-warning', startCounterMissingWarning);
 
       // === górny banknot: SUMA OBROTÓW ===
       moneyTop.classList.remove('note-50','note-100','note-200','note-500','empty');
@@ -2792,10 +2838,16 @@
 
       // === pełnoekranowy worek pojawia się tylko gdy oba banknoty są puste ===
       if(moneyEmptyBag){
-        if(total <= 0){
+        if(startCounterMissingWarning){
+          moneyEmptyBag.innerHTML = `<img src="Photos/licznik.png" alt="Licznik" class="money-counter-warning-img" onerror="this.style.display='none';this.nextElementSibling.style.display='block';"><span class="money-counter-warning-fallback">🧮</span>`;
           moneyEmptyBag.classList.remove('hidden');
         } else {
-          moneyEmptyBag.classList.add('hidden');
+          moneyEmptyBag.textContent = '💰';
+          if(total <= 0){
+            moneyEmptyBag.classList.remove('hidden');
+          } else {
+            moneyEmptyBag.classList.add('hidden');
+          }
         }
       }
 
@@ -3126,7 +3178,6 @@
     }
     function openMoneyPanel(){
       let rows='';
-      const hasAnyProviderAmount = PROVIDERS.some(p => (revenues[p.key]||0) > 0);
       const finalCounterMissing = counterEnd === null;
       const workHasStarted = startWorkMinutes !== null;
       for(const p of PROVIDERS){
@@ -3146,19 +3197,14 @@
           </div>`;
       }
       // Punkt 8: zamiast 'otwórz' pokazuj najwyższy aktualny licznik (końcowy > początkowy > z wczoraj)
-      const counterDisplay = (
-        counterEnd !== null ? counterEnd :
-        counterStart !== null ? counterStart :
-        lastCounterEnd !== null ? lastCounterEnd :
-        null
-      );
-      const cAny = counterStart!==null||counterEnd!==null||privKmTotal>0||lastCounterEnd!==null;
+      const counterDisplay = counterEnd !== null ? counterEnd : '';
+      const cAny = counterEnd !== null;
       const counterLabelWarning = workHasStarted && finalCounterMissing;
-      const counterValueWarning = workHasStarted && hasAnyProviderAmount && finalCounterMissing;
+      const counterValueWarning = workHasStarted && finalCounterMissing;
       rows += `
         <div class="provider-row" style="margin-top:8px;">
           <button class="prov-btn ${counterLabelWarning?'counter-warning':''}" data-prov="__counter" style="background:#2a2a2a;color:#f0f0f0;">LICZNIK</button>
-          <div class="prov-amount ${cAny?'filled':'empty'} ${counterValueWarning?'counter-warning':''}">${counterDisplay !== null ? counterDisplay : '—'}</div>
+          <div class="prov-amount ${cAny?'filled':'empty'} ${counterValueWarning?'counter-warning':''}">${counterDisplay}</div>
         </div>`;
       showOverlay(`
         <div class="big-panel money-panel">
