@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_4.7: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_4.8: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -211,7 +211,7 @@
     .coin-btn{ order:6; }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_4.7: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_4.8: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -669,6 +669,22 @@
       line-height:1.1;
       text-shadow:0 2px 6px rgba(0,0,0,.6);
       margin-bottom:8px;
+    }
+    .end-confirm-title .missing-counter-main{
+      display:block;
+      font-size:clamp(26px, 7.2vw, 44px);
+      line-height:.94;
+      letter-spacing:.2px;
+      text-shadow:
+        0 2px 4px rgba(0,0,0,.75),
+        0 0 12px rgba(255,255,255,.24);
+    }
+    .end-confirm-title .missing-counter-question{
+      display:block;
+      margin-top:8px;
+      font-size:clamp(18px, 5.1vw, 30px);
+      line-height:1;
+      text-shadow:0 2px 6px rgba(0,0,0,.7);
     }
     .end-confirm-counter{
       font-size:clamp(60px, 18vw, 110px);
@@ -2045,7 +2061,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_4.7</div>
+  <div class="version">vGPT_4.8</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -4597,7 +4613,13 @@
         }
         if(startWorkMinutes!==null && endWorkMinutes===null){
           // praca trwa - włącz zabezpieczenie zamiast od razu kończyć
-          startEndConfirm();
+          if(counterEnd===null){
+            startEndConfirm({
+              title:'<span class="missing-counter-main">BRAK LICZNIKA</span><span class="missing-counter-main">KO&#323;COWEGO</span><span class="missing-counter-question">Wys&#322;a&#263; mimo to?</span>'
+            });
+          } else {
+            startEndConfirm();
+          }
         } else {
           // brak pracy lub już zakończona - start nowej
           setWorkStart(nowMinutes(), false);
