@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_4.5: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_4.6: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -203,9 +203,15 @@
       grid-auto-rows:auto; column-gap:6px; row-gap:2px;
       align-items:end;
     }
+    .work-btn{ order:1; }
+    .pot-btn{ order:2; }
+    .break-btn{ order:3; }
+    .exercise-btn{ order:4; }
+    .money-btn{ order:5; }
+    .coin-btn{ order:6; }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_4.5: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_4.6: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1421,7 +1427,19 @@
         0 0 28px rgba(255,0,0,.9),
         0 0 44px rgba(255,0,0,.64);
     }
+    .prov-btn.counter-warning .prov-label{
+      position:relative;
+      z-index:4;
+      color:#ffffff;
+      text-shadow:
+        0 0 3px rgba(255,255,255,1),
+        0 0 7px rgba(255,255,255,1),
+        0 0 14px rgba(255,255,255,.95),
+        0 0 24px rgba(255,40,40,.9),
+        0 0 42px rgba(255,0,0,.72);
+    }
     .prov-btn.counter-warning::before{
+      z-index:1;
       background:
         radial-gradient(ellipse at 50% 0%, rgba(255,45,45,.86) 0%, rgba(170,0,0,.34) 48%, transparent 78%),
         linear-gradient(180deg, rgba(85,0,0,.56), rgba(0,0,0,.45) 64%, rgba(0,0,0,.72));
@@ -1866,7 +1884,7 @@
         </div>
       </button>
 
-      <button class="btn coin-btn" id="coinBtn" type="button">
+      <button class="btn coin-btn empty-slot" id="coinBtn" type="button">
         <div class="coin-cell empty" id="coinCell"></div>
       </button>
     </div>
@@ -1875,7 +1893,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_4.5</div>
+  <div class="version">vGPT_4.6</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2344,6 +2362,12 @@
     }
 
     // ===== przyciski =====
+    function formatBreakButtonTime(minutes){
+      const m = Math.max(0, Math.floor(Math.abs(minutes)));
+      if(m < 60) return ':' + pad(m);
+      return Math.floor(m / 60) + ':' + pad(m % 60);
+    }
+
     function renderButtons(){
       const workBtn=document.getElementById('workBtn');
       const exBtn=document.getElementById('exerciseBtn');
@@ -2363,9 +2387,9 @@
         // Punkt 2: gdy pauza aktywna - pokaż tylko dolny (bieżąca pauza); gdy nieaktywna - tylko górny (suma)
         if(breakActive){
           breakTopZone.textContent = '';
-          breakBotZone.textContent = ':' + pad(getActiveBreakMinutes());
+          breakBotZone.textContent = formatBreakButtonTime(getActiveBreakMinutes());
         } else {
-          breakTopZone.textContent = totalBreak !== 0 ? ':' + pad(Math.abs(totalBreak)) : '';
+          breakTopZone.textContent = totalBreak !== 0 ? formatBreakButtonTime(totalBreak) : '';
           breakBotZone.textContent = '';
         }
         workBtn.classList.toggle('overtime', net>workTargetMinutes);
@@ -2790,6 +2814,7 @@
       const moneyBtn=document.getElementById('moneyBtn');
       const moneyTop=document.getElementById('moneyTop');
       const moneyBot=document.getElementById('moneyBot');
+      const coinBtn=document.getElementById('coinBtn');
       const coinCell=document.getElementById('coinCell');
       const moneyEmptyBag=document.getElementById('moneyEmptyBag');
       const startCounterMissingWarning = startWorkMinutes !== null && counterStart === null;
@@ -2861,6 +2886,7 @@
       coinCell.classList.remove('coin-1','coin-2','coin-5','empty');
       coinCell.style.backgroundImage='';
       clearChildren(coinCell);
+      let coinVisible = false;
 
       if(total>0 && counterStart!==null && counterEnd!==null){
         const km=counterEnd-counterStart-privKmTotal;
@@ -2877,12 +2903,14 @@
           t.className='coin-cell-text';
           t.textContent=perKm.toFixed(2);
           coinCell.appendChild(t);
+          coinVisible = true;
         } else {
           coinCell.classList.add('empty');
         }
       } else {
         coinCell.classList.add('empty');
       }
+      if(coinBtn) coinBtn.classList.toggle('empty-slot', !coinVisible);
     }
 
     function getNoteDisplayTimeMinutes(note){
@@ -3209,7 +3237,7 @@
       const counterValueWarning = workHasStarted && finalCounterMissing;
       rows += `
         <div class="provider-row" style="margin-top:8px;">
-          <button class="prov-btn ${counterLabelWarning?'counter-warning':''}" data-prov="__counter" style="background:#2a2a2a;color:#f0f0f0;">LICZNIK</button>
+          <button class="prov-btn ${counterLabelWarning?'counter-warning':''}" data-prov="__counter" style="background:#2a2a2a;color:#f0f0f0;"><span class="prov-label">LICZNIK</span></button>
           <div class="prov-amount ${cAny?'filled':'empty'} ${counterValueWarning?'counter-warning':''}">${counterDisplay}</div>
         </div>`;
       showOverlay(`
@@ -4248,7 +4276,11 @@
     // === MONEY === (otwarcie panelu obrotów)
     document.getElementById('moneyBtn').addEventListener('click', ()=> openMoneyPanel());
     // === COIN === (też otwiera panel obrotów - to ten sam panel)
-    document.getElementById('coinBtn').addEventListener('click', ()=> openMoneyPanel());
+    document.getElementById('coinBtn').addEventListener('click', ()=>{
+      const btn=document.getElementById('coinBtn');
+      if(btn && btn.classList.contains('empty-slot')) return;
+      openMoneyPanel();
+    });
 
     // trick: 3x puk w wersję = konfiguracja URL Apps Script
     let vt=0, vtT=null;
