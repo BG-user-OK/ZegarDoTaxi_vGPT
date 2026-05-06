@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_4.6: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_4.7: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -211,7 +211,7 @@
     .coin-btn{ order:6; }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_4.6: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_4.7: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1156,6 +1156,143 @@
       position:absolute; left:12px; right:12px; bottom:12px;
       display:flex; justify-content:space-between; align-items:center;
     }
+    .time-picker-layer{
+      position:absolute; inset:0;
+      z-index:1200;
+      display:flex; align-items:center; justify-content:center;
+      padding:8px;
+      background:rgba(0,0,0,.74);
+    }
+    .time-picker-editor{
+      justify-content:flex-start;
+      padding:12px 12px 86px;
+      overflow:hidden;
+    }
+    .time-picker-title{
+      text-align:center;
+      color:#cfcfcf;
+      font-size:16px;
+      font-weight:900;
+      letter-spacing:1px;
+      text-transform:uppercase;
+      padding:2px 0 8px;
+    }
+    .time-picker-top{
+      display:grid;
+      grid-template-columns:1fr auto 1fr;
+      align-items:center;
+      gap:8px;
+      margin-bottom:10px;
+    }
+    .time-picker-field{
+      height:72px;
+      border:none;
+      border-radius:14px;
+      background:#111;
+      color:#b9b9b9;
+      font-size:clamp(40px, 12vw, 64px);
+      font-weight:900;
+      font-variant-numeric:tabular-nums;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+    }
+    .time-picker-field.active{
+      background:linear-gradient(180deg,#133f45,#09292e);
+      color:#7ef4ff;
+      box-shadow:inset 0 0 0 2px rgba(126,244,255,.75), 0 0 18px rgba(72,229,255,.22);
+    }
+    .time-picker-colon{
+      color:#d8faff;
+      font-size:clamp(38px, 10vw, 58px);
+      font-weight:900;
+      margin-top:-5px;
+    }
+    .time-picker-dial{
+      position:relative;
+      width:min(88vw, 472px);
+      aspect-ratio:1;
+      margin:0 auto;
+      border-radius:50%;
+      background:
+        radial-gradient(circle at 50% 47%, rgba(31,66,70,.28), rgba(6,8,9,.95) 62%, #020303 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.07),
+        inset 0 0 34px rgba(0,0,0,.82),
+        0 8px 24px rgba(0,0,0,.5);
+      overflow:hidden;
+    }
+    .time-picker-center{
+      position:absolute; left:50%; top:50%;
+      width:12px; height:12px;
+      transform:translate(-50%,-50%);
+      border-radius:50%;
+      background:#7ef4ff;
+      box-shadow:0 0 16px rgba(126,244,255,.5);
+      z-index:3;
+    }
+    .time-picker-hand{
+      position:absolute;
+      left:50%;
+      top:calc(50% - var(--hand-len));
+      width:2px;
+      height:var(--hand-len);
+      transform:translateX(-50%) rotate(var(--hand-angle));
+      transform-origin:50% 100%;
+      background:linear-gradient(180deg, rgba(126,244,255,.18), rgba(126,244,255,.72));
+      box-shadow:0 0 8px rgba(126,244,255,.18);
+      z-index:2;
+    }
+    .time-picker-number{
+      position:absolute;
+      left:var(--x);
+      top:var(--y);
+      width:52px;
+      height:52px;
+      transform:translate(-50%,-50%);
+      border:none;
+      border-radius:50%;
+      background:transparent;
+      color:#d7e4e5;
+      font-size:20px;
+      font-weight:900;
+      font-variant-numeric:tabular-nums;
+      z-index:4;
+    }
+    .time-picker-number.inner{
+      width:46px;
+      height:46px;
+      font-size:17px;
+      color:#aebfc1;
+    }
+    .time-picker-number.selected{
+      width:62px;
+      height:62px;
+      background:#9af5ff;
+      color:#041012;
+      box-shadow:0 0 22px rgba(126,244,255,.45);
+    }
+    .time-picker-number.disabled{
+      opacity:.25;
+      pointer-events:none;
+    }
+    .time-picker-extra{
+      margin:8px auto 0;
+      text-align:center;
+      color:#bfbfbf;
+      font-size:15px;
+      font-weight:800;
+    }
+    .time-picker-extra button{
+      margin-top:6px;
+      height:40px;
+      width:auto;
+      padding:0 18px;
+      border:none;
+      border-radius:12px;
+      background:linear-gradient(180deg,#2a4a2a,#1a3a1a);
+      color:#d6ffd9;
+      font-size:15px;
+      font-weight:900;
+    }
     .cancel-btn, .ok-btn, .delete-btn{
       width:64px; height:64px;
       border:none; border-radius:16px;
@@ -1633,15 +1770,24 @@
       min-width:0;
     }
     .note-time-control{
-      display:grid;
-      grid-template-columns:1fr auto 1fr;
+      width:100%;
+      min-height:96px;
+      border:none;
+      border-radius:14px;
+      background:linear-gradient(180deg,#151515,#080808);
+      color:#ffffff;
+      display:flex;
       align-items:center;
-      justify-items:center;
-      gap:5px;
-      padding:4px 0 2px;
+      justify-content:center;
+      gap:7px;
+      padding:8px 6px;
+      cursor:pointer;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.14), inset 0 0 20px rgba(0,0,0,.7);
     }
-    .note-time-control .time-col{ gap:8px; }
+    .note-time-control:active{ transform:scale(.98); }
+    .note-time-control .time-col{ width:auto; gap:0; }
     .note-time-control .arrow-btn{
+      display:none;
       width:min(18vw, 70px);
       height:min(11vw, 46px);
       font-size:26px;
@@ -1659,6 +1805,12 @@
       color:#ffffff;
       font-size:clamp(30px, 7vw, 44px);
       margin-top:0;
+    }
+    .note-time-control .note-time-value{
+      font-size:clamp(42px, 11vw, 64px);
+      font-weight:900;
+      line-height:1;
+      font-variant-numeric:tabular-nums;
     }
     .note-time-control.off{ opacity:.45; }
     .note-alarm-row{
@@ -1893,7 +2045,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_4.6</div>
+  <div class="version">vGPT_4.7</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3099,20 +3251,235 @@
     function hideOverlay(){ overlay.classList.remove('show'); overlay.innerHTML=''; }
     overlay.addEventListener('click',(e)=>{ if(e.target===overlay) hideOverlay(); });
 
+    // ===== wspolny picker czasu =====
+    function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+    function roundToStep(n,step){
+      const s = step || 5;
+      return Math.round(n / s) * s;
+    }
+    function normalizePickerMinutes(total, opts){
+      const step = opts.minuteStep || 5;
+      let value = Number.isFinite(total) ? Math.max(0, Math.floor(total)) : 0;
+      let h = Math.floor(value / 60);
+      let m = roundToStep(value % 60, step);
+      if(m >= 60){ h += 1; m = 0; }
+      value = h * 60 + m;
+      if(opts.kind === 'clock') return ((value % 1440) + 1440) % 1440;
+      const min = Number.isFinite(opts.minMinutes) ? opts.minMinutes : 0;
+      const max = Number.isFinite(opts.maxMinutes) ? opts.maxMinutes : 23 * 60 + 55;
+      return clamp(value, min, max);
+    }
+    function pickerPoint(index,total,ring){
+      const a = (index / total) * Math.PI * 2 - Math.PI / 2;
+      return {
+        x: 50 + Math.cos(a) * ring,
+        y: 50 + Math.sin(a) * ring
+      };
+    }
+    function openSharedTimePicker(opts){
+      const options = Object.assign({
+        kind:'clock',
+        title:'TIME',
+        minuteStep:5,
+        initialMinutes:0,
+        autoConfirm:true,
+        nested:false,
+        extraHtml:'',
+        extraActions:{}
+      }, opts || {});
+
+      let value = normalizePickerMinutes(options.initialMinutes, options);
+      let selectedHour = Math.floor(value / 60) % 24;
+      let selectedMinute = value % 60;
+      let activePart = 'hour';
+      let layer = null;
+
+      function totalFor(h,m){ return h * 60 + m; }
+      function isDuration(){ return options.kind !== 'clock'; }
+      function valueAllowed(total){
+        if(!isDuration()) return true;
+        const min = Number.isFinite(options.minMinutes) ? options.minMinutes : 0;
+        const max = Number.isFinite(options.maxMinutes) ? options.maxMinutes : 23 * 60 + 55;
+        return total >= min && total <= max;
+      }
+      function hourAllowed(h){
+        if(!isDuration()) return true;
+        const step = options.minuteStep || 5;
+        for(let m=0;m<60;m+=step){
+          if(valueAllowed(totalFor(h,m))) return true;
+        }
+        return false;
+      }
+      function minuteAllowed(m){ return valueAllowed(totalFor(selectedHour,m)); }
+      function closePicker(callCancel){
+        if(layer) layer.remove();
+        else hideOverlay();
+        if(callCancel && typeof options.onCancel === 'function') options.onCancel();
+      }
+      function confirmPicker(){
+        const out = normalizePickerMinutes(totalFor(selectedHour, selectedMinute), options);
+        closePicker(false);
+        if(typeof options.onDone === 'function') options.onDone(out);
+      }
+      function dialNumberHtml(value,label,ring,index,total,selected,disabled,inner){
+        const p = pickerPoint(index,total,ring);
+        const cls = ['time-picker-number'];
+        if(selected) cls.push('selected');
+        if(disabled) cls.push('disabled');
+        if(inner) cls.push('inner');
+        return `<button type="button" class="${cls.join(' ')}" data-tp-value="${value}" style="--x:${p.x.toFixed(2)}%;--y:${p.y.toFixed(2)}%;">${label}</button>`;
+      }
+      function dialHtml(){
+        let numbers = '';
+        let angle = 0;
+        let handLen = '41%';
+        if(activePart === 'hour'){
+          for(let h=0;h<24;h++){
+            const inner = h >= 12;
+            const idx = inner ? h - 12 : h;
+            const ring = inner ? 28 : 41;
+            numbers += dialNumberHtml(h, pad(h), ring, idx, 12, h === selectedHour, !hourAllowed(h), inner);
+          }
+          angle = (selectedHour % 12) * 30;
+          handLen = selectedHour >= 12 ? '28%' : '41%';
+        } else {
+          const step = options.minuteStep || 5;
+          for(let m=0;m<60;m+=step){
+            numbers += dialNumberHtml(m, pad(m), 41, m / step, 60 / step, m === selectedMinute, !minuteAllowed(m), false);
+          }
+          angle = selectedMinute * 6;
+          handLen = '41%';
+        }
+        return `
+          <div class="time-picker-dial">
+            <div class="time-picker-hand" style="--hand-angle:${angle}deg;--hand-len:${handLen};"></div>
+            <div class="time-picker-center"></div>
+            ${numbers}
+          </div>`;
+      }
+      function render(){
+        const html = `
+          <div class="editor time-picker-editor">
+            <div class="time-picker-title">${escapeHtml(options.title)}</div>
+            <div class="time-picker-top">
+              <button type="button" class="time-picker-field ${activePart==='hour'?'active':''}" data-tp-field="hour">${pad(selectedHour)}</button>
+              <div class="time-picker-colon">:</div>
+              <button type="button" class="time-picker-field ${activePart==='minute'?'active':''}" data-tp-field="minute">${pad(selectedMinute)}</button>
+            </div>
+            ${dialHtml()}
+            ${options.extraHtml ? `<div class="time-picker-extra">${options.extraHtml}</div>` : ''}
+            <div class="editor-actions">
+              <button class="cancel-btn" type="button" data-tp-act="cancel">X</button>
+              <button class="ok-btn" type="button" data-tp-act="ok">OK</button>
+            </div>
+          </div>`;
+        if(layer) layer.innerHTML = html;
+        else showOverlay(html);
+        bind();
+      }
+      function bind(){
+        const root = layer || overlay;
+        root.querySelectorAll('[data-tp-field]').forEach(btn=>{
+          btn.addEventListener('click',(e)=>{
+            e.stopPropagation();
+            activePart = btn.dataset.tpField;
+            render();
+          });
+        });
+        root.querySelectorAll('[data-tp-value]').forEach(btn=>{
+          btn.addEventListener('click',(e)=>{
+            e.stopPropagation();
+            if(btn.classList.contains('disabled')) return;
+            const v = parseInt(btn.dataset.tpValue,10);
+            if(activePart === 'hour'){
+              selectedHour = v;
+              if(!minuteAllowed(selectedMinute)){
+                const step = options.minuteStep || 5;
+                for(let m=0;m<60;m+=step){
+                  if(minuteAllowed(m)){ selectedMinute = m; break; }
+                }
+              }
+              activePart = 'minute';
+              render();
+            } else {
+              selectedMinute = v;
+              if(options.autoConfirm) confirmPicker();
+              else render();
+            }
+          });
+        });
+        const cancel = root.querySelector('[data-tp-act="cancel"]');
+        if(cancel) cancel.addEventListener('click',(e)=>{ e.stopPropagation(); closePicker(true); });
+        const ok = root.querySelector('[data-tp-act="ok"]');
+        if(ok) ok.addEventListener('click',(e)=>{ e.stopPropagation(); confirmPicker(); });
+        root.querySelectorAll('[data-tp-extra]').forEach(btn=>{
+          btn.addEventListener('click',(e)=>{
+            e.stopPropagation();
+            const action = options.extraActions && options.extraActions[btn.dataset.tpExtra];
+            if(typeof action === 'function') action();
+          });
+        });
+      }
+      if(options.nested){
+        layer = document.createElement('div');
+        layer.className = 'time-picker-layer';
+        layer.addEventListener('click',(e)=>{ if(e.target === layer) closePicker(true); });
+        overlay.appendChild(layer);
+      }
+      render();
+    }
+
     // ===== edytor czasu =====
     function openTimeEditor(mode){
       editMode=mode;
       if(mode==='start'){
-        if(startWorkMinutes!==null){
-          editHour=Math.floor(startWorkMinutes/60);
-          editMinute=startWorkMinutes%60;
-        } else {
-          const n=new Date();
-          editHour=n.getHours(); editMinute=n.getMinutes();
-        }
-      } else if(mode==='breakAdjust'){ editSignedMinutes=0; }
-      else if(mode==='pot'){ editPotMinutes=potDurationMin; }
-      renderTimeEditor();
+        const initial = startWorkMinutes!==null ? startWorkMinutes : nowMinutes();
+        openSharedTimePicker({
+          title:'Godzina startu',
+          kind:'clock',
+          initialMinutes:initial,
+          extraHtml:`Cel pracy: <strong style="color:#7adf8a;">${pad(Math.floor(workTargetMinutes/60))}:${pad(workTargetMinutes%60)}</strong><br><button type="button" data-tp-extra="target">Zmien cel</button>`,
+          extraActions:{ target:()=>openTimeEditor('target') },
+          onDone:(mins)=>setWorkStart(mins, true)
+        });
+      } else if(mode==='breakAdjust'){
+        openSharedTimePicker({
+          title:'Korekta przerw',
+          kind:'duration',
+          initialMinutes:0,
+          minMinutes:0,
+          maxMinutes:23*60+55,
+          onDone:(mins)=>{
+            breakAdjustMinutes += mins;
+            saveState(); renderAll();
+          }
+        });
+      } else if(mode==='pot'){
+        openSharedTimePicker({
+          title:'Czas grzania',
+          kind:'duration',
+          initialMinutes:potDurationMin,
+          minMinutes:5,
+          maxMinutes:995,
+          onDone:(mins)=>{
+            potDurationMin = Math.max(1, mins);
+            saveState(); renderAll();
+          }
+        });
+      } else if(mode==='target'){
+        openSharedTimePicker({
+          title:'Cel pracy',
+          kind:'duration',
+          initialMinutes:workTargetMinutes,
+          minMinutes:60,
+          maxMinutes:960,
+          onDone:(mins)=>{
+            workTargetMinutes = mins;
+            saveState(); renderAll();
+            openTimeEditor('start');
+          }
+        });
+      }
     }
     function renderTimeEditor(){
       let hT, mT, lab='';
@@ -3670,6 +4037,24 @@
       }
 
       refreshAlarmUi();
+      document.getElementById('noteTimeControl').addEventListener('click',(e)=>{
+        e.stopPropagation();
+        enableAlarm();
+        refreshAlarmUi();
+        openSharedTimePicker({
+          title:'Alarm time',
+          kind:'clock',
+          initialMinutes:noteAlarmHour*60+noteAlarmMinute,
+          nested:true,
+          onDone:(mins)=>{
+            noteAlarmHour = Math.floor(mins/60)%24;
+            noteAlarmMinute = mins%60;
+            noteAlarmEnabled = true;
+            if(currentAlerts.length === 0) currentAlerts.push(0);
+            refreshAlarmUi();
+          }
+        });
+      });
       overlay.querySelectorAll('[data-note-act]').forEach(btn=>{
         btn.addEventListener('click',(e)=>{
           e.stopPropagation();
@@ -3711,10 +4096,14 @@
             stopHoldWarning(btn);
             btn.dataset._longFired='1';
             const cur = currentOffsets[idx];
-            const v = prompt('Wyprzedzenie w minutach:', String(cur));
-            if(v !== null){
-              const num = parseInt(v.trim(), 10);
-              if(!isNaN(num) && num > 0){
+            openSharedTimePicker({
+              title:'Alarm advance',
+              kind:'duration',
+              initialMinutes:cur,
+              minMinutes:5,
+              maxMinutes:23*60+55,
+              nested:true,
+              onDone:(num)=>{
                 const oldOff = currentOffsets[idx];
                 const wasOn = currentAlerts.indexOf(oldOff);
                 if(wasOn>=0){ currentAlerts.splice(wasOn,1); currentAlerts.push(num); }
@@ -3723,7 +4112,7 @@
                 btn.textContent = noteOffsetLabel(num);
                 styleAlertButton(btn);
               }
-            }
+            });
           }, 2000);
         });
         btn.addEventListener('pointerup',()=>{ clearTimeout(lp); stopHoldWarning(btn); });
