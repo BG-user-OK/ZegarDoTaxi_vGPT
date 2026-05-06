@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_4.8: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_4.9: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -211,7 +211,7 @@
     .coin-btn{ order:6; }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_4.8: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_4.9: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1373,6 +1373,74 @@
       border-radius:18px !important;
     }
     /* Dwie tablice w tle - srebrna (lewa) i złota (prawa) */
+    .sync-menu{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      padding:16px 6px;
+    }
+    .sync-menu-btn,
+    .sync-snapshot-btn{
+      border:none;
+      border-radius:12px;
+      background:linear-gradient(180deg,#202020,#0f0f0f);
+      color:#f2f2f2;
+      min-height:66px;
+      padding:10px 14px;
+      font-size:20px;
+      font-weight:900;
+      text-align:left;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.08), 0 4px 12px rgba(0,0,0,.34);
+    }
+    .sync-menu-btn.primary{
+      background:linear-gradient(180deg,#1d4d2a,#0c2a14);
+      color:#d8ffdf;
+    }
+    .sync-menu-btn.warn{
+      background:linear-gradient(180deg,#5b1616,#250808);
+      color:#ffdede;
+    }
+    .sync-list{
+      flex:1;
+      overflow-y:auto;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      padding:8px 2px 12px;
+    }
+    .sync-snapshot-btn{
+      min-height:74px;
+      font-size:16px;
+      line-height:1.22;
+    }
+    .sync-snapshot-btn strong{
+      display:block;
+      font-size:19px;
+      color:#fff;
+      margin-bottom:2px;
+    }
+    .sync-meta{
+      display:block;
+      color:#a9a9a9;
+      font-size:14px;
+      font-weight:700;
+    }
+    .sync-warning{
+      color:#ffdddd;
+      font-size:22px;
+      font-weight:900;
+      text-align:center;
+      line-height:1.12;
+      padding:18px 8px;
+      text-shadow:0 0 14px rgba(255,0,0,.38);
+    }
+    .sync-loading{
+      color:#ddd;
+      font-size:24px;
+      font-weight:900;
+      text-align:center;
+      padding:28px 8px;
+    }
     .board-bg{
       position:absolute;
       top:0; bottom:0;
@@ -2061,12 +2129,14 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_4.8</div>
+  <div class="version">vGPT_4.9</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
     const LS_PERSIST = 'tarcza_persist_v1';
     const LS_APPSCRIPT = 'tarcza_appscript_url';
+    const LS_SYNC_PIN = 'tarcza_sync_pin';
+    const LS_SYNC_DEVICE = 'tarcza_sync_device';
 
     const PROVIDERS = [
       { key:'uber',    label:'UBER',    bg:'#000000', fg:'#ffffff' },
@@ -2182,6 +2252,47 @@
           recentNoteSymbols = Array.isArray(p.recentNoteSymbols) ? p.recentNoteSymbols.slice(0,50) : [];
         }
       }catch(e){}
+    }
+
+    function collectStateObjects(){
+      return {
+        state:{
+          startWorkMinutes, endWorkMinutes, lastExerciseMinutes,
+          breakActive, currentBreakStart, breakSegments,
+          exerciseMarkers, breakAdjustMinutes, workDate,
+          potDurationMin, potStartedAt, potAckedDone, potUsedToday,
+          revenues, counterStart, counterEnd, privKmTotal,
+          workTargetMinutes
+        },
+        persist:{ lastCounterEnd, notes, recentNoteSymbols }
+      };
+    }
+    function applyStateObjects(state, persist){
+      const s = state || {};
+      startWorkMinutes = s.startWorkMinutes ?? null;
+      endWorkMinutes = s.endWorkMinutes ?? null;
+      lastExerciseMinutes = s.lastExerciseMinutes ?? null;
+      breakActive = !!s.breakActive;
+      currentBreakStart = s.currentBreakStart ?? null;
+      breakSegments = Array.isArray(s.breakSegments) ? s.breakSegments : [];
+      exerciseMarkers = Array.isArray(s.exerciseMarkers) ? s.exerciseMarkers : [];
+      breakAdjustMinutes = s.breakAdjustMinutes || 0;
+      workDate = s.workDate || null;
+      potDurationMin = s.potDurationMin ?? 20;
+      potStartedAt = s.potStartedAt ?? null;
+      potAckedDone = !!s.potAckedDone;
+      potUsedToday = !!s.potUsedToday;
+      workTargetMinutes = s.workTargetMinutes ?? 480;
+      PROVIDERS.forEach(p => revenues[p.key] = s.revenues ? (s.revenues[p.key] || 0) : 0);
+      counterStart = s.counterStart ?? null;
+      counterEnd = s.counterEnd ?? null;
+      privKmTotal = s.privKmTotal || 0;
+
+      const p = persist || {};
+      lastCounterEnd = p.lastCounterEnd ?? null;
+      notes = Array.isArray(p.notes) ? p.notes : [];
+      recentNoteSymbols = Array.isArray(p.recentNoteSymbols) ? p.recentNoteSymbols.slice(0,50) : [];
+      saveState();
     }
 
     // ===== pomocnicze =====
@@ -4331,6 +4442,240 @@
       setTimeout(()=>t.remove(), 3500);
     }
 
+    // ===== synchronizacja stanu =====
+    function appVersionLabel(){
+      const el = document.querySelector('.version');
+      return el ? el.textContent.trim() : 'vGPT_4.9';
+    }
+    function localDateTimeLabel(d){
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    function getStateStatus(state){
+      if(!state || state.startWorkMinutes === null || typeof state.startWorkMinutes === 'undefined') return 'not_started';
+      return state.endWorkMinutes === null || typeof state.endWorkMinutes === 'undefined' ? 'active' : 'ended';
+    }
+    function getSyncConfig(needDevice){
+      let url = localStorage.getItem(LS_APPSCRIPT) || '';
+      if(!url){
+        url = (prompt('URL Google Apps Script:', '') || '').trim();
+        if(url) localStorage.setItem(LS_APPSCRIPT, url);
+      }
+      if(!url){ showToast('Brak URL Apps Script.', 'err'); return null; }
+
+      let pin = localStorage.getItem(LS_SYNC_PIN) || '';
+      if(!pin){
+        pin = (prompt('PIN synchronizacji:', '') || '').trim();
+        if(pin) localStorage.setItem(LS_SYNC_PIN, pin);
+      }
+      if(!pin){ showToast('Brak PIN synchronizacji.', 'err'); return null; }
+
+      let device = localStorage.getItem(LS_SYNC_DEVICE) || '';
+      if(needDevice && !device){
+        device = (prompt('Nazwa telefonu:', 'Telefon') || '').trim();
+        if(device) localStorage.setItem(LS_SYNC_DEVICE, device);
+      }
+      return { url, pin, device: device || 'Telefon' };
+    }
+    function buildSyncSnapshot(deviceLabel){
+      saveState();
+      const d = new Date();
+      const data = collectStateObjects();
+      return {
+        schema:'tarcza-sync-v1',
+        appVersion:appVersionLabel(),
+        savedAt:d.toISOString(),
+        savedAtLocal:localDateTimeLabel(d),
+        savedAtDate:todayISO(),
+        savedAtMinutes:d.getHours()*60+d.getMinutes(),
+        deviceLabel:deviceLabel || 'Telefon',
+        workDate:data.state.workDate || '',
+        workStatus:getStateStatus(data.state),
+        providerKeys:PROVIDERS.map(p=>p.key),
+        state:data.state,
+        persist:data.persist
+      };
+    }
+    function jsonpRequest(url, params){
+      return new Promise((resolve, reject)=>{
+        const cb = '__tarczaSyncCb_' + Date.now() + '_' + Math.floor(Math.random()*100000);
+        const script = document.createElement('script');
+        const cleanup = ()=>{
+          delete window[cb];
+          if(script.parentNode) script.parentNode.removeChild(script);
+          clearTimeout(timer);
+        };
+        const timer = setTimeout(()=>{
+          cleanup();
+          reject(new Error('timeout'));
+        }, 25000);
+        window[cb] = (data)=>{
+          cleanup();
+          resolve(data);
+        };
+        const query = Object.assign({}, params || {}, { callback:cb });
+        const qs = Object.keys(query)
+          .map(k=>encodeURIComponent(k)+'='+encodeURIComponent(query[k]))
+          .join('&');
+        script.onerror = ()=>{
+          cleanup();
+          reject(new Error('network'));
+        };
+        script.src = url + (url.includes('?') ? '&' : '?') + qs;
+        document.body.appendChild(script);
+      });
+    }
+    async function sendSyncSnapshot(){
+      const cfg = getSyncConfig(true);
+      if(!cfg) return;
+      const snapshot = buildSyncSnapshot(cfg.device);
+      showToast('Wysylam synchronizacje...', 'ok');
+      try{
+        await fetch(cfg.url, {
+          method:'POST',
+          mode:'no-cors',
+          headers:{ 'Content-Type':'text/plain' },
+          body: JSON.stringify({ action:'syncSave', pin:cfg.pin, snapshot })
+        });
+        showToast('Synchronizacja wyslana.', 'ok');
+        hideOverlay();
+      }catch(e){
+        showToast('Synchronizacja nieudana.', 'err');
+      }
+    }
+    function openWorkMenu(){
+      showOverlay(`
+        <div class="big-panel">
+          <h3>MENU START</h3>
+          <div class="sync-menu">
+            <button class="sync-menu-btn primary" type="button" data-sync-act="edit">Edytuj start / cel</button>
+            <button class="sync-menu-btn" type="button" data-sync-act="send">Wy&#347;lij synchronizacj&#281;</button>
+            <button class="sync-menu-btn" type="button" data-sync-act="load">Pobierz synchronizacj&#281;</button>
+          </div>
+          <div style="flex:1;"></div>
+          <div class="panel-actions">
+            <button class="cancel-btn" data-act="cancel">X</button>
+          </div>
+        </div>
+      `);
+      overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); hideOverlay(); });
+      overlay.querySelectorAll('[data-sync-act]').forEach(btn=>{
+        btn.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          const a = btn.dataset.syncAct;
+          if(a === 'edit'){ openTimeEditor('start'); return; }
+          if(a === 'send'){ sendSyncSnapshot(); return; }
+          if(a === 'load'){ openSyncSnapshotList(); return; }
+        });
+      });
+    }
+    function renderSyncLoading(text){
+      showOverlay(`
+        <div class="big-panel">
+          <h3>SYNCHRONIZACJA</h3>
+          <div class="sync-loading">${escapeHtml(text)}</div>
+          <div style="flex:1;"></div>
+          <div class="panel-actions">
+            <button class="cancel-btn" data-act="cancel">X</button>
+          </div>
+        </div>
+      `);
+      overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); hideOverlay(); });
+    }
+    async function openSyncSnapshotList(){
+      const cfg = getSyncConfig(false);
+      if(!cfg) return;
+      renderSyncLoading('Pobieram liste...');
+      try{
+        const data = await jsonpRequest(cfg.url, { action:'syncList', pin:cfg.pin, limit:30 });
+        if(!data || !data.ok) throw new Error(data && data.error ? data.error : 'syncList failed');
+        renderSyncSnapshotList(data.snapshots || [], cfg);
+      }catch(e){
+        localStorage.removeItem(LS_SYNC_PIN);
+        showToast('Nie udalo sie pobrac synchronizacji.', 'err');
+        openWorkMenu();
+      }
+    }
+    function renderSyncSnapshotList(items, cfg){
+      const list = items.length ? items.map(s=>`
+        <button class="sync-snapshot-btn" type="button" data-sync-id="${escapeHtml(s.id)}">
+          <strong>${escapeHtml(s.savedAtLocal || s.savedAtIso || '')}</strong>
+          <span class="sync-meta">${escapeHtml(s.deviceLabel || 'Telefon')} | ${escapeHtml(s.appVersion || '')} | ${escapeHtml(s.workStatus || '')}</span>
+          <span class="sync-meta">Data pracy: ${escapeHtml(s.workDate || '-')}</span>
+        </button>
+      `).join('') : '<div class="sync-loading">Brak zapisanych synchronizacji.</div>';
+      showOverlay(`
+        <div class="big-panel">
+          <h3>POBIERZ SYNCHRONIZACJ&#280;</h3>
+          <div class="sync-list">${list}</div>
+          <div class="panel-actions">
+            <button class="cancel-btn" data-act="back">X</button>
+          </div>
+        </div>
+      `);
+      overlay.querySelector('[data-act="back"]').addEventListener('click',(e)=>{ e.stopPropagation(); openWorkMenu(); });
+      overlay.querySelectorAll('[data-sync-id]').forEach(btn=>{
+        btn.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          confirmSyncLoad(btn.dataset.syncId, cfg);
+        });
+      });
+    }
+    function confirmSyncLoad(id, cfg){
+      showOverlay(`
+        <div class="big-panel">
+          <h3>UWAGA</h3>
+          <div class="sync-warning">
+            Pobranie synchronizacji nadpisze aktualny stan tego telefonu.
+            <br><br>
+            Kontynuowa&#263;?
+          </div>
+          <div style="flex:1;"></div>
+          <div class="panel-actions">
+            <button class="cancel-btn" data-act="cancel">X</button>
+            <button class="ok-btn" data-act="ok">OK</button>
+          </div>
+        </div>
+      `);
+      overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); openSyncSnapshotList(); });
+      overlay.querySelector('[data-act="ok"]').addEventListener('click',async (e)=>{
+        e.stopPropagation();
+        await loadSyncSnapshot(id, cfg);
+      });
+    }
+    async function loadSyncSnapshot(id, cfg){
+      renderSyncLoading('Pobieram stan...');
+      try{
+        const data = await jsonpRequest(cfg.url, { action:'syncLoad', pin:cfg.pin, id });
+        if(!data || !data.ok || !data.snapshot) throw new Error(data && data.error ? data.error : 'syncLoad failed');
+        applySyncSnapshot(data.snapshot);
+        hideOverlay();
+        showToast('Synchronizacja pobrana.', 'ok');
+      }catch(e){
+        localStorage.removeItem(LS_SYNC_PIN);
+        showToast('Nie udalo sie pobrac stanu.', 'err');
+        openWorkMenu();
+      }
+    }
+    function applySyncSnapshot(snapshot){
+      const state = JSON.parse(JSON.stringify(snapshot.state || {}));
+      const persist = JSON.parse(JSON.stringify(snapshot.persist || {}));
+      if(state.startWorkMinutes !== null && typeof state.startWorkMinutes !== 'undefined' &&
+         (state.endWorkMinutes === null || typeof state.endWorkMinutes === 'undefined') &&
+         state.workDate && state.workDate !== todayISO()){
+        const endM = Number.isFinite(snapshot.savedAtMinutes) ? snapshot.savedAtMinutes : nowMinutes();
+        if(state.breakActive && state.currentBreakStart !== null && typeof state.currentBreakStart !== 'undefined'){
+          state.breakSegments = Array.isArray(state.breakSegments) ? state.breakSegments : [];
+          state.breakSegments.push({ start:state.currentBreakStart, end:endM });
+        }
+        state.endWorkMinutes = endM;
+        state.breakActive = false;
+        state.currentBreakStart = null;
+      }
+      applyStateObjects(state, persist);
+      renderAll();
+      syncWorkWakeLock();
+    }
+
     let workWakeLock = null;
     let workWakeLockWanted = false;
 
@@ -4626,7 +4971,7 @@
         }
       },
       // długi klik 3s = edycja godziny startu
-      ()=> openTimeEditor('start')
+      ()=> openWorkMenu()
     );
 
     // === EXERCISE - klik = przywracanie koła z animacją ===
