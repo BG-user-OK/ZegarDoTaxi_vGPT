@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_4.9: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -211,7 +211,7 @@
     .coin-btn{ order:6; }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_4.9: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.0: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2129,7 +2129,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_4.9</div>
+  <div class="version">vGPT_5.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -4445,7 +4445,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_4.9';
+      return el ? el.textContent.trim() : 'vGPT_5.0';
     }
     function localDateTimeLabel(d){
       return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -4542,6 +4542,31 @@
         showToast('Synchronizacja nieudana.', 'err');
       }
     }
+    function confirmResetSyncSettings(){
+      showOverlay(`
+        <div class="big-panel">
+          <h3>RESET SYNCHRONIZACJI</h3>
+          <div class="sync-warning">
+            Skasowa&#263; lokalne ustawienia synchronizacji?
+            <br><br>
+            PIN i nazwa telefonu zostan&#261; wpisane ponownie przy nast&#281;pnej synchronizacji.
+          </div>
+          <div style="flex:1;"></div>
+          <div class="panel-actions">
+            <button class="cancel-btn" data-act="cancel">X</button>
+            <button class="ok-btn" data-act="ok">OK</button>
+          </div>
+        </div>
+      `);
+      overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); openWorkMenu(); });
+      overlay.querySelector('[data-act="ok"]').addEventListener('click',(e)=>{
+        e.stopPropagation();
+        localStorage.removeItem(LS_SYNC_PIN);
+        localStorage.removeItem(LS_SYNC_DEVICE);
+        showToast('Lokalne ustawienia synchronizacji skasowane.', 'ok');
+        openWorkMenu();
+      });
+    }
     function openWorkMenu(){
       showOverlay(`
         <div class="big-panel">
@@ -4559,13 +4584,19 @@
       `);
       overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); hideOverlay(); });
       overlay.querySelectorAll('[data-sync-act]').forEach(btn=>{
-        btn.addEventListener('click',(e)=>{
-          e.stopPropagation();
-          const a = btn.dataset.syncAct;
-          if(a === 'edit'){ openTimeEditor('start'); return; }
-          if(a === 'send'){ sendSyncSnapshot(); return; }
-          if(a === 'load'){ openSyncSnapshotList(); return; }
-        });
+        const a = btn.dataset.syncAct;
+        if(a === 'edit'){
+          btn.addEventListener('click',(e)=>{ e.stopPropagation(); openTimeEditor('start'); });
+          return;
+        }
+        setupLongPress(
+          btn,
+          ()=>{
+            if(a === 'send'){ sendSyncSnapshot(); return; }
+            if(a === 'load'){ openSyncSnapshotList(); return; }
+          },
+          ()=>confirmResetSyncSettings()
+        );
       });
     }
     function renderSyncLoading(text){
