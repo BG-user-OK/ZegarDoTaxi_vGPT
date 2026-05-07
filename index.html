@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.1: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.1.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -211,7 +211,7 @@
     .coin-btn{ order:6; }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.1: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.1.1: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -262,13 +262,13 @@
     .auto-sync-indicator{
       position:fixed;
       top:35px;
-      right:27px;
+      right:20px;
       z-index:21;
-      width:8px;
-      height:8px;
+      width:24px;
+      height:24px;
       border-radius:50%;
       background:#555;
-      box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 0 4px rgba(0,0,0,.55);
+      box-shadow:0 0 0 1px rgba(255,255,255,.1), 0 0 8px rgba(0,0,0,.65);
       border:none;
       padding:0;
       cursor:pointer;
@@ -276,12 +276,12 @@
       align-items:center;
       justify-content:center;
       color:#dff8ff;
-      font-size:14px;
+      font-size:18px;
       line-height:1;
     }
     .auto-sync-indicator.on{
       background:#2ecc71;
-      box-shadow:0 0 0 1px rgba(46,204,113,.28), 0 0 8px rgba(46,204,113,.45);
+      box-shadow:0 0 0 1px rgba(46,204,113,.35), 0 0 14px rgba(46,204,113,.55);
     }
     .auto-sync-indicator.checking{
       background:#f4d03f;
@@ -293,17 +293,17 @@
     }
     .auto-sync-indicator.applied{
       background:#e02020;
-      width:10px;
-      height:10px;
+      width:26px;
+      height:26px;
       box-shadow:0 0 0 1px rgba(255,80,80,.35), 0 0 10px rgba(255,0,0,.7);
     }
     .auto-sync-indicator.frozen{
-      width:18px;
-      height:18px;
+      width:34px;
+      height:34px;
       background:transparent;
       box-shadow:none;
-      font-size:16px;
-      text-shadow:0 0 6px rgba(120,220,255,.8);
+      font-size:30px;
+      text-shadow:0 0 8px rgba(120,220,255,.95), 0 0 14px rgba(255,255,255,.4);
     }
     @keyframes autoSyncBlink{
       from{ opacity:.35; transform:scale(.9); }
@@ -2180,7 +2180,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.1</div>
+  <div class="version">vGPT_5.1.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -4538,7 +4538,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.1';
+      return el ? el.textContent.trim() : 'vGPT_5.1.1';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -4652,6 +4652,15 @@
       });
     }
     let syncAudioCtx = null;
+    const SYNC_SOUND_FILES = {
+      start:'sounds/sync_start.mp3',
+      success:'sounds/sync_success.mp3',
+      noChanges:'sounds/sync_no_changes.mp3',
+      error:'sounds/sync_error.mp3',
+      standby:'sounds/sync_standby.mp3',
+      offNotice:'sounds/sync_off_notice.mp3'
+    };
+    const syncSoundLastPlayed = {};
     function unlockSyncAudio(){
       try{
         const AC = window.AudioContext || window.webkitAudioContext;
@@ -4686,9 +4695,37 @@
     function playSyncSuccessBeep(){
       playBeep(660, .45, 0);
     }
+    function playSyncSound(name, delay=0, minIntervalMs=0){
+      const src = SYNC_SOUND_FILES[name];
+      if(!src) return;
+      const now = Date.now();
+      const last = syncSoundLastPlayed[name] || 0;
+      if(minIntervalMs && now-last < minIntervalMs) return;
+      syncSoundLastPlayed[name] = now;
+      const run = ()=>{
+        try{
+          const audio = new Audio(src);
+          audio.preload = 'auto';
+          audio.volume = 1;
+          audio.play().catch(()=>{});
+        }catch(e){}
+      };
+      if(delay>0) setTimeout(run, delay*1000);
+      else run();
+    }
+    function playSyncStartedSound(){ playSyncSound('start', 0, 1200); }
+    function playSyncSuccessSound(){ playSyncSound('success', 0, 1200); }
+    function playSyncNoChangesSound(){ playSyncSound('noChanges', 0, 1200); }
+    function playSyncErrorSound(){ playSyncSound('error', 0, 1800); }
+    function playSyncStandbySound(delay=.55){ playSyncSound('standby', delay, 1200); }
+    function playSyncOffNoticeSound(){ playSyncSound('offNotice', 0, 2500); }
     document.addEventListener('pointerdown', unlockSyncAudio, { passive:true });
     function setAutoSyncIndicatorState(state){
       autoSyncIndicatorState = state || 'off';
+      if(autoSyncIndicatorState === 'frozen'){
+        autoSyncFrozenAcknowledged = false;
+        playSyncErrorSound();
+      }
       updateAutoSyncIndicator();
     }
     function updateAutoSyncIndicator(){
@@ -4698,7 +4735,7 @@
       el.innerHTML = '';
       if(!isAutoSyncEnabled()){
         autoSyncIndicatorState = 'off';
-      } else if(!localStorage.getItem(LS_SYNC_DEVICE)){
+      } else if((!localStorage.getItem(LS_SYNC_DEVICE) || autoSyncIndicatorState === 'frozen') && !autoSyncFrozenAcknowledged){
         autoSyncIndicatorState = 'frozen';
       } else if(!autoSyncIndicatorState || autoSyncIndicatorState === 'off'){
         autoSyncIndicatorState = 'on';
@@ -4713,8 +4750,15 @@
       }
     }
     let autoSyncIndicatorState = 'off';
+    let autoSyncFrozenAcknowledged = false;
     let autoSyncBusy = false;
     let autoSyncHiddenUploaded = false;
+    function acknowledgeAutoSyncFrozen(){
+      autoSyncFrozenAcknowledged = true;
+      autoSyncIndicatorState = isAutoSyncEnabled() ? 'on' : 'off';
+      updateAutoSyncIndicator();
+      if(isAutoSyncEnabled()) playSyncStandbySound(0);
+    }
     function getAutoSyncConfig(){
       if(!isAutoSyncEnabled()) return null;
       const url = localStorage.getItem(LS_APPSCRIPT) || '';
@@ -4797,13 +4841,17 @@
       if(!cfg) return;
       const snapshot = buildSyncSnapshot(cfg.device);
       showToast('Wysylam synchronizacje...', 'ok');
+      playSyncStartedSound();
       try{
         await sendSyncPayload(cfg, snapshot, false);
         localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(snapshot.lastLocalChangeAt || Date.now()));
         markCloudSeen(snapshot);
+        playSyncSuccessSound();
+        playSyncStandbySound();
         showToast('Synchronizacja wyslana.', 'ok');
         hideOverlay();
       }catch(e){
+        setAutoSyncIndicatorState('frozen');
         showToast('Synchronizacja nieudana.', 'err');
       }
     }
@@ -4957,15 +5005,19 @@
     }
     async function loadSyncSnapshot(id, cfg){
       renderSyncLoading('Pobieram stan...');
+      playSyncStartedSound();
       try{
         const data = await jsonpRequest(cfg.url, { action:'syncLoad', pin:cfg.pin, id });
         if(!data || !data.ok || !data.snapshot) throw new Error(data && data.error ? data.error : 'syncLoad failed');
         applySyncSnapshot(data.snapshot);
         markCloudSeen(data.snapshot);
+        playSyncSuccessSound();
+        playSyncStandbySound();
         hideOverlay();
         showToast('Synchronizacja pobrana.', 'ok');
       }catch(e){
         localStorage.removeItem(LS_SYNC_PIN);
+        setAutoSyncIndicatorState('frozen');
         showToast('Nie udalo sie pobrac stanu.', 'err');
         openWorkMenu();
       }
@@ -4992,11 +5044,17 @@
     }
 
     async function autoSyncCheckOnForeground(reason){
-      if(autoSyncBusy || !isAutoSyncEnabled()) return;
+      if(autoSyncBusy) return;
+      if(!isAutoSyncEnabled()){
+        updateAutoSyncIndicator();
+        playSyncOffNoticeSound();
+        return;
+      }
       const cfg = getAutoSyncConfig();
       if(!cfg) return;
       autoSyncBusy = true;
       setAutoSyncIndicatorState('checking');
+      playSyncStartedSound();
       showToast('Sprawdzam synchronizacje...', 'ok');
       try{
         const list = await fetchSyncList(cfg);
@@ -5005,6 +5063,8 @@
         if(!candidate){
           if(reason === 'toggle') markCurrentStateForInitialAutoUpload();
           setAutoSyncIndicatorState('on');
+          playSyncNoChangesSound();
+          playSyncStandbySound();
           return;
         }
         const seenCloudChange = Number(localStorage.getItem(LS_LAST_SEEN_CLOUD_CHANGE_AT) || 0);
@@ -5013,6 +5073,8 @@
           if(reason === 'toggle') markCurrentStateForInitialAutoUpload();
           markCloudSeen(candidate);
           setAutoSyncIndicatorState('on');
+          playSyncNoChangesSound();
+          playSyncStandbySound();
           return;
         }
         if(autoSyncConflictWithCloud(candidate)){
@@ -5028,9 +5090,12 @@
         markCloudSeen(loaded.snapshot);
         if(downloadedComparable === currentComparable){
           setAutoSyncIndicatorState('on');
+          playSyncNoChangesSound();
+          playSyncStandbySound();
           return;
         }
         applySyncSnapshot(loaded.snapshot);
+        playSyncSuccessSound();
         setAutoSyncIndicatorState('applied');
       }catch(e){
         setAutoSyncIndicatorState('frozen');
@@ -5046,7 +5111,7 @@
       if(!cfg) return;
       if(!hasUnuploadedLocalChanges()) return;
       autoSyncBusy = true;
-      playSyncStartBeeps();
+      playSyncStartedSound();
       try{
         const list = await fetchSyncList(cfg);
         if(list && list.ok){
@@ -5070,7 +5135,8 @@
         await sendSyncPayload(cfg, snapshot, true).catch(()=>sendSyncPayload(cfg, snapshot, false));
         localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(snapshot.lastLocalChangeAt || Date.now()));
         markCloudSeen(snapshot);
-        playSyncSuccessBeep();
+        playSyncSuccessSound();
+        playSyncStandbySound();
       }catch(e){
         setAutoSyncIndicatorState('frozen');
       }finally{
@@ -5528,6 +5594,9 @@
       e.stopPropagation();
       if(autoSyncIndicatorState === 'applied'){
         setAutoSyncIndicatorState('on');
+        playSyncStandbySound(0);
+      } else if(autoSyncIndicatorState === 'frozen'){
+        acknowledgeAutoSyncFrozen();
       } else {
         openWorkMenu();
       }
