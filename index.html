@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.1.4: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.1.5: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -211,7 +211,7 @@
     .coin-btn{ order:6; }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.1.4: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.1.5: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2205,7 +2205,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.1.4</div>
+  <div class="version">vGPT_5.1.5</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2535,7 +2535,7 @@
 
       // === Strzałka godzinowa - jako polygon (grot strzałki) ===
       const aRad = (hourDeg - 90) * Math.PI / 180;
-      const r1 = radius, r2 = 75;
+      const r1 = 130, r2 = 75;
       // Punkty trzonu strzałki (prostokąt) + grot na końcu (przy cyfrze, r1)
       // Grot ma szerokość większą i kończy się w punkcie r1+8
       const tipR = r1 + 4;        // wierzchołek grotu
@@ -2771,7 +2771,7 @@
       if(end===null) return;
       const ang = angleFromMinutes(end);
       const fRad = ang * Math.PI / 180;
-      const r1 = 130, r2 = 75;
+      const r1 = radius, r2 = 75;
       const fx1 = cx + Math.cos(fRad)*r1, fy1 = cy + Math.sin(fRad)*r1;
       const fx2 = cx + Math.cos(fRad)*r2, fy2 = cy + Math.sin(fRad)*r2;
       g.appendChild(svgBarrierLine(fx1,fy1,fx2,fy2));
@@ -4582,7 +4582,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.1.4';
+      return el ? el.textContent.trim() : 'vGPT_5.1.5';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
