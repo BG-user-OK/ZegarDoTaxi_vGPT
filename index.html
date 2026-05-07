@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.1.8: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.1.9: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -115,12 +115,14 @@
       position:relative;
       z-index:60;
       animation:notePostponeHoldGlow 2s ease-out forwards;
+      -webkit-user-drag:none;
     }
     .note-sticker.note-postpone-armed{
       position:relative;
       z-index:80;
       touch-action:none;
       animation:notePostponeShake .16s linear infinite;
+      -webkit-user-drag:none;
       box-shadow:
         0 0 0 7px rgba(255,255,255,.58),
         0 0 22px rgba(255,235,80,.9),
@@ -129,12 +131,22 @@
     .note-sticker.note-postpone-dragging{
       z-index:1200;
       transition:none;
+      animation:none;
+      touch-action:none;
+      -webkit-user-drag:none;
       will-change:transform, opacity;
     }
     .note-sticker.note-postpone-flyout{
       z-index:1200;
       transition:transform .18s ease-in, opacity .18s ease-in;
+      animation:none;
       will-change:transform, opacity;
+    }
+    .note-sticker.note-postpone-holding:active,
+    .note-sticker.note-postpone-armed:active,
+    .note-sticker.note-postpone-dragging:active,
+    .note-sticker.note-postpone-flyout:active{
+      transform:none;
     }
     @keyframes notePostponeHoldGlow{
       0%{
@@ -175,6 +187,8 @@
     .note-sticker.filled{
       background:#f4d847;
       color:#3a2c00;
+      touch-action:none;
+      -webkit-user-drag:none;
     }
     .note-sticker.alarm-blink{
       background:#ff3838;
@@ -265,7 +279,7 @@
     .coin-btn{ order:6; }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.1.8: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.1.9: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2288,7 +2302,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.1.8</div>
+  <div class="version">vGPT_5.1.9</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3506,6 +3520,8 @@
         armed = false;
         cancelled = false;
         btn._notePostponeSuppressClick = false;
+        btn.style.transform = '';
+        btn.style.opacity = '';
         btn.classList.add('note-postpone-holding');
         try{ btn.setPointerCapture(pointerId); }catch(err){}
         timer = setTimeout(()=>{
@@ -3535,6 +3551,10 @@
       function finish(e){
         if(pointerId !== null && e.pointerId !== pointerId) return;
         const wasArmed = armed;
+        if(wasArmed){
+          if(e.cancelable) e.preventDefault();
+          e.stopPropagation();
+        }
         const thrown = wasArmed && (
           e.clientY <= 0 ||
           btn.getBoundingClientRect().bottom <= 0 ||
@@ -3573,6 +3593,7 @@
 
       btn.addEventListener('pointerup', finish);
       btn.addEventListener('pointercancel', cancel);
+      btn.addEventListener('contextmenu',(e)=>{ e.preventDefault(); });
       btn.addEventListener('lostpointercapture', ()=>{
         if(pointerId !== null && !armed) cancel();
       });
@@ -4820,7 +4841,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.1.8';
+      return el ? el.textContent.trim() : 'vGPT_5.1.9';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
