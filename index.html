@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.1.5: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.1.6: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -211,7 +211,7 @@
     .coin-btn{ order:6; }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.1.5: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.1.6: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1886,6 +1886,35 @@
       font-size:32px; font-weight:900;
       text-align:center; max-width:120px; letter-spacing:1px;
     }
+    .note-symbol-row{
+      display:flex;
+      align-items:stretch;
+      gap:10px;
+      width:100%;
+    }
+    .note-symbol-row .icon-input{
+      flex:0 0 120px;
+    }
+    .emoji-search-btn{
+      flex:1;
+      border:none;
+      border-radius:10px;
+      background:linear-gradient(180deg,#25332f,#121b18);
+      color:#dfffee;
+      font-size:20px;
+      font-weight:900;
+      letter-spacing:.4px;
+      box-shadow:
+        inset 0 0 0 1px rgba(190,255,220,.16),
+        inset 0 -10px 18px rgba(0,0,0,.26),
+        0 0 12px rgba(80,255,165,.12);
+      cursor:pointer;
+      touch-action:manipulation;
+    }
+    .emoji-search-btn:active{
+      transform:scale(.985);
+      background:linear-gradient(180deg,#315345,#17251f);
+    }
     .note-fields label{
       font-size:15px; color:#d0d0d0;
       font-weight:900;
@@ -2205,7 +2234,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.1.5</div>
+  <div class="version">vGPT_5.1.6</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2498,7 +2527,7 @@
       stripe.setAttribute('stroke','#d31515');
       stripe.setAttribute('stroke-width','7');
       stripe.setAttribute('stroke-linecap','butt');
-      stripe.setAttribute('stroke-dasharray','7 5');
+      stripe.setAttribute('stroke-dasharray','14 10');
       stripe.setAttribute('opacity','0.98');
       g.appendChild(base);
       g.appendChild(stripe);
@@ -4260,7 +4289,10 @@
           <div style="height:6px;flex:0 0 auto;"></div>
           <div class="note-fields">
             <label>Symbol widoczny na karteczce (1-4 znaki)</label>
-            <input id="noteIcon" class="icon-input" maxlength="4" value="${escapeHtml(icon)}" placeholder="💧" />
+            <div class="note-symbol-row">
+              <input id="noteIcon" class="icon-input" maxlength="4" value="${escapeHtml(icon)}" placeholder="💧" />
+              <button type="button" class="emoji-search-btn" id="emojiSearchBtn">Szukaj emoji</button>
+            </div>
             <label>Ostatnio używane symbole</label>
             <div class="recent-symbols" id="recentSymbols">${recentButtons || '<span style="color:#777;font-size:15px;">Brak</span>'}</div>
           </div>
@@ -4392,6 +4424,10 @@
       });
       document.getElementById('noteIcon').addEventListener('input',(e)=>{
         e.target.value = trimNoteSymbol(e.target.value);
+      });
+      document.getElementById('emojiSearchBtn').addEventListener('click',(e)=>{
+        e.stopPropagation();
+        window.open('https://emoji-copypaste.com/', '_blank', 'noopener,noreferrer');
       });
 
       overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); hideOverlay(); });
@@ -4582,7 +4618,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.1.5';
+      return el ? el.textContent.trim() : 'vGPT_5.1.6';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
