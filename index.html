@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.0: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -211,7 +211,7 @@
     .coin-btn{ order:6; }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.0: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.1: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -258,6 +258,56 @@
       width:3px; height:9px;
       background:#2ecc71;
       border-radius:0 2px 2px 0;
+    }
+    .auto-sync-indicator{
+      position:fixed;
+      top:35px;
+      right:27px;
+      z-index:21;
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:#555;
+      box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 0 4px rgba(0,0,0,.55);
+      border:none;
+      padding:0;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#dff8ff;
+      font-size:14px;
+      line-height:1;
+    }
+    .auto-sync-indicator.on{
+      background:#2ecc71;
+      box-shadow:0 0 0 1px rgba(46,204,113,.28), 0 0 8px rgba(46,204,113,.45);
+    }
+    .auto-sync-indicator.checking{
+      background:#f4d03f;
+      animation:autoSyncBlink .7s infinite alternate;
+    }
+    .auto-sync-indicator.downloading{
+      background:#ff3333;
+      animation:autoSyncBlink .45s infinite alternate;
+    }
+    .auto-sync-indicator.applied{
+      background:#e02020;
+      width:10px;
+      height:10px;
+      box-shadow:0 0 0 1px rgba(255,80,80,.35), 0 0 10px rgba(255,0,0,.7);
+    }
+    .auto-sync-indicator.frozen{
+      width:18px;
+      height:18px;
+      background:transparent;
+      box-shadow:none;
+      font-size:16px;
+      text-shadow:0 0 6px rgba(120,220,255,.8);
+    }
+    @keyframes autoSyncBlink{
+      from{ opacity:.35; transform:scale(.9); }
+      to{ opacity:1; transform:scale(1.18); }
     }
     .battery-indicator.low{
       color:#ff3838;
@@ -1987,6 +2037,7 @@
 <body>
   <div class="app">
     <div class="battery-indicator" id="batteryIndicator">—</div>
+    <button class="auto-sync-indicator" id="autoSyncIndicator" type="button" aria-label="Auto Sync"></button>
     <div class="notes-bar" id="notesBar"></div>
 
     <div class="clock-wrap">
@@ -2129,7 +2180,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.0</div>
+  <div class="version">vGPT_5.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2137,6 +2188,13 @@
     const LS_APPSCRIPT = 'tarcza_appscript_url';
     const LS_SYNC_PIN = 'tarcza_sync_pin';
     const LS_SYNC_DEVICE = 'tarcza_sync_device';
+    const LS_AUTO_SYNC_ENABLED = 'tarcza_auto_sync_enabled';
+    const LS_SYNC_DEVICE_ID = 'tarcza_sync_device_id';
+    const LS_LAST_LOCAL_CHANGE_AT = 'tarcza_last_local_change_at';
+    const LS_LAST_AUTO_UPLOAD_CHANGE_AT = 'tarcza_last_auto_upload_change_at';
+    const LS_LAST_SEEN_SYNC_ID = 'tarcza_last_seen_sync_id';
+    const LS_LAST_SEEN_CLOUD_CHANGE_AT = 'tarcza_last_seen_cloud_change_at';
+    const LS_SYNC_STATE_HASH = 'tarcza_sync_state_hash';
 
     const PROVIDERS = [
       { key:'uber',    label:'UBER',    bg:'#000000', fg:'#ffffff' },
@@ -2191,6 +2249,28 @@
 
     const cx=200, cy=200, radius=200;
     let blinkState = false;
+    let syncApplyInProgress = false;
+
+    function normalizeForSyncCompare(value, key){
+      if(Array.isArray(value)) return value.map(v=>normalizeForSyncCompare(v, key));
+      if(value && typeof value === 'object'){
+        const out = {};
+        Object.keys(value).sort().forEach(k=>{
+          out[k] = normalizeForSyncCompare(value[k], k);
+        });
+        return out;
+      }
+      if(typeof value === 'number' && key === 'potStartedAt'){
+        return Math.floor(value / 60000);
+      }
+      return value;
+    }
+    function stableStringify(value){
+      return JSON.stringify(normalizeForSyncCompare(value, ''));
+    }
+    function getCurrentComparableState(){
+      return collectStateObjects();
+    }
 
     // ===== localStorage =====
     function saveState(){
@@ -2206,6 +2286,12 @@
         localStorage.setItem(LS_KEY, JSON.stringify(state));
         const persist = { lastCounterEnd, notes, recentNoteSymbols };
         localStorage.setItem(LS_PERSIST, JSON.stringify(persist));
+        const comparable = stableStringify({state, persist});
+        const previous = localStorage.getItem(LS_SYNC_STATE_HASH) || '';
+        localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
+        if(previous && previous !== comparable && !syncApplyInProgress){
+          localStorage.setItem(LS_LAST_LOCAL_CHANGE_AT, String(Date.now()));
+        }
       }catch(e){}
     }
     function loadState(){
@@ -2292,7 +2378,14 @@
       lastCounterEnd = p.lastCounterEnd ?? null;
       notes = Array.isArray(p.notes) ? p.notes : [];
       recentNoteSymbols = Array.isArray(p.recentNoteSymbols) ? p.recentNoteSymbols.slice(0,50) : [];
-      saveState();
+      syncApplyInProgress = true;
+      try{ saveState(); }
+      finally{ syncApplyInProgress = false; }
+    }
+    function initializeSyncTracking(){
+      const comparable = stableStringify(getCurrentComparableState());
+      if(!localStorage.getItem(LS_SYNC_STATE_HASH)) localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
+      if(!localStorage.getItem(LS_LAST_LOCAL_CHANGE_AT)) localStorage.setItem(LS_LAST_LOCAL_CHANGE_AT, '0');
     }
 
     // ===== pomocnicze =====
@@ -4445,7 +4538,21 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.0';
+      return el ? el.textContent.trim() : 'vGPT_5.1';
+    }
+    function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
+    function setAutoSyncEnabled(on){
+      localStorage.setItem(LS_AUTO_SYNC_ENABLED, on ? '1' : '0');
+      updateAutoSyncIndicator();
+      if(on) setTimeout(()=>autoSyncCheckOnForeground('toggle'), 250);
+    }
+    function getDeviceId(){
+      let id = localStorage.getItem(LS_SYNC_DEVICE_ID) || '';
+      if(!id){
+        id = 'dev_' + Date.now().toString(36) + '_' + Math.floor(Math.random()*1e9).toString(36);
+        localStorage.setItem(LS_SYNC_DEVICE_ID, id);
+      }
+      return id;
     }
     function localDateTimeLabel(d){
       return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -4471,23 +4578,34 @@
 
       let device = localStorage.getItem(LS_SYNC_DEVICE) || '';
       if(needDevice && !device){
-        device = (prompt('Nazwa telefonu:', 'Telefon') || '').trim();
+        device = (prompt('Nazwa telefonu:', '') || '').trim();
         if(device) localStorage.setItem(LS_SYNC_DEVICE, device);
       }
-      return { url, pin, device: device || 'Telefon' };
+      if(needDevice && !device){ showToast('Brak nazwy telefonu.', 'err'); return null; }
+      return { url, pin, device: device || '', deviceId:getDeviceId() };
     }
     function buildSyncSnapshot(deviceLabel){
       saveState();
       const d = new Date();
       const data = collectStateObjects();
+      const syncId = 'sync_' + d.getTime().toString(36) + '_' + Math.floor(Math.random()*1e9).toString(36);
+      const deviceId = getDeviceId();
+      const lastLocalChangeAt = Number(localStorage.getItem(LS_LAST_LOCAL_CHANGE_AT) || Date.now());
       return {
         schema:'tarcza-sync-v1',
+        syncId,
         appVersion:appVersionLabel(),
         savedAt:d.toISOString(),
+        savedAtMs:d.getTime(),
         savedAtLocal:localDateTimeLabel(d),
         savedAtDate:todayISO(),
         savedAtMinutes:d.getHours()*60+d.getMinutes(),
-        deviceLabel:deviceLabel || 'Telefon',
+        deviceId,
+        deviceLabel:deviceLabel || '',
+        deviceName:deviceLabel || '',
+        lastLocalChangeAt,
+        baseCloudSyncId:localStorage.getItem(LS_LAST_SEEN_SYNC_ID) || '',
+        baseCloudSavedAtMs:Number(localStorage.getItem(LS_LAST_SEEN_CLOUD_CHANGE_AT) || 0),
         workDate:data.state.workDate || '',
         workStatus:getStateStatus(data.state),
         providerKeys:PROVIDERS.map(p=>p.key),
@@ -4524,18 +4642,165 @@
         document.body.appendChild(script);
       });
     }
+    function sendSyncPayload(cfg, snapshot, keepalive){
+      return fetch(cfg.url, {
+        method:'POST',
+        mode:'no-cors',
+        keepalive:!!keepalive,
+        headers:{ 'Content-Type':'text/plain' },
+        body: JSON.stringify({ action:'syncSave', pin:cfg.pin, snapshot })
+      });
+    }
+    let syncAudioCtx = null;
+    function unlockSyncAudio(){
+      try{
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if(!AC) return;
+        if(!syncAudioCtx) syncAudioCtx = new AC();
+        if(syncAudioCtx.state === 'suspended') syncAudioCtx.resume().catch(()=>{});
+      }catch(e){}
+    }
+    function playBeep(freq, duration, delay){
+      try{
+        unlockSyncAudio();
+        if(!syncAudioCtx) return;
+        const start = syncAudioCtx.currentTime + (delay || 0);
+        const osc = syncAudioCtx.createOscillator();
+        const gain = syncAudioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.18, start + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        osc.connect(gain);
+        gain.connect(syncAudioCtx.destination);
+        osc.start(start);
+        osc.stop(start + duration + 0.03);
+      }catch(e){}
+    }
+    function playSyncStartBeeps(){
+      playBeep(880, .09, 0);
+      playBeep(880, .09, .18);
+      playBeep(880, .09, .36);
+    }
+    function playSyncSuccessBeep(){
+      playBeep(660, .45, 0);
+    }
+    document.addEventListener('pointerdown', unlockSyncAudio, { passive:true });
+    function setAutoSyncIndicatorState(state){
+      autoSyncIndicatorState = state || 'off';
+      updateAutoSyncIndicator();
+    }
+    function updateAutoSyncIndicator(){
+      const el = document.getElementById('autoSyncIndicator');
+      if(!el) return;
+      el.className = 'auto-sync-indicator';
+      el.innerHTML = '';
+      if(!isAutoSyncEnabled()){
+        autoSyncIndicatorState = 'off';
+      } else if(!localStorage.getItem(LS_SYNC_DEVICE)){
+        autoSyncIndicatorState = 'frozen';
+      } else if(!autoSyncIndicatorState || autoSyncIndicatorState === 'off'){
+        autoSyncIndicatorState = 'on';
+      }
+      if(autoSyncIndicatorState === 'on') el.classList.add('on');
+      else if(autoSyncIndicatorState === 'checking') el.classList.add('checking');
+      else if(autoSyncIndicatorState === 'downloading') el.classList.add('downloading');
+      else if(autoSyncIndicatorState === 'applied') el.classList.add('applied');
+      else if(autoSyncIndicatorState === 'frozen'){
+        el.classList.add('frozen');
+        el.innerHTML = '&#129398;';
+      }
+    }
+    let autoSyncIndicatorState = 'off';
+    let autoSyncBusy = false;
+    let autoSyncHiddenUploaded = false;
+    function getAutoSyncConfig(){
+      if(!isAutoSyncEnabled()) return null;
+      const url = localStorage.getItem(LS_APPSCRIPT) || '';
+      const pin = localStorage.getItem(LS_SYNC_PIN) || '';
+      const device = localStorage.getItem(LS_SYNC_DEVICE) || '';
+      if(!url || !pin || !device){
+        setAutoSyncIndicatorState('frozen');
+        return null;
+      }
+      return { url, pin, device, deviceId:getDeviceId() };
+    }
+    function getLastLocalChangeAt(){
+      return Number(localStorage.getItem(LS_LAST_LOCAL_CHANGE_AT) || 0);
+    }
+    function getLastAutoUploadChangeAt(){
+      return Number(localStorage.getItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT) || 0);
+    }
+    function hasUnuploadedLocalChanges(){
+      return getLastLocalChangeAt() > getLastAutoUploadChangeAt();
+    }
+    function markCurrentStateForInitialAutoUpload(){
+      localStorage.setItem(LS_SYNC_STATE_HASH, stableStringify(getCurrentComparableState()));
+      if(!hasUnuploadedLocalChanges()){
+        localStorage.setItem(LS_LAST_LOCAL_CHANGE_AT, String(Date.now()));
+      }
+    }
+    function clearLocalSyncDirty(snapshot){
+      const changeAt = Number(snapshot && (snapshot.lastLocalChangeAt || snapshot.savedAtMs) || 0);
+      if(changeAt){
+        localStorage.setItem(LS_LAST_LOCAL_CHANGE_AT, String(changeAt));
+        localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(changeAt));
+      }
+      localStorage.setItem(LS_SYNC_STATE_HASH, stableStringify(getCurrentComparableState()));
+    }
+    function markCloudSeen(snapshot){
+      if(!snapshot) return;
+      const id = snapshot.syncId || snapshot.id || '';
+      const changeAt = Number(snapshot.lastLocalChangeAt || snapshot.savedAtMs || 0);
+      if(id) localStorage.setItem(LS_LAST_SEEN_SYNC_ID, id);
+      if(changeAt) localStorage.setItem(LS_LAST_SEEN_CLOUD_CHANGE_AT, String(changeAt));
+    }
+    function syncSnapshotMetaToSnapshot(meta){
+      return {
+        syncId:meta.syncId || meta.id || '',
+        id:meta.id || meta.syncId || '',
+        deviceId:meta.deviceId || '',
+        deviceLabel:meta.deviceLabel || '',
+        savedAtMs:Number(meta.savedAtMs || 0),
+        lastLocalChangeAt:Number(meta.lastLocalChangeAt || meta.savedAtMs || 0)
+      };
+    }
+    function findNewestOtherSnapshot(items, deviceId){
+      return (items || [])
+        .map(syncSnapshotMetaToSnapshot)
+        .filter(s=>s.id && s.deviceId && s.deviceId !== deviceId)
+        .sort((a,b)=>(b.lastLocalChangeAt || b.savedAtMs) - (a.lastLocalChangeAt || a.savedAtMs))[0] || null;
+    }
+    function comparableSnapshotState(snapshot){
+      return stableStringify({ state:snapshot.state || {}, persist:snapshot.persist || {} });
+    }
+    function currentComparableStateString(){
+      return stableStringify(getCurrentComparableState());
+    }
+    function autoSyncConflictWithCloud(candidate){
+      if(!candidate) return false;
+      const cloudChange = Number(candidate.lastLocalChangeAt || candidate.savedAtMs || 0);
+      const seen = Number(localStorage.getItem(LS_LAST_SEEN_CLOUD_CHANGE_AT) || 0);
+      return hasUnuploadedLocalChanges() && cloudChange > seen;
+    }
+    async function fetchSyncList(cfg){
+      return jsonpRequest(cfg.url, {
+        action:'syncList',
+        pin:cfg.pin,
+        limit:30,
+        excludeDeviceId:cfg.deviceId
+      });
+    }
     async function sendSyncSnapshot(){
       const cfg = getSyncConfig(true);
       if(!cfg) return;
       const snapshot = buildSyncSnapshot(cfg.device);
       showToast('Wysylam synchronizacje...', 'ok');
       try{
-        await fetch(cfg.url, {
-          method:'POST',
-          mode:'no-cors',
-          headers:{ 'Content-Type':'text/plain' },
-          body: JSON.stringify({ action:'syncSave', pin:cfg.pin, snapshot })
-        });
+        await sendSyncPayload(cfg, snapshot, false);
+        localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(snapshot.lastLocalChangeAt || Date.now()));
+        markCloudSeen(snapshot);
         showToast('Synchronizacja wyslana.', 'ok');
         hideOverlay();
       }catch(e){
@@ -4573,6 +4838,7 @@
           <h3>MENU START</h3>
           <div class="sync-menu">
             <button class="sync-menu-btn primary" type="button" data-sync-act="edit">Edytuj start / cel</button>
+            <button class="sync-menu-btn ${isAutoSyncEnabled()?'primary':''}" type="button" data-sync-act="auto">Auto Sync: ${isAutoSyncEnabled()?'ON':'OFF'}</button>
             <button class="sync-menu-btn" type="button" data-sync-act="send">Wy&#347;lij synchronizacj&#281;</button>
             <button class="sync-menu-btn" type="button" data-sync-act="load">Pobierz synchronizacj&#281;</button>
           </div>
@@ -4587,6 +4853,22 @@
         const a = btn.dataset.syncAct;
         if(a === 'edit'){
           btn.addEventListener('click',(e)=>{ e.stopPropagation(); openTimeEditor('start'); });
+          return;
+        }
+        if(a === 'auto'){
+          btn.addEventListener('click',(e)=>{
+            e.stopPropagation();
+            if(isAutoSyncEnabled()){
+              setAutoSyncEnabled(false);
+              openWorkMenu();
+              return;
+            }
+            const cfg = getSyncConfig(true);
+            if(cfg){
+              setAutoSyncEnabled(true);
+              openWorkMenu();
+            }
+          });
           return;
         }
         setupLongPress(
@@ -4679,6 +4961,7 @@
         const data = await jsonpRequest(cfg.url, { action:'syncLoad', pin:cfg.pin, id });
         if(!data || !data.ok || !data.snapshot) throw new Error(data && data.error ? data.error : 'syncLoad failed');
         applySyncSnapshot(data.snapshot);
+        markCloudSeen(data.snapshot);
         hideOverlay();
         showToast('Synchronizacja pobrana.', 'ok');
       }catch(e){
@@ -4703,8 +4986,96 @@
         state.currentBreakStart = null;
       }
       applyStateObjects(state, persist);
+      clearLocalSyncDirty(snapshot);
       renderAll();
       syncWorkWakeLock();
+    }
+
+    async function autoSyncCheckOnForeground(reason){
+      if(autoSyncBusy || !isAutoSyncEnabled()) return;
+      const cfg = getAutoSyncConfig();
+      if(!cfg) return;
+      autoSyncBusy = true;
+      setAutoSyncIndicatorState('checking');
+      showToast('Sprawdzam synchronizacje...', 'ok');
+      try{
+        const list = await fetchSyncList(cfg);
+        if(!list || !list.ok) throw new Error(list && list.error ? list.error : 'syncList failed');
+        const candidate = findNewestOtherSnapshot(list.snapshots || [], cfg.deviceId);
+        if(!candidate){
+          if(reason === 'toggle') markCurrentStateForInitialAutoUpload();
+          setAutoSyncIndicatorState('on');
+          return;
+        }
+        const seenCloudChange = Number(localStorage.getItem(LS_LAST_SEEN_CLOUD_CHANGE_AT) || 0);
+        const cloudChange = Number(candidate.lastLocalChangeAt || candidate.savedAtMs || 0);
+        if(cloudChange <= seenCloudChange){
+          if(reason === 'toggle') markCurrentStateForInitialAutoUpload();
+          markCloudSeen(candidate);
+          setAutoSyncIndicatorState('on');
+          return;
+        }
+        if(autoSyncConflictWithCloud(candidate)){
+          setAutoSyncIndicatorState('frozen');
+          showToast('Konflikt synchronizacji - uzyj recznej synchronizacji.', 'err');
+          return;
+        }
+        setAutoSyncIndicatorState('downloading');
+        const loaded = await jsonpRequest(cfg.url, { action:'syncLoad', pin:cfg.pin, id:candidate.id });
+        if(!loaded || !loaded.ok || !loaded.snapshot) throw new Error(loaded && loaded.error ? loaded.error : 'syncLoad failed');
+        const downloadedComparable = comparableSnapshotState(loaded.snapshot);
+        const currentComparable = currentComparableStateString();
+        markCloudSeen(loaded.snapshot);
+        if(downloadedComparable === currentComparable){
+          setAutoSyncIndicatorState('on');
+          return;
+        }
+        applySyncSnapshot(loaded.snapshot);
+        setAutoSyncIndicatorState('applied');
+      }catch(e){
+        setAutoSyncIndicatorState('frozen');
+        showToast('Auto Sync zatrzymany - sprawdz ustawienia.', 'err');
+      }finally{
+        autoSyncBusy = false;
+      }
+    }
+
+    async function autoSyncUploadOnHide(reason){
+      if(autoSyncBusy || !isAutoSyncEnabled()) return;
+      const cfg = getAutoSyncConfig();
+      if(!cfg) return;
+      if(!hasUnuploadedLocalChanges()) return;
+      autoSyncBusy = true;
+      playSyncStartBeeps();
+      try{
+        const list = await fetchSyncList(cfg);
+        if(list && list.ok){
+          const candidate = findNewestOtherSnapshot(list.snapshots || [], cfg.deviceId);
+          if(candidate){
+            const cloudChange = Number(candidate.lastLocalChangeAt || candidate.savedAtMs || 0);
+            if(cloudChange > getLastLocalChangeAt()){
+              markCloudSeen(candidate);
+              setAutoSyncIndicatorState('frozen');
+              showToast('Auto Sync pominiety - nowszy stan w chmurze.', 'err');
+              return;
+            }
+            if(autoSyncConflictWithCloud(candidate)){
+              setAutoSyncIndicatorState('frozen');
+              showToast('Konflikt synchronizacji - uzyj recznej synchronizacji.', 'err');
+              return;
+            }
+          }
+        }
+        const snapshot = buildSyncSnapshot(cfg.device);
+        await sendSyncPayload(cfg, snapshot, true).catch(()=>sendSyncPayload(cfg, snapshot, false));
+        localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(snapshot.lastLocalChangeAt || Date.now()));
+        markCloudSeen(snapshot);
+        playSyncSuccessBeep();
+      }catch(e){
+        setAutoSyncIndicatorState('frozen');
+      }finally{
+        autoSyncBusy = false;
+      }
     }
 
     let workWakeLock = null;
@@ -4748,7 +5119,27 @@
       else releaseWorkWakeLock();
     }
     document.addEventListener('visibilitychange', ()=>{
-      if(document.visibilityState === 'visible') syncWorkWakeLock();
+      if(document.visibilityState === 'visible'){
+        autoSyncHiddenUploaded = false;
+        syncWorkWakeLock();
+        autoSyncCheckOnForeground('visible');
+      } else if(document.visibilityState === 'hidden' && !autoSyncHiddenUploaded){
+        autoSyncHiddenUploaded = true;
+        autoSyncUploadOnHide('hidden');
+      }
+    });
+    window.addEventListener('pagehide', ()=>{
+      if(!autoSyncHiddenUploaded){
+        autoSyncHiddenUploaded = true;
+        autoSyncUploadOnHide('pagehide');
+      }
+    });
+    window.addEventListener('pageshow', ()=>{
+      autoSyncHiddenUploaded = false;
+      autoSyncCheckOnForeground('pageshow');
+    });
+    window.addEventListener('focus', ()=>{
+      autoSyncCheckOnForeground('focus');
     });
 
     // ===== event listeners =====
@@ -5133,15 +5524,26 @@
       installBtn.classList.remove('visible');
       deferredInstallPrompt=null;
     });
+    document.getElementById('autoSyncIndicator').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(autoSyncIndicatorState === 'applied'){
+        setAutoSyncIndicatorState('on');
+      } else {
+        openWorkMenu();
+      }
+    });
 
     // ===== init =====
     loadState();
+    initializeSyncTracking();
     if(startWorkMinutes!==null && endWorkMinutes===null){
       document.getElementById('workBtn').classList.add('on');
     }
     buildDots();
     renderAll();
     syncWorkWakeLock();
+    updateAutoSyncIndicator();
+    setTimeout(()=>autoSyncCheckOnForeground('startup'), 900);
     // Pierwszy render rolki może paść jeśli clientHeight=0 przed layoutem.
     // Po pierwszej klatce wymuszamy ponowny render dla pewności.
     requestAnimationFrame(()=>{ renderAll(); });
