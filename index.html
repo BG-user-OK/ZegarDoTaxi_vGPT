@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.1.9: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.1.10: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -111,6 +111,17 @@
       border:none; cursor:pointer;
       transition:opacity .2s, background .2s;
     }
+    .note-sticker-body{
+      width:100%;
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      pointer-events:none;
+      color:inherit;
+      font:inherit;
+      line-height:inherit;
+    }
     .note-sticker.note-postpone-holding{
       position:relative;
       z-index:60;
@@ -121,7 +132,7 @@
       position:relative;
       z-index:80;
       touch-action:none;
-      animation:notePostponeShake .16s linear infinite;
+      animation:none;
       -webkit-user-drag:none;
       box-shadow:
         0 0 0 7px rgba(255,255,255,.58),
@@ -129,6 +140,7 @@
         0 2px 4px rgba(0,0,0,.5);
     }
     .note-sticker.note-postpone-dragging{
+      position:relative;
       z-index:1200;
       transition:none;
       animation:none;
@@ -137,6 +149,7 @@
       will-change:transform, opacity;
     }
     .note-sticker.note-postpone-flyout{
+      position:relative;
       z-index:1200;
       transition:transform .18s ease-in, opacity .18s ease-in;
       animation:none;
@@ -202,6 +215,11 @@
       justify-content:flex-start;
       gap:2px;
       padding:5px 4px 3px;
+    }
+    .note-sticker.with-time .note-sticker-body{
+      flex-direction:column;
+      justify-content:flex-start;
+      gap:2px;
     }
     .note-icon-main{
       flex:0 0 auto;
@@ -279,7 +297,7 @@
     .coin-btn{ order:6; }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.1.9: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.1.10: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2302,7 +2320,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.1.9</div>
+  <div class="version">vGPT_5.1.10</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3486,6 +3504,7 @@
 
     function setupNotePostponeGesture(btn, note){
       const HOLD_MS = 2000;
+      const shakeTarget = btn.querySelector('.note-sticker-body') || btn;
       let timer = null;
       let pointerId = null;
       let startX = 0;
@@ -3493,14 +3512,32 @@
       let currentDy = 0;
       let armed = false;
       let cancelled = false;
+      let tracking = false;
+
+      function addTracking(){
+        if(tracking) return;
+        tracking = true;
+        document.addEventListener('pointermove', move, { passive:false });
+        document.addEventListener('pointerup', finish, { passive:false });
+        document.addEventListener('pointercancel', cancel, { passive:false });
+      }
+      function removeTracking(){
+        if(!tracking) return;
+        tracking = false;
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', finish);
+        document.removeEventListener('pointercancel', cancel);
+      }
 
       function clearGesture(resetVisual=true){
         clearTimeout(timer);
         timer = null;
+        removeTracking();
         if(resetVisual){
           btn.classList.remove('note-postpone-holding','note-postpone-armed','note-postpone-dragging','note-postpone-flyout');
           btn.style.transform = '';
           btn.style.opacity = '';
+          stopHoldWarning(shakeTarget);
         }
         if(pointerId !== null){
           try{ btn.releasePointerCapture(pointerId); }catch(e){}
@@ -3523,6 +3560,7 @@
         btn.style.transform = '';
         btn.style.opacity = '';
         btn.classList.add('note-postpone-holding');
+        addTracking();
         try{ btn.setPointerCapture(pointerId); }catch(err){}
         timer = setTimeout(()=>{
           if(cancelled) return;
@@ -3530,14 +3568,16 @@
           btn._notePostponeSuppressClick = true;
           btn.classList.remove('note-postpone-holding');
           btn.classList.add('note-postpone-armed');
+          shakeTarget.classList.add('hold-warning-shake');
           if(navigator.vibrate){ try{ navigator.vibrate([45,30,45]); }catch(e){} }
         }, HOLD_MS);
       });
 
-      btn.addEventListener('pointermove',(e)=>{
+      function move(e){
         if(pointerId === null || e.pointerId !== pointerId || cancelled) return;
         if(!armed) return;
-        e.preventDefault();
+        if(e.cancelable) e.preventDefault();
+        e.stopPropagation();
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
         currentDy = Math.min(0, dy);
@@ -3546,7 +3586,7 @@
         btn.classList.add('note-postpone-dragging');
         btn.style.transform = `translate3d(${currentDx}px, ${currentDy}px, 0) rotate(${currentDy * -0.04}deg)`;
         btn.style.opacity = String(fade);
-      });
+      }
 
       function finish(e){
         if(pointerId !== null && e.pointerId !== pointerId) return;
@@ -3563,7 +3603,9 @@
         if(thrown){
           btn._notePostponeSuppressClick = true;
           clearTimeout(timer);
+          removeTracking();
           btn.classList.remove('note-postpone-holding','note-postpone-armed','note-postpone-dragging');
+          stopHoldWarning(shakeTarget);
           btn.classList.add('note-postpone-flyout');
           btn.style.transform = `translate3d(0, -${window.innerHeight + 120}px, 0) rotate(-10deg)`;
           btn.style.opacity = '0';
@@ -3591,8 +3633,6 @@
         }
       }
 
-      btn.addEventListener('pointerup', finish);
-      btn.addEventListener('pointercancel', cancel);
       btn.addEventListener('contextmenu',(e)=>{ e.preventDefault(); });
       btn.addEventListener('lostpointercapture', ()=>{
         if(pointerId !== null && !armed) cancel();
@@ -3626,6 +3666,8 @@
         const b=document.createElement('button');
         b.className='note-sticker filled';
         b.style.setProperty('--note-size', size + 'px');
+        const body=document.createElement('span');
+        body.className='note-sticker-body';
         if(n.alarmTime){
           b.classList.add('with-time');
           const iconEl=document.createElement('span');
@@ -3634,11 +3676,12 @@
           const timeEl=document.createElement('span');
           timeEl.className='note-time-mini';
           timeEl.textContent=n.alarmTime;
-          b.appendChild(iconEl);
-          b.appendChild(timeEl);
+          body.appendChild(iconEl);
+          body.appendChild(timeEl);
         } else {
-          b.textContent=n.icon||'•';
+          body.textContent=n.icon||'•';
         }
+        b.appendChild(body);
         b.title=n.text||'';
 
         // Czy któryś alarm jest aktywny (przeszedł moment trigger i nie został potwierdzony)?
@@ -4841,7 +4884,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.1.9';
+      return el ? el.textContent.trim() : 'vGPT_5.1.10';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
