@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.1.10: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.1.11: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -151,7 +151,7 @@
     .note-sticker.note-postpone-flyout{
       position:relative;
       z-index:1200;
-      transition:transform .18s ease-in, opacity .18s ease-in;
+      transition:transform .55s cubic-bezier(.18,.72,.2,1), opacity .45s ease-in;
       animation:none;
       will-change:transform, opacity;
     }
@@ -181,14 +181,21 @@
           0 0 22px rgba(255,235,80,.88);
       }
     }
-    @keyframes notePostponeShake{
-      0%   { transform:translate3d(0,0,0) rotate(0deg); }
-      16%  { transform:translate3d(-2px,1px,0) rotate(-1deg); }
-      32%  { transform:translate3d(2px,-2px,0) rotate(1deg); }
-      48%  { transform:translate3d(-1px,-2px,0) rotate(-.7deg); }
-      64%  { transform:translate3d(2px,2px,0) rotate(.8deg); }
-      82%  { transform:translate3d(-2px,0,0) rotate(-.6deg); }
-      100% { transform:translate3d(0,0,0) rotate(0deg); }
+    .note-postpone-shake-strong{
+      animation:notePostponeShakeStrong .12s linear infinite;
+      will-change:transform;
+    }
+    @keyframes notePostponeShakeStrong{
+      0%   { transform:translate3d(0,0,0) rotate(0deg) scale(1); }
+      10%  { transform:translate3d(-7px,5px,0) rotate(-4deg) scale(1.03); }
+      20%  { transform:translate3d(8px,-5px,0) rotate(4deg) scale(1.02); }
+      32%  { transform:translate3d(-6px,-7px,0) rotate(-3deg) scale(1.04); }
+      44%  { transform:translate3d(7px,7px,0) rotate(3.5deg) scale(1.03); }
+      56%  { transform:translate3d(-9px,1px,0) rotate(-4.5deg) scale(1.02); }
+      68%  { transform:translate3d(8px,3px,0) rotate(4deg) scale(1.04); }
+      80%  { transform:translate3d(-4px,8px,0) rotate(-2.5deg) scale(1.03); }
+      90%  { transform:translate3d(5px,-6px,0) rotate(3deg) scale(1.02); }
+      100% { transform:translate3d(0,0,0) rotate(0deg) scale(1); }
     }
     .note-sticker.empty{
       width:34px;
@@ -297,7 +304,7 @@
     .coin-btn{ order:6; }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.1.10: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.1.11: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2320,7 +2327,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.1.10</div>
+  <div class="version">vGPT_5.1.11</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3513,6 +3520,7 @@
       let armed = false;
       let cancelled = false;
       let tracking = false;
+      let throwing = false;
 
       function addTracking(){
         if(tracking) return;
@@ -3537,7 +3545,7 @@
           btn.classList.remove('note-postpone-holding','note-postpone-armed','note-postpone-dragging','note-postpone-flyout');
           btn.style.transform = '';
           btn.style.opacity = '';
-          stopHoldWarning(shakeTarget);
+          shakeTarget.classList.remove('note-postpone-shake-strong');
         }
         if(pointerId !== null){
           try{ btn.releasePointerCapture(pointerId); }catch(e){}
@@ -3545,6 +3553,7 @@
         pointerId = null;
         armed = false;
         cancelled = false;
+        throwing = false;
         currentDy = 0;
       }
 
@@ -3556,6 +3565,7 @@
         currentDy = 0;
         armed = false;
         cancelled = false;
+        throwing = false;
         btn._notePostponeSuppressClick = false;
         btn.style.transform = '';
         btn.style.opacity = '';
@@ -3568,13 +3578,31 @@
           btn._notePostponeSuppressClick = true;
           btn.classList.remove('note-postpone-holding');
           btn.classList.add('note-postpone-armed');
-          shakeTarget.classList.add('hold-warning-shake');
+          shakeTarget.classList.add('note-postpone-shake-strong');
           if(navigator.vibrate){ try{ navigator.vibrate([45,30,45]); }catch(e){} }
         }, HOLD_MS);
       });
 
+      function throwNote(){
+        if(throwing) return;
+        throwing = true;
+        btn._notePostponeSuppressClick = true;
+        clearTimeout(timer);
+        removeTracking();
+        btn.classList.remove('note-postpone-holding','note-postpone-armed','note-postpone-dragging');
+        shakeTarget.classList.remove('note-postpone-shake-strong');
+        btn.classList.add('note-postpone-flyout');
+        btn.style.transform = `translate3d(0, -${window.innerHeight + 140}px, 0) rotate(-11deg) scale(.72)`;
+        btn.style.opacity = '0';
+        if(pointerId !== null){
+          try{ btn.releasePointerCapture(pointerId); }catch(err){}
+        }
+        pointerId = null;
+        setTimeout(()=>postponeNoteUntilNextWorkDate(note), 560);
+      }
+
       function move(e){
-        if(pointerId === null || e.pointerId !== pointerId || cancelled) return;
+        if(pointerId === null || e.pointerId !== pointerId || cancelled || throwing) return;
         if(!armed) return;
         if(e.cancelable) e.preventDefault();
         e.stopPropagation();
@@ -3586,6 +3614,9 @@
         btn.classList.add('note-postpone-dragging');
         btn.style.transform = `translate3d(${currentDx}px, ${currentDy}px, 0) rotate(${currentDy * -0.04}deg)`;
         btn.style.opacity = String(fade);
+        if(currentDy <= -24){
+          throwNote();
+        }
       }
 
       function finish(e){
@@ -3594,27 +3625,6 @@
         if(wasArmed){
           if(e.cancelable) e.preventDefault();
           e.stopPropagation();
-        }
-        const thrown = wasArmed && (
-          e.clientY <= 0 ||
-          btn.getBoundingClientRect().bottom <= 0 ||
-          currentDy < -(startY + btn.offsetHeight)
-        );
-        if(thrown){
-          btn._notePostponeSuppressClick = true;
-          clearTimeout(timer);
-          removeTracking();
-          btn.classList.remove('note-postpone-holding','note-postpone-armed','note-postpone-dragging');
-          stopHoldWarning(shakeTarget);
-          btn.classList.add('note-postpone-flyout');
-          btn.style.transform = `translate3d(0, -${window.innerHeight + 120}px, 0) rotate(-10deg)`;
-          btn.style.opacity = '0';
-          if(pointerId !== null){
-            try{ btn.releasePointerCapture(pointerId); }catch(err){}
-          }
-          pointerId = null;
-          setTimeout(()=>postponeNoteUntilNextWorkDate(note), 180);
-          return;
         }
         if(wasArmed) btn._notePostponeSuppressClick = true;
         clearGesture(true);
@@ -4884,7 +4894,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.1.10';
+      return el ? el.textContent.trim() : 'vGPT_5.1.11';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
