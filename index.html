@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.2: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.2.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -129,26 +129,27 @@
     .note-sticker.note-postpone-holding{
       position:relative;
       z-index:60;
+      animation:notePostponeHoldGlow 2s ease-out forwards;
       -webkit-user-drag:none;
     }
     .note-sticker.note-postpone-holding .note-sticker-body{
-      animation:notePostponeHoldGlow 2s ease-out forwards;
+      animation:none;
     }
     .note-sticker.note-postpone-armed{
       position:relative;
       z-index:1200;
       touch-action:none;
-      transform-origin:center;
-      -webkit-user-drag:none;
-    }
-    .note-sticker.note-postpone-armed .note-sticker-body{
       animation:notePostponeShakeStrong .105s linear infinite;
       transform-origin:center;
+      -webkit-user-drag:none;
       box-shadow:
         0 0 0 9px rgba(255,255,255,.7),
         0 0 30px rgba(255,235,80,1),
         0 0 54px rgba(255,210,30,.55),
         0 2px 4px rgba(0,0,0,.5);
+    }
+    .note-sticker.note-postpone-armed .note-sticker-body{
+      animation:none;
     }
     .note-sticker.note-postpone-dragging{
       position:relative;
@@ -168,7 +169,6 @@
       will-change:transform, opacity;
     }
     .note-sticker.note-postpone-holding:active,
-    .note-sticker.note-postpone-armed:active,
     .note-sticker.note-postpone-dragging:active,
     .note-sticker.note-postpone-flyout:active{
       transform:none;
@@ -236,6 +236,23 @@
       overflow:visible;
       touch-action:none;
       -webkit-user-drag:none;
+    }
+    .note-sticker.filled.note-postpone-holding{
+      box-shadow:
+        0 2px 4px rgba(0,0,0,.5),
+        0 0 0 10px rgba(255,255,255,.68),
+        0 0 30px rgba(255,235,80,1),
+        0 0 52px rgba(255,210,30,.48);
+      animation:notePostponeHoldGlow 2s ease-out forwards;
+    }
+    .note-sticker.filled.note-postpone-armed{
+      box-shadow:
+        0 0 0 10px rgba(255,255,255,.75),
+        0 0 32px rgba(255,235,80,1),
+        0 0 58px rgba(255,210,30,.55),
+        0 2px 4px rgba(0,0,0,.5);
+      animation:notePostponeShakeStrong .105s linear infinite;
+      transform-origin:center;
     }
     .note-sticker.alarm-blink{
       color:#fff;
@@ -347,10 +364,12 @@
       align-self:end;
       overflow:visible;
       z-index:4;
+      background:#000 !important;
+      box-shadow:none;
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.2: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.2.1: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2399,7 +2418,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.2</div>
+  <div class="version">vGPT_5.2.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3703,7 +3722,6 @@
         clone.style.visibility = 'visible';
         document.body.appendChild(clone);
         btn.classList.remove('note-postpone-holding','note-postpone-armed','note-postpone-dragging');
-        btn.style.visibility = 'hidden';
         releaseCapture();
         pointerId = null;
         let done = false;
@@ -3717,6 +3735,7 @@
         clone.addEventListener('transitionend', complete);
         void clone.offsetWidth;
         requestAnimationFrame(()=>{
+          btn.style.visibility = 'hidden';
           requestAnimationFrame(()=>{
             const flyDistance = rect.top + rect.height + 140;
             clone.style.transform = `translate3d(0, -${flyDistance}px, 0) rotate(-12deg) scale(.68)`;
@@ -5029,7 +5048,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.2';
+      return el ? el.textContent.trim() : 'vGPT_5.2.1';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
