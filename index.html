@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.2.2: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.2.3: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -369,7 +369,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.2.2: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.2.3: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2418,7 +2418,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.2.2</div>
+  <div class="version">vGPT_5.2.3</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -5103,7 +5103,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.2.2';
+      return el ? el.textContent.trim() : 'vGPT_5.2.3';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -5522,17 +5522,50 @@
       }
     }
     function renderSyncSnapshotList(items, cfg){
+      const romanMonths = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
       const syncDateFallback = (s)=>{
         const local = String(s.savedAtLocal || s.savedAtIso || '');
         const m = local.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
         return m ? { date:m[1], time:m[2] } : { date:local, time:'' };
       };
-      const list = items.length ? items.map(s=>`
+      const formatSyncDate = (value)=>{
+        const raw = String(value || '').trim();
+        if(!raw) return '-';
+        if(/^\d{1,2}\.[IVX]+'?\d{2}$/.test(raw)) return raw.includes("'") ? raw : raw.replace(/(\d{2})$/, "'$1");
+        let m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if(!m) m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T]/);
+        if(m){
+          const month = romanMonths[Number(m[2])-1] || m[2];
+          return `${m[3]}.${month}'${m[1].slice(-2)}`;
+        }
+        const parsed = Date.parse(raw);
+        if(!Number.isNaN(parsed) && raw.length > 12){
+          const d = new Date(parsed);
+          return `${pad(d.getDate())}.${romanMonths[d.getMonth()]}'${String(d.getFullYear()).slice(-2)}`;
+        }
+        return raw.length > 18 ? '-' : raw;
+      };
+      const formatSyncTime = (value)=>{
+        const raw = String(value || '').trim();
+        if(!raw) return '-';
+        const m = raw.match(/(\d{1,2}):(\d{2})/);
+        if(m) return `${pad(Number(m[1]))}:${m[2]}`;
+        return raw.length > 12 ? '-' : raw;
+      };
+      const syncLine = (s)=>{
+        const fallback = syncDateFallback(s);
+        return [
+          s.snapshotNo || '-',
+          formatSyncDate(s.savedDate || fallback.date),
+          s.savedDay || '-',
+          formatSyncTime(s.savedTime || fallback.time),
+          s.phone || s.deviceLabel || 'Telefon'
+        ].join(' | ');
+      };
+      const displayItems = (items || []).filter(s=>Number(s.snapshotNo) > 0 && (s.savedDate || s.savedDay || s.savedTime || s.phone));
+      const list = displayItems.length ? displayItems.map(s=>`
         <button class="sync-snapshot-btn" type="button" data-sync-id="${escapeHtml(s.id)}">
-          <strong>${escapeHtml('#' + (s.snapshotNo || '-') + ' | ' + (s.savedDate || syncDateFallback(s).date || '-') + ' | ' + (s.savedDay || '-') + ' | ' + (s.savedTime || syncDateFallback(s).time || '-'))}</strong>
-          <span class="sync-meta">Telefon: ${escapeHtml(s.deviceLabel || s.phone || 'Telefon')}</span>
-          <span class="sync-meta">${escapeHtml(s.appVersion || '')} | ${escapeHtml(s.workStatus || '')}</span>
-          <span class="sync-meta">Data pracy: ${escapeHtml(s.workDate || '-')}</span>
+          <strong>${escapeHtml(syncLine(s))}</strong>
         </button>
       `).join('') : '<div class="sync-loading">Brak zapisanych synchronizacji.</div>';
       showOverlay(`
