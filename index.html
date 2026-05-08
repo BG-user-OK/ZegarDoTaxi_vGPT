@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.1.11: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.1.12: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -121,6 +121,10 @@
       color:inherit;
       font:inherit;
       line-height:inherit;
+      border-radius:8px 8px 14px 8px;
+      padding:0 4px;
+      box-shadow:0 2px 4px rgba(0,0,0,.5);
+      background:#f4d847;
     }
     .note-sticker.note-postpone-holding{
       position:relative;
@@ -205,12 +209,18 @@
       font-size:18px;
     }
     .note-sticker.filled{
-      background:#f4d847;
+      background:transparent;
       color:#3a2c00;
+      box-shadow:none;
+      padding:0;
+      overflow:visible;
       touch-action:none;
       -webkit-user-drag:none;
     }
     .note-sticker.alarm-blink{
+      color:#fff;
+    }
+    .note-sticker.alarm-blink .note-sticker-body{
       background:#ff3838;
       color:#fff;
     }
@@ -223,10 +233,14 @@
       gap:2px;
       padding:5px 4px 3px;
     }
+    .note-sticker.filled.with-time{
+      padding:0;
+    }
     .note-sticker.with-time .note-sticker-body{
       flex-direction:column;
       justify-content:flex-start;
       gap:2px;
+      padding:5px 4px 3px;
     }
     .note-icon-main{
       flex:0 0 auto;
@@ -304,7 +318,7 @@
     .coin-btn{ order:6; }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.1.11: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.1.12: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2327,7 +2341,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.1.11</div>
+  <div class="version">vGPT_5.1.12</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3516,6 +3530,8 @@
       let pointerId = null;
       let startX = 0;
       let startY = 0;
+      let lastX = 0;
+      let lastY = 0;
       let currentDy = 0;
       let armed = false;
       let cancelled = false;
@@ -3562,6 +3578,8 @@
         pointerId = e.pointerId;
         startX = e.clientX;
         startY = e.clientY;
+        lastX = e.clientX;
+        lastY = e.clientY;
         currentDy = 0;
         armed = false;
         cancelled = false;
@@ -3575,6 +3593,9 @@
         timer = setTimeout(()=>{
           if(cancelled) return;
           armed = true;
+          startX = lastX;
+          startY = lastY;
+          currentDy = 0;
           btn._notePostponeSuppressClick = true;
           btn.classList.remove('note-postpone-holding');
           btn.classList.add('note-postpone-armed');
@@ -3603,6 +3624,8 @@
 
       function move(e){
         if(pointerId === null || e.pointerId !== pointerId || cancelled || throwing) return;
+        lastX = e.clientX;
+        lastY = e.clientY;
         if(!armed) return;
         if(e.cancelable) e.preventDefault();
         e.stopPropagation();
@@ -3614,7 +3637,7 @@
         btn.classList.add('note-postpone-dragging');
         btn.style.transform = `translate3d(${currentDx}px, ${currentDy}px, 0) rotate(${currentDy * -0.04}deg)`;
         btn.style.opacity = String(fade);
-        if(currentDy <= -24){
+        if(currentDy <= -64 && Math.abs(dy) > Math.abs(dx) * 1.15){
           throwNote();
         }
       }
@@ -4894,7 +4917,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.1.11';
+      return el ? el.textContent.trim() : 'vGPT_5.1.12';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
