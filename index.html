@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.2.3: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.2.4: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -369,7 +369,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.2.3: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.2.4: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2418,7 +2418,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.2.3</div>
+  <div class="version">vGPT_5.2.4</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2721,6 +2721,27 @@
       stripe.setAttribute('opacity','0.98');
       g.appendChild(base);
       g.appendChild(stripe);
+      const angle=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
+      const midX=(x1+x2)/2, midY=(y1+y2)/2;
+      const sign=document.createElementNS('http://www.w3.org/2000/svg','g');
+      sign.setAttribute('transform',`translate(${midX.toFixed(2)} ${midY.toFixed(2)}) rotate(${angle.toFixed(2)})`);
+      const signCircle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      signCircle.setAttribute('cx','0');
+      signCircle.setAttribute('cy','0');
+      signCircle.setAttribute('r','9.5');
+      signCircle.setAttribute('fill','#d80000');
+      signCircle.setAttribute('stroke','#fff');
+      signCircle.setAttribute('stroke-width','2.2');
+      const signBar=document.createElementNS('http://www.w3.org/2000/svg','rect');
+      signBar.setAttribute('x','-6.5');
+      signBar.setAttribute('y','-2.2');
+      signBar.setAttribute('width','13');
+      signBar.setAttribute('height','4.4');
+      signBar.setAttribute('rx','1.2');
+      signBar.setAttribute('fill','#fff');
+      sign.appendChild(signCircle);
+      sign.appendChild(signBar);
+      g.appendChild(sign);
       return g;
     }
 
@@ -2801,15 +2822,15 @@
       const lblX = cx + Math.cos(mRad) * lblR, lblY = cy + Math.sin(mRad) * lblR;
       const lblBg = document.createElementNS('http://www.w3.org/2000/svg','circle');
       lblBg.setAttribute('cx', lblX.toFixed(2)); lblBg.setAttribute('cy', lblY.toFixed(2));
-      lblBg.setAttribute('r','22');
+      lblBg.setAttribute('r','29');
       lblBg.setAttribute('fill','#000');
       lblBg.setAttribute('stroke','rgba(255,255,255,.22)');
-      lblBg.setAttribute('stroke-width','1.5');
+      lblBg.setAttribute('stroke-width','2');
       gMin.appendChild(lblBg);
       const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
       lbl.setAttribute('x', lblX.toFixed(2)); lbl.setAttribute('y', lblY.toFixed(2));
       lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('dominant-baseline','central');
-      lbl.setAttribute('fill','#fff'); lbl.setAttribute('font-size','33');
+      lbl.setAttribute('fill','#fff'); lbl.setAttribute('font-size','43');
       lbl.setAttribute('font-weight','900'); lbl.setAttribute('font-family','inherit');
       lbl.setAttribute('opacity','0.95');
       lbl.style.filter = 'drop-shadow(0 0 5px rgba(255,255,255,.98)) drop-shadow(0 0 13px rgba(255,255,255,.76)) drop-shadow(0 0 22px rgba(185,220,255,.48))';
@@ -3292,13 +3313,18 @@
 
       if(elapsedFrac >= 60){
         // Tryb "overage" - czerwony licznik nadwyżki
+        const enteringOverage=!exBtn.classList.contains('overage');
         exBtn.classList.add('overage');
         paintWheelMask(360);
         const overFrac = Math.max(0, elapsedFrac - 60);
-        renderOverageRoller(overFrac);
+        renderOverageRoller(overFrac, { entering: enteringOverage });
         return;
       }
       clearWheelImageMask();
+      if(exBtn.classList.contains('overage')){
+        const inner=document.getElementById('overageRollerInner');
+        if(inner) inner.dataset.active='0';
+      }
       exBtn.classList.remove('overage','fading-overage','restore-overage');
 
       const ang = getWheelVanishAngle(elapsedFrac);
@@ -3331,7 +3357,7 @@
     }
 
     // Rolka nadwyżki - pełne przewijanie jak workRoller, minuty od 1 w górę
-    function renderOverageRoller(minutes){
+    function renderOverageRoller(minutes, opts={}){
       const roller = document.querySelector('#overageDisplay .work-roller');
       const inner = document.getElementById('overageRollerInner');
       if(!roller || !inner) return;
@@ -3363,11 +3389,11 @@
           const chars = String(Math.abs(n)).length + 1;
           let fontSize;
           if(chars >= 4){
-            fontSize = Math.min(digitH * 0.76, w * 0.44);
+            fontSize = Math.min(digitH * 0.66, w * 0.34);
           } else if(chars === 3){
-            fontSize = Math.min(digitH * 0.9, w * 0.64);
+            fontSize = Math.min(digitH * 0.8, w * 0.52);
           } else {
-            fontSize = Math.min(digitH * 1.06, w * 0.82);
+            fontSize = Math.min(digitH * 0.95, w * 0.64);
           }
           d.style.fontSize = Math.floor(fontSize) + 'px';
           d.style.letterSpacing = '0';
@@ -3377,12 +3403,22 @@
       }
 
       const clamped = Math.min(MAX_MIN, Math.max(0, minutes));
+      roller.style.transition = 'opacity .45s ease';
+      roller.style.opacity = clamped <= 0.01 ? '0' : '1';
       const intM = Math.floor(clamped);
       const frac = clamped - intM;
       const baseOffset = (h / 2) - (digitH / 2);
       const offset = baseOffset - (intM + frac) * digitH;
       // Krótka transition żeby kropki sekund nie szarpały
-      inner.style.transition = 'transform 0.95s linear';
+      if(opts.entering || inner.dataset.active !== '1'){
+        inner.style.transition = 'none';
+        inner.style.transform = `translateY(${baseOffset}px)`;
+        inner.dataset.active = '1';
+        inner.offsetHeight;
+        inner.style.transition = clamped <= 1.15 ? 'transform 1.15s cubic-bezier(.18,.78,.25,1)' : 'none';
+      } else {
+        inner.style.transition = 'transform 0.95s linear';
+      }
       inner.style.transform = `translateY(${offset}px)`;
     }
 
@@ -4676,6 +4712,10 @@
         });
       });
     }
+    function openStartCounterEditor(){
+      const hint=counterStart!==null?counterStart:(lastCounterEnd!==null?lastCounterEnd:0);
+      openKeypad('counter',{ field:'start', hint, label:'Stan licznika poczatkowy' });
+    }
 
     // ===== notatki =====
     function escapeHtml(s){
@@ -5103,7 +5143,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.2.3';
+      return el ? el.textContent.trim() : 'vGPT_5.2.4';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -6122,7 +6162,13 @@
     );
 
     // === MONEY === (otwarcie panelu obrotów)
-    document.getElementById('moneyBtn').addEventListener('click', ()=> openMoneyPanel());
+    document.getElementById('moneyBtn').addEventListener('click', ()=>{
+      if(startWorkMinutes !== null && counterStart === null){
+        openStartCounterEditor();
+        return;
+      }
+      openMoneyPanel();
+    });
     // === COIN === (też otwiera panel obrotów - to ten sam panel)
     document.getElementById('coinBtn').addEventListener('click', ()=>{
       const btn=document.getElementById('coinBtn');

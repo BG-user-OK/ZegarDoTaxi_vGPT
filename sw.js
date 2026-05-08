@@ -1,7 +1,7 @@
 // Service Worker dla Tarczy czasu pracy
 // WAŻNE: przy każdej nowej wersji aplikacji zmień nazwę cache - stare wersje automatycznie się usuną.
-// vGPT_5.2.3: based on a previously developed v:1.28 version created by another AI.
-const CACHE_NAME = 'tarcza-vGPT-5.2.3';
+// vGPT_5.2.4: based on a previously developed v:1.28 version created by another AI.
+const CACHE_NAME = 'tarcza-vGPT-5.2.4';
 
 const FILES_TO_CACHE = [
   './',
