@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.2.1: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.2.2: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -369,7 +369,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.2.1: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.2.2: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2418,7 +2418,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.2.1</div>
+  <div class="version">vGPT_5.2.2</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2846,7 +2846,62 @@
     function getActiveBreakMinutes(){ return (breakActive&&currentBreakStart!==null)?diffMinutes(currentBreakStart,effectiveNow()):0; }
     function getTotalBreakMinutes(a=true){ let s=getClosedBreakMinutes()+breakAdjustMinutes; if(a) s+=getActiveBreakMinutes(); return s; }
     function getNetWorkMinutes(){ if(startWorkMinutes===null) return 0; return diffMinutes(startWorkMinutes,effectiveNow()) - getTotalBreakMinutes(true); }
-    function getForecastEndMinutes(){ if(startWorkMinutes===null) return null; return startWorkMinutes + workTargetMinutes + getTotalBreakMinutes(true); }
+    function getTimelineBreakSegmentsAbs(nowAbs, includeActive=true){
+      if(startWorkMinutes===null) return [];
+      const segments = [];
+      for(const seg of breakSegments){
+        if(!seg || seg.start===null || seg.end===null || typeof seg.start === 'undefined' || typeof seg.end === 'undefined') continue;
+        const sAbs = startWorkMinutes + diffMinutes(startWorkMinutes, seg.start);
+        const eAbs = sAbs + diffMinutes(seg.start, seg.end);
+        if(eAbs > startWorkMinutes && sAbs < nowAbs) segments.push({
+          start:Math.max(startWorkMinutes, sAbs),
+          end:Math.min(nowAbs, eAbs)
+        });
+      }
+      if(includeActive && breakActive && currentBreakStart!==null){
+        const sAbs = startWorkMinutes + diffMinutes(startWorkMinutes, currentBreakStart);
+        if(sAbs < nowAbs) segments.push({
+          start:Math.max(startWorkMinutes, sAbs),
+          end:nowAbs
+        });
+      }
+      return segments
+        .filter(seg=>seg.end>seg.start)
+        .sort((a,b)=>a.start-b.start)
+        .reduce((merged, seg)=>{
+          const last = merged[merged.length-1];
+          if(last && seg.start <= last.end){
+            last.end = Math.max(last.end, seg.end);
+          } else {
+            merged.push({ start:seg.start, end:seg.end });
+          }
+          return merged;
+        }, []);
+    }
+    function getForecastEndMinutes(){
+      if(startWorkMinutes===null) return null;
+      const now=effectiveNow();
+      const nowAbs=startWorkMinutes + diffMinutes(startWorkMinutes, now);
+      const targetWork=Math.max(0, workTargetMinutes + (breakAdjustMinutes || 0));
+      if(targetWork<=0) return startWorkMinutes;
+      let worked=0;
+      let cursor=startWorkMinutes;
+      const breaksAbs=getTimelineBreakSegmentsAbs(nowAbs, true);
+      for(const seg of breaksAbs){
+        if(seg.start>cursor){
+          const span=seg.start-cursor;
+          if(worked+span>=targetWork) return cursor + (targetWork-worked);
+          worked+=span;
+        }
+        cursor=Math.max(cursor, seg.end);
+      }
+      if(nowAbs>cursor){
+        const span=nowAbs-cursor;
+        if(worked+span>=targetWork) return cursor + (targetWork-worked);
+        worked+=span;
+      }
+      return nowAbs + (targetWork-worked);
+    }
     function getBreakOverlapSince(anchor){
       const total=diffMinutes(anchor,effectiveNow()); let o=0;
       for(const seg of breakSegments){
@@ -5048,7 +5103,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.2.1';
+      return el ? el.textContent.trim() : 'vGPT_5.2.2';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
