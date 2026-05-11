@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.2.5: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.2.6: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -133,13 +133,13 @@
       -webkit-user-drag:none;
     }
     .note-sticker.note-postpone-holding .note-sticker-body{
-      animation:none;
+      animation:notePostponeBodyHoldGlow 2s ease-out forwards;
     }
     .note-sticker.note-postpone-armed{
       position:relative;
       z-index:1200;
       touch-action:none;
-      animation:notePostponeShakeStrong .105s linear infinite;
+      animation:none;
       transform-origin:center;
       -webkit-user-drag:none;
       box-shadow:
@@ -149,7 +149,13 @@
         0 2px 4px rgba(0,0,0,.5);
     }
     .note-sticker.note-postpone-armed .note-sticker-body{
-      animation:none;
+      animation:notePostponeShakeStrong .105s linear infinite;
+      transform-origin:center;
+      box-shadow:
+        0 0 0 10px rgba(255,255,255,.78),
+        0 0 34px rgba(255,235,80,1),
+        0 0 62px rgba(255,210,30,.62),
+        0 2px 4px rgba(0,0,0,.5);
     }
     .note-sticker.note-postpone-dragging{
       position:relative;
@@ -169,6 +175,7 @@
       will-change:transform, opacity;
     }
     .note-sticker.note-postpone-holding:active,
+    .note-sticker.note-postpone-armed:active,
     .note-sticker.note-postpone-dragging:active,
     .note-sticker.note-postpone-flyout:active{
       transform:none;
@@ -203,6 +210,27 @@
           0 0 0 10px rgba(255,255,255,.68),
           0 0 30px rgba(255,235,80,1),
           0 0 52px rgba(255,210,30,.48);
+      }
+    }
+    @keyframes notePostponeBodyHoldGlow{
+      0%{
+        box-shadow:
+          0 2px 4px rgba(0,0,0,.5),
+          0 0 0 0 rgba(255,255,255,0),
+          0 0 0 rgba(255,235,80,0);
+      }
+      55%{
+        box-shadow:
+          0 2px 4px rgba(0,0,0,.5),
+          0 0 0 6px rgba(255,255,255,.5),
+          0 0 20px rgba(255,235,80,.82);
+      }
+      100%{
+        box-shadow:
+          0 2px 4px rgba(0,0,0,.5),
+          0 0 0 11px rgba(255,255,255,.74),
+          0 0 34px rgba(255,235,80,1),
+          0 0 58px rgba(255,210,30,.55);
       }
     }
     .note-postpone-shake-strong{
@@ -251,7 +279,7 @@
         0 0 32px rgba(255,235,80,1),
         0 0 58px rgba(255,210,30,.55),
         0 2px 4px rgba(0,0,0,.5);
-      animation:notePostponeShakeStrong .105s linear infinite;
+      animation:none;
       transform-origin:center;
     }
     .note-sticker.alarm-blink{
@@ -262,6 +290,12 @@
       color:#fff;
     }
     .note-sticker:active{ transform:scale(.96); }
+    .note-sticker.note-postpone-holding:active,
+    .note-sticker.note-postpone-armed:active,
+    .note-sticker.note-postpone-dragging:active,
+    .note-sticker.note-postpone-flyout:active{
+      transform:none;
+    }
     .note-sticker.with-time{
       width:var(--note-size, 68px);
       height:calc(var(--note-size, 60px) * 1.22);
@@ -369,7 +403,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.2.5: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.2.6: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -768,6 +802,14 @@
     .money-cell.note-500 { --note-tx:0%; --note-ty:0%; }
     /* Punkt 2: górny banknot kwota w lewo, dolny banknot kwota w lewo */
     #moneyTop .money-cell-text { --row-shift:-35%; }
+    #moneyTop.note-500 .money-cell-text{
+      --row-shift:-24%;
+      font-size:clamp(28px, 8.6vw, 46px);
+    }
+    #moneyTop.note-500 .money-cell-text.money-digits-4{
+      --row-shift:-20%;
+      font-size:clamp(24px, 7.6vw, 40px);
+    }
     #moneyBot .money-cell-text { --row-shift:-20%; }
     .controls.results-ended .money-split{
       display:block;
@@ -1784,8 +1826,70 @@
     }
     /* Wewnątrz każdej kolumny - moduł z marginesem od krawędzi tablicy */
     .provider-row > .prov-btn,
-    .provider-row > .prov-amount{
+    .provider-row > .prov-amount,
+    .provider-row > .prov-suma-label,
+    .provider-row > .prov-suma-amount,
+    .provider-row > .prov-summary-empty{
       margin:0 14px;
+    }
+    .provider-summary-row{
+      min-height:96px !important;
+      align-items:center;
+      margin-bottom:2px;
+    }
+    .provider-summary-row.summary-empty{
+      pointer-events:none;
+    }
+    .prov-summary-empty{
+      min-height:88px;
+      border-radius:8px;
+      opacity:0;
+    }
+    .prov-suma-label{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:82px;
+      border-radius:8px;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(104,255,129,.2) 0%, transparent 48%),
+        linear-gradient(180deg, #171d17 0%, #071007 58%, #010401 100%);
+      color:#35ff62;
+      font-size:clamp(27px, 7vw, 40px);
+      font-weight:1000;
+      letter-spacing:1px;
+      text-shadow:
+        0 0 4px rgba(195,255,206,.92),
+        0 0 12px rgba(67,255,103,.95),
+        0 0 24px rgba(0,255,60,.68);
+      box-shadow:
+        inset 0 5px 12px rgba(0,0,0,.76),
+        inset 0 -2px 5px rgba(140,255,150,.12),
+        0 0 18px rgba(0,255,60,.26);
+    }
+    .prov-suma-amount{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      min-height:82px;
+      padding:0 12px;
+      border-radius:8px;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(255,245,176,.48) 0%, rgba(255,204,70,.22) 34%, transparent 70%),
+        linear-gradient(180deg, rgba(130,84,0,.62) 0%, rgba(54,36,0,.7) 58%, rgba(14,10,0,.86) 100%);
+      color:#fff8d0;
+      font-size:clamp(30px, 8vw, 46px);
+      font-weight:1000;
+      line-height:.92;
+      font-variant-numeric:tabular-nums;
+      text-shadow:
+        0 0 4px rgba(255,255,255,.86),
+        0 0 14px rgba(255,224,92,.9),
+        0 0 30px rgba(255,174,0,.56);
+      box-shadow:
+        inset 0 6px 14px rgba(255,232,126,.28),
+        inset 0 -8px 14px rgba(0,0,0,.58),
+        0 0 18px rgba(255,197,55,.32);
     }
     .prov-btn{
       position:relative;
@@ -2030,6 +2134,34 @@
       padding:0 8px;
       font-size:13px; color:#777;
       text-transform:uppercase; letter-spacing:.8px;
+    }
+    .keypad-start-counter-help{
+      flex:1;
+      min-height:180px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      padding:12px 8px 6px;
+      text-align:center;
+    }
+    .keypad-start-counter-help-text{
+      max-width:360px;
+      color:#f2f2f2;
+      font-size:clamp(22px, 6vw, 32px);
+      font-weight:900;
+      line-height:1.12;
+      text-transform:none;
+      letter-spacing:0;
+      text-shadow:0 0 14px rgba(255,255,255,.24);
+    }
+    .keypad-start-counter-help img{
+      width:min(62vw, 250px);
+      height:auto;
+      max-height:28vh;
+      object-fit:contain;
+      filter:drop-shadow(0 0 18px rgba(255,255,255,.18));
     }
 
     .counter-fields{ display:flex; flex-direction:column; gap:8px; }
@@ -2428,7 +2560,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.2.5</div>
+  <div class="version">vGPT_5.2.6</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3709,8 +3841,8 @@
 
     function setupNotePostponeGesture(btn, note){
       const HOLD_MS = 2000;
-      const THROW_DY = -44;
-      const THROW_MIN_MOVE = 28;
+      const THROW_DY = -24;
+      const THROW_MIN_MOVE = 18;
       let timer = null;
       let pointerId = null;
       let startX = 0;
@@ -3812,39 +3944,33 @@
         clearTimeout(timer);
         removeTracking();
         const rect = btn.getBoundingClientRect();
-        const clone = btn.cloneNode(true);
-        clone.classList.remove('note-postpone-holding','note-postpone-armed','note-postpone-dragging','note-postpone-flyout');
-        clone.classList.add('note-postpone-flight-clone');
-        clone.style.left = rect.left + 'px';
-        clone.style.top = rect.top + 'px';
-        clone.style.width = rect.width + 'px';
-        clone.style.height = rect.height + 'px';
-        clone.style.transform = 'translate3d(0,0,0) rotate(0deg) scale(1)';
-        clone.style.opacity = '1';
-        clone.style.visibility = 'visible';
-        document.body.appendChild(clone);
         btn.classList.remove('note-postpone-holding','note-postpone-armed','note-postpone-dragging');
+        btn.classList.add('note-postpone-flyout');
+        btn.style.transform = 'translate3d(0,0,0) rotate(0deg) scale(1)';
+        btn.style.opacity = '1';
+        btn.style.visibility = 'visible';
         releaseCapture();
         pointerId = null;
         let done = false;
+        const onEnd = (ev)=>{
+          if(ev && ev.target !== btn) return;
+          if(ev && ev.propertyName && ev.propertyName !== 'transform') return;
+          complete();
+        };
         const complete = ()=>{
           if(done) return;
           done = true;
-          clone.removeEventListener('transitionend', complete);
-          if(clone.parentNode) clone.parentNode.removeChild(clone);
+          btn.removeEventListener('transitionend', onEnd);
           postponeNoteUntilNextWorkDate(note);
         };
-        clone.addEventListener('transitionend', complete);
-        void clone.offsetWidth;
+        btn.addEventListener('transitionend', onEnd);
+        void btn.offsetWidth;
         requestAnimationFrame(()=>{
-          btn.style.visibility = 'hidden';
-          requestAnimationFrame(()=>{
-            const flyDistance = rect.top + rect.height + 140;
-            clone.style.transform = `translate3d(0, -${flyDistance}px, 0) rotate(-12deg) scale(.68)`;
-            clone.style.opacity = '0';
-          });
+          const flyDistance = rect.top + rect.height + 150;
+          btn.style.transform = `translate3d(0, -${flyDistance}px, 0) rotate(-12deg) scale(.7)`;
+          btn.style.opacity = '0';
         });
-        setTimeout(complete, 860);
+        setTimeout(complete, 760);
       }
 
       function handleMove(x, y, e){
@@ -3856,7 +3982,7 @@
         if(e && e.stopPropagation) e.stopPropagation();
         const dx = x - startX;
         const dy = y - startY;
-        if(dy <= THROW_DY && Math.abs(dy) >= THROW_MIN_MOVE && Math.abs(dy) > Math.abs(dx) * .85){
+        if(dy <= THROW_DY && Math.abs(dy) >= THROW_MIN_MOVE && Math.abs(dy) > Math.abs(dx) * .25){
           throwNote();
         }
       }
@@ -4401,10 +4527,29 @@
       const z=Math.floor(g/100), gg=g%100;
       return `${z},${pad(gg)}`;
     }
+    function formatProviderSumDisplay(g){
+      const z=Math.floor(g/100);
+      return String(z).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
     function openMoneyPanel(){
       let rows='';
       const finalCounterMissing = counterEnd === null;
       const workHasStarted = startWorkMinutes !== null;
+      const filledProviderCount = PROVIDERS.reduce((count,p)=>count + ((revenues[p.key]||0)>0 ? 1 : 0), 0);
+      const providerTotal = getTotalRevenueGroszy();
+      if(filledProviderCount > 1){
+        rows += `
+          <div class="provider-row provider-summary-row">
+            <div class="prov-suma-label">SUMA:</div>
+            <div class="prov-suma-amount">${formatProviderSumDisplay(providerTotal)}</div>
+          </div>`;
+      } else {
+        rows += `
+          <div class="provider-row provider-summary-row summary-empty" aria-hidden="true">
+            <div class="prov-summary-empty"></div>
+            <div class="prov-summary-empty"></div>
+          </div>`;
+      }
       for(const p of PROVIDERS){
         const v=revenues[p.key]||0;
         const filled = v > 0;
@@ -4521,6 +4666,7 @@
 
     function renderKeypad(){
       let disp='', lab='';
+      const startCounterAutoHelp = keypadMode==='counter' && keypadContext.startWorkAuto;
       if(keypadMode==='amount'){
         const p=PROVIDERS.find(x=>x.key===keypadContext.provider);
         lab=`Kwota: ${p.label}${keypadContext.addMode?' (dodaj)':''}`;
@@ -4537,7 +4683,7 @@
           ${keypadMode==='counter' && keypadContext.field==='end'
             ? `<div class="keypad-live-preview" style="text-align:center;font-size:17px;font-weight:700;color:#aaa;padding:2px 0 4px;">${liveKmPreview()}</div>`
             : ''}
-          <div class="keypad" style="flex:1;">
+          <div class="keypad" style="${startCounterAutoHelp?'flex:0 0 auto;':'flex:1;'}">
             <button data-k="1"><span>1</span></button><button data-k="2"><span>2</span></button><button data-k="3"><span>3</span></button>
             <button data-k="4"><span>4</span></button><button data-k="5"><span>5</span></button><button data-k="6"><span>6</span></button>
             <button data-k="7"><span>7</span></button><button data-k="8"><span>8</span></button><button data-k="9"><span>9</span></button>
@@ -4546,6 +4692,12 @@
             <button class="key-ok" data-k="ok"><span>✓</span></button>
             <button class="key-back" data-k="back" style="grid-column:span 3;"><span>← Cofnij</span></button>
           </div>
+          ${startCounterAutoHelp
+            ? `<div class="keypad-start-counter-help">
+                <div class="keypad-start-counter-help-text">zerknij na licznik w aucie i skoryguj stan powyżej w apce jeśli trzeba 😀</div>
+                <img src="Photos/licznik.png" alt="Licznik" />
+              </div>`
+            : ''}
         </div>
       `);
       overlay.querySelectorAll('[data-k]').forEach(b=>{
@@ -4582,7 +4734,14 @@
     function keypadPress(k){
       if(k==='cancel'){
         if(keypadMode==='amount') openMoneyPanel();
-        else if(keypadMode==='counter') openCounterPanel();
+        else if(keypadMode==='counter'){
+          if(keypadContext.returnToMain){
+            hideOverlay();
+            renderAll();
+          } else {
+            openCounterPanel();
+          }
+        }
         return;
       }
       if(k==='ok'){ commitKeypad(); return; }
@@ -4632,10 +4791,13 @@
     function commitKeypad(){
       if(keypadMode==='amount'){
         const g=parseInt(keypadRaw||'0',10);
-        if(g>0){
-          const k=keypadContext.provider;
-          if(keypadContext.addMode) revenues[k]=(revenues[k]||0)+g;
-          else revenues[k]=g;
+        const k=keypadContext.provider;
+        if(k){
+          if(keypadContext.addMode){
+            if(g>0) revenues[k]=(revenues[k]||0)+g;
+          } else {
+            revenues[k]=g;
+          }
         }
         saveState();
         openMoneyPanel();
@@ -4645,7 +4807,12 @@
         else if(keypadContext.field==='end') counterEnd=val;
         else if(keypadContext.field==='priv') privKmTotal+=val;
         saveState();
-        openCounterPanel();
+        if(keypadContext.returnToMain){
+          hideOverlay();
+          renderAll();
+        } else {
+          openCounterPanel();
+        }
       }
     }
 
@@ -4723,9 +4890,15 @@
         });
       });
     }
-    function openStartCounterEditor(){
+    function openStartCounterEditor(options={}){
       const hint=counterStart!==null?counterStart:(lastCounterEnd!==null?lastCounterEnd:0);
-      openKeypad('counter',{ field:'start', hint, label:'Stan licznika poczatkowy' });
+      openKeypad('counter',{
+        field:'start',
+        hint,
+        label:'Stan licznika poczatkowy',
+        returnToMain:!!options.returnToMain,
+        startWorkAuto:!!options.startWorkAuto
+      });
     }
 
     // ===== notatki =====
@@ -5020,6 +5193,9 @@
       if(!fromEdit) restoreDuePostponedNotes(workDate);
       saveState(); renderAll();
       syncWorkWakeLock();
+      if(!fromEdit){
+        setTimeout(()=>openStartCounterEditor({ returnToMain:true, startWorkAuto:true }), 0);
+      }
     }
     function askEndedWorkdayStartChoice(){
       startEndConfirm({
@@ -5154,7 +5330,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.2.5';
+      return el ? el.textContent.trim() : 'vGPT_5.2.6';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
