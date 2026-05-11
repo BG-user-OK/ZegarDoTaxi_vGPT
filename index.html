@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.3.2: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.3.3: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -329,7 +329,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.3.2: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.3.3: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2493,7 +2493,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.3.2</div>
+  <div class="version">vGPT_5.3.3</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3156,6 +3156,11 @@
       if(m < 60) return ':' + pad(m);
       return Math.floor(m / 60) + ':' + pad(m % 60);
     }
+    function formatMinuteValue(minutes){
+      const m = Math.max(0, Math.floor(Math.abs(minutes)));
+      if(m < 60) return String(m);
+      return Math.floor(m / 60) + ':' + pad(m % 60);
+    }
 
     function renderButtons(){
       const workBtn=document.getElementById('workBtn');
@@ -3449,7 +3454,7 @@
           d.className = 'work-roller-digit';
           inner.appendChild(d);
           d.dataset.value = String(i);
-          d.textContent = i === 0 ? '' : '+' + i;
+          d.textContent = i === 0 ? '' : '+' + formatMinuteValue(i);
         }
         inner.dataset.built='1';
       }
@@ -3463,10 +3468,12 @@
       if(inner.dataset.lastH !== String(h) || inner.dataset.lastW !== String(w)){
         inner.querySelectorAll('.work-roller-digit').forEach(d => {
           d.style.height = digitH + 'px';
-          const n = parseInt(d.dataset.value || '0', 10);
-          const chars = String(Math.abs(n)).length + 1;
+          const label = d.textContent || '';
+          const chars = label.length;
           let fontSize;
-          if(chars >= 4){
+          if(chars >= 5){
+            fontSize = Math.min(digitH * 0.6, w * 0.28);
+          } else if(chars >= 4){
             fontSize = Math.min(digitH * 0.66, w * 0.34);
           } else if(chars === 3){
             fontSize = Math.min(digitH * 0.8, w * 0.52);
@@ -3591,13 +3598,13 @@
       if(rem>0){
         const pct=Math.min(100,(elapsedSec/totalSec)*100);
         if(bar) bar.style.height=pct.toFixed(1)+'%';
-        ctr.textContent=Math.ceil(rem/60);
+        ctr.textContent=formatMinuteValue(Math.ceil(rem/60));
       } else {
         if(bar) bar.style.height='0%';
         if(!potAckedDone){
           btn.classList.add(blinkState?'done-alarm':'done-alarm-off');
           const totalMin=Math.ceil(elapsedSec/60);
-          ctr.textContent=totalMin;
+          ctr.textContent=formatMinuteValue(totalMin);
         } else {
           if(btn.classList.contains('pot-has-img')){
             ctr.removeAttribute('data-show');
@@ -5216,7 +5223,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.3.2';
+      return el ? el.textContent.trim() : 'vGPT_5.3.3';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
