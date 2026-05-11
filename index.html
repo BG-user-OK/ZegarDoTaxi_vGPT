@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.3.0: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.3.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -110,6 +110,9 @@
       box-shadow:0 2px 4px rgba(0,0,0,.5);
       border:none; cursor:pointer;
       transition:opacity .2s, background .2s;
+      user-select:none;
+      -webkit-user-select:none;
+      -webkit-touch-callout:none;
     }
     .note-sticker-body{
       width:100%;
@@ -142,7 +145,7 @@
         0 2px 4px rgba(0,0,0,.5);
     }
     .note-sticker.note-postpone-committed{
-      pointer-events:none;
+      touch-action:none;
     }
     .note-sticker.note-postpone-committed .note-sticker-body{
       background:#d8d8d8;
@@ -190,6 +193,28 @@
     .note-sticker.alarm-blink .note-sticker-body{
       background:#ff3838;
       color:#fff;
+    }
+    .note-sticker.note-postpone-warning.alarm-blink .note-sticker-body{
+      background:#ff2525;
+      color:#fff;
+      box-shadow:
+        0 0 0 4px rgba(255,255,255,.55),
+        0 0 22px rgba(255,0,0,.78),
+        0 2px 4px rgba(0,0,0,.5);
+    }
+    .note-sticker.note-postpone-committed.alarm-blink .note-sticker-body{
+      background:#d8d8d8;
+      color:#111;
+      box-shadow:
+        0 0 0 2px rgba(255,255,255,.42),
+        0 0 18px rgba(255,255,255,.2),
+        0 2px 4px rgba(0,0,0,.5);
+    }
+    .note-sticker.note-postpone-fading.alarm-blink .note-sticker-body{
+      background:#000;
+      color:rgba(0,0,0,0);
+      box-shadow:none;
+      opacity:0;
     }
     .note-sticker:active{ transform:scale(.96); }
     .note-sticker.note-postpone-warning:active,
@@ -304,7 +329,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.3.0: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.3.1: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2468,7 +2493,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.3.0</div>
+  <div class="version">vGPT_5.3.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3751,14 +3776,27 @@
     }
 
     function setupNotePostponeGesture(btn, note){
+      const WARNING_MS = 180;
       const HOLD_MS = 2000;
       const GRAY_WAIT_MS = 3000;
       const FADE_MS = 3000;
+      let warningTimer = null;
       let timer = null;
       let fadeTimer = null;
       let finishTimer = null;
       let pointerId = null;
       let committed = false;
+      let holding = false;
+
+      function addReleaseListeners(){
+        document.addEventListener('pointerup', finishHold, true);
+        document.addEventListener('pointercancel', finishHold, true);
+      }
+
+      function removeReleaseListeners(){
+        document.removeEventListener('pointerup', finishHold, true);
+        document.removeEventListener('pointercancel', finishHold, true);
+      }
 
       function releaseCapture(){
         if(pointerId !== null){
@@ -3766,23 +3804,37 @@
         }
       }
 
-      function clearHold(resetVisual=true){
+      function clearPendingTimers(){
+        clearTimeout(warningTimer);
         clearTimeout(timer);
+        warningTimer = null;
         timer = null;
+      }
+
+      function clearHold(resetVisual=true){
+        clearPendingTimers();
         if(resetVisual && !committed){
           btn.classList.remove('note-postpone-warning');
         }
+        removeReleaseListeners();
         releaseCapture();
         pointerId = null;
+        holding = false;
       }
 
       btn.addEventListener('pointerdown',(e)=>{
-        if(e.button && e.button !== 0) return;
+        if(e.pointerType === 'mouse' && e.button !== 0) return;
         if(committed) return;
         clearHold(true);
         pointerId = e.pointerId;
+        holding = true;
         btn._notePostponeSuppressClick = false;
-        btn.classList.add('note-postpone-warning');
+        warningTimer = setTimeout(()=>{
+          if(holding && !committed){
+            btn.classList.add('note-postpone-warning');
+          }
+        }, WARNING_MS);
+        addReleaseListeners();
         try{ btn.setPointerCapture(pointerId); }catch(err){}
         timer = setTimeout(()=>{
           commitPostponeVisual();
@@ -3790,16 +3842,18 @@
       });
 
       function commitPostponeVisual(){
-        if(committed) return;
+        if(committed || !holding) return;
         committed = true;
+        holding = false;
         btn._notePostponeSuppressClick = true;
-        clearTimeout(timer);
+        clearPendingTimers();
         btn.classList.remove('note-postpone-warning');
         btn.classList.add('note-postpone-committed');
         const body = btn.querySelector('.note-sticker-body');
         if(body){
           body.innerHTML = '<span class="note-tomorrow-text">do jutra...</span>';
         }
+        removeReleaseListeners();
         releaseCapture();
         pointerId = null;
         if(navigator.vibrate){ try{ navigator.vibrate([60,40,60]); }catch(e){} }
@@ -3819,8 +3873,10 @@
         if(committed){
           if(e && e.cancelable) e.preventDefault();
           if(e && e.stopPropagation) e.stopPropagation();
+          removeReleaseListeners();
           releaseCapture();
           pointerId = null;
+          holding = false;
           return;
         }
         clearHold(true);
@@ -3828,7 +3884,6 @@
 
       btn.addEventListener('pointerup', finishHold);
       btn.addEventListener('pointercancel', finishHold);
-      btn.addEventListener('pointerleave', finishHold);
 
       btn.addEventListener('contextmenu',(e)=>{ e.preventDefault(); });
     }
@@ -3885,8 +3940,10 @@
         }
 
         b.addEventListener('click', ()=>{
+          if(b.classList.contains('note-postpone-committed') || b.classList.contains('note-postpone-fading')){
+            return;
+          }
           if(b._notePostponeSuppressClick){
-            b._notePostponeSuppressClick = false;
             return;
           }
           if(isNoteAlarmActive(n, Date.now())){
@@ -5148,7 +5205,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.3.0';
+      return el ? el.textContent.trim() : 'vGPT_5.3.1';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
