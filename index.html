@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.2.7: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.2.8: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -403,7 +403,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.2.7: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.2.8: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -478,6 +478,13 @@
     .auto-sync-indicator.checking{
       background:#f4d03f;
       animation:autoSyncBlink .7s infinite alternate;
+    }
+    .auto-sync-indicator.scheduled{
+      background:#ff7a00;
+      box-shadow:
+        0 0 0 1px rgba(255,154,31,.55),
+        0 0 12px rgba(255,122,0,.95),
+        0 0 24px rgba(255,122,0,.68);
     }
     .auto-sync-indicator.downloading{
       background:#ff3333;
@@ -2560,7 +2567,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.2.7</div>
+  <div class="version">vGPT_5.2.8</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2669,10 +2676,13 @@
         const comparable = stableStringify({state, persist});
         const previous = localStorage.getItem(LS_SYNC_STATE_HASH) || '';
         localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
+        const changed = !!(previous && previous !== comparable && !syncApplyInProgress);
         if(previous && previous !== comparable && !syncApplyInProgress){
           localStorage.setItem(LS_LAST_LOCAL_CHANGE_AT, String(Date.now()));
         }
+        return changed;
       }catch(e){}
+      return false;
     }
     function loadState(){
       try{
@@ -3819,7 +3829,7 @@
       note.postponedAtDate = baseDate;
       note.postponedUntilDate = addDaysISO(baseDate, 1);
       note.ackedAlerts = {};
-      saveState();
+      saveStateAndScheduleAutoSync('note_postponed');
       renderNotesBar();
     }
 
@@ -4090,7 +4100,7 @@
           if(isNoteAlarmActive(n, Date.now())){
             // Stuknięcie aktywnego alarmu = potwierdzenie najbliższego
             ackNoteAlarm(n);
-            saveState();
+            saveStateAndScheduleAutoSync('note_alarm_ack');
             renderAll();
           } else {
             openNoteEditor(n.id);
@@ -4199,7 +4209,7 @@
     const overlay=document.getElementById('overlay');
     function showOverlay(html){ overlay.innerHTML=html; overlay.classList.add('show'); }
     function hideOverlay(){ overlay.classList.remove('show'); overlay.innerHTML=''; }
-    overlay.addEventListener('click',(e)=>{ if(e.target===overlay) hideOverlay(); });
+    overlay.addEventListener('click',(e)=>{ if(e.target===overlay) closeOverlayToMain('overlay_close'); });
 
     // ===== wspolny picker czasu =====
     function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
@@ -4401,7 +4411,8 @@
           maxMinutes:23*60+55,
           onDone:(mins)=>{
             breakAdjustMinutes += mins;
-            saveState(); renderAll();
+            saveStateAndScheduleAutoSync('break_adjust');
+            renderAll();
           }
         });
       } else if(mode==='pot'){
@@ -4413,7 +4424,8 @@
           maxMinutes:995,
           onDone:(mins)=>{
             potDurationMin = Math.max(1, mins);
-            saveState(); renderAll();
+            saveStateAndScheduleAutoSync('pot_duration');
+            renderAll();
           }
         });
       } else if(mode==='target'){
@@ -4425,7 +4437,8 @@
           maxMinutes:960,
           onDone:(mins)=>{
             workTargetMinutes = mins;
-            saveState(); renderAll();
+            saveStateAndScheduleAutoSync('work_target');
+            renderAll();
             openTimeEditor('start');
           }
         });
@@ -4485,13 +4498,16 @@
           setWorkStart(editHour*60+editMinute, true);
         } else if(editMode==='breakAdjust'){
           breakAdjustMinutes += editSignedMinutes;
-          saveState(); renderAll();
+          saveStateAndScheduleAutoSync('break_adjust');
+          renderAll();
         } else if(editMode==='pot'){
           potDurationMin = Math.max(1, editPotMinutes);
-          saveState(); renderAll();
+          saveStateAndScheduleAutoSync('pot_duration');
+          renderAll();
         } else if(editMode==='target'){
           // Cel zatwierdzony - wracamy do edytora startu
-          saveState(); renderAll();
+          saveStateAndScheduleAutoSync('work_target');
+          renderAll();
           openTimeEditor('start');
           return;
         }
@@ -4590,8 +4606,12 @@
           </div>
         </div>
       `);
-      overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); hideOverlay(); });
-      overlay.querySelector('[data-act="ok"]').addEventListener('click',(e)=>{ e.stopPropagation(); saveState(); hideOverlay(); renderAll(); });
+      overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); closeOverlayToMain('money_panel'); });
+      overlay.querySelector('[data-act="ok"]').addEventListener('click',(e)=>{
+        e.stopPropagation();
+        saveStateAndMarkOverlayDirty('money_panel');
+        closeOverlayToMain('money_panel');
+      });
       overlay.querySelectorAll('[data-prov]').forEach(btn=>{
         btn.addEventListener('click',(e)=>{
           e.stopPropagation();
@@ -4736,8 +4756,7 @@
         if(keypadMode==='amount') openMoneyPanel();
         else if(keypadMode==='counter'){
           if(keypadContext.returnToMain){
-            hideOverlay();
-            renderAll();
+            closeOverlayToMain('counter_edit_cancel');
           } else {
             openCounterPanel();
           }
@@ -4799,17 +4818,16 @@
             revenues[k]=g;
           }
         }
-        saveState();
+        saveStateAndMarkOverlayDirty('provider_amount');
         openMoneyPanel();
       } else if(keypadMode==='counter'){
         const val=parseInt(keypadCounterDigits.join(''),10);
         if(keypadContext.field==='start') counterStart=val;
         else if(keypadContext.field==='end') counterEnd=val;
         else if(keypadContext.field==='priv') privKmTotal+=val;
-        saveState();
+        saveStateAndMarkOverlayDirty('counter_edit');
         if(keypadContext.returnToMain){
-          hideOverlay();
-          renderAll();
+          closeOverlayToMain('counter_edit');
         } else {
           openCounterPanel();
         }
@@ -4870,7 +4888,8 @@
         if(counterStart===null && lastCounterEnd!==null){
           counterStart = lastCounterEnd;
         }
-        saveState(); hideOverlay(); renderAll();
+        saveStateAndMarkOverlayDirty('counter_panel');
+        closeOverlayToMain('counter_panel');
       });
       overlay.querySelectorAll('[data-cnt]').forEach(b=>{
         b.addEventListener('click',(e)=>{
@@ -5161,13 +5180,15 @@
             ackedAlerts: {}
           });
         }
-        saveState(); hideOverlay(); renderAll();
+        saveStateAndMarkOverlayDirty('note_edit');
+        closeOverlayToMain('note_edit');
       });
       const del=overlay.querySelector('[data-act="delete"]');
       if(del) del.addEventListener('click',(e)=>{
         e.stopPropagation();
         notes = notes.filter(n=>n.id!==noteId);
-        saveState(); hideOverlay(); renderAll();
+        saveStateAndMarkOverlayDirty('note_delete');
+        closeOverlayToMain('note_delete');
       });
     }
 
@@ -5191,7 +5212,8 @@
       document.getElementById('workBtn').classList.add('on');
       workDate = todayISO();
       if(!fromEdit) restoreDuePostponedNotes(workDate);
-      saveState(); renderAll();
+      saveStateAndScheduleAutoSync(fromEdit ? 'work_start_edit' : 'work_start');
+      renderAll();
       syncWorkWakeLock();
       if(!fromEdit){
         setTimeout(()=>openStartCounterEditor({ returnToMain:true, startWorkAuto:true }), 0);
@@ -5231,7 +5253,8 @@
       }
 
       document.getElementById('workBtn').classList.add('on');
-      saveState(); renderAll();
+      saveStateAndScheduleAutoSync('work_continue');
+      renderAll();
       syncWorkWakeLock();
     }
     async function endWork(){
@@ -5243,7 +5266,8 @@
       document.getElementById('workBtn').classList.remove('on');
       // zapamiętaj końcowy licznik na jutro
       if(counterEnd!==null) lastCounterEnd=counterEnd;
-      saveState(); renderAll();
+      saveStateAndScheduleAutoSync('work_end');
+      renderAll();
       syncWorkWakeLock();
 
       // Eksport - dane zostają na ekranie po sukcesie. Reset nastąpi dopiero przy nowym START.
@@ -5253,7 +5277,8 @@
         const ok=await doExport(url);
         if(ok){
           showToast('Eksport OK. Dane pozostają na ekranie.','ok');
-          saveState(); renderAll();
+          saveStateAndScheduleAutoSync('work_end_export');
+          renderAll();
         } else {
           showToast('Eksport nieudany. Spróbuj ponownie.','err');
         }
@@ -5281,7 +5306,8 @@
       resetDayAfterExport();
       // Także garnek - jakby był aktywny
       potStartedAt=null; potAckedDone=false;
-      saveState(); renderAll();
+      saveStateAndScheduleAutoSync('soft_reset');
+      renderAll();
     }
 
     async function doExport(url){
@@ -5330,11 +5356,12 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.2.7';
+      return el ? el.textContent.trim() : 'vGPT_5.2.8';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
       localStorage.setItem(LS_AUTO_SYNC_ENABLED, on ? '1' : '0');
+      if(!on) clearAutoSyncSchedule(false);
       updateAutoSyncIndicator();
       if(on) setTimeout(()=>autoSyncCheckOnForeground('toggle'), 250);
     }
@@ -5512,11 +5539,16 @@
     function playSyncStandbySound(delay=.55){ playSyncSound('standby', delay, 1200); }
     function playSyncOffNoticeSound(){ playSyncSound('offNotice', 0, 2500); }
     document.addEventListener('pointerdown', unlockSyncAudio, { passive:true });
-    function setAutoSyncIndicatorState(state){
+    function setAutoSyncIndicatorState(state, reason){
       autoSyncIndicatorState = state || 'off';
       if(autoSyncIndicatorState === 'frozen'){
         autoSyncFrozenAcknowledged = false;
+        if(reason) autoSyncFrozenReason = reason;
         playSyncErrorSound();
+      } else if(autoSyncIndicatorState !== 'scheduled'){
+        if(autoSyncIndicatorState === 'on' || autoSyncIndicatorState === 'off' || autoSyncIndicatorState === 'applied'){
+          autoSyncFrozenReason = '';
+        }
       }
       updateAutoSyncIndicator();
     }
@@ -5534,6 +5566,7 @@
       }
       if(autoSyncIndicatorState === 'on') el.classList.add('on');
       else if(autoSyncIndicatorState === 'checking') el.classList.add('checking');
+      else if(autoSyncIndicatorState === 'scheduled') el.classList.add('scheduled');
       else if(autoSyncIndicatorState === 'downloading') el.classList.add('downloading');
       else if(autoSyncIndicatorState === 'applied') el.classList.add('applied');
       else if(autoSyncIndicatorState === 'frozen'){
@@ -5545,6 +5578,13 @@
     let autoSyncFrozenAcknowledged = false;
     let autoSyncBusy = false;
     let autoSyncHiddenUploaded = false;
+    let autoSyncFrozenReason = '';
+    const AUTO_SYNC_DEBOUNCE_MS = 15000;
+    let autoSyncUploadTimer = null;
+    let autoSyncScheduledReason = '';
+    let autoSyncScheduledAt = 0;
+    let autoSyncOverlayDirty = false;
+    let autoSyncOverlayDirtyReason = '';
     function acknowledgeAutoSyncFrozen(){
       autoSyncFrozenAcknowledged = true;
       autoSyncIndicatorState = isAutoSyncEnabled() ? 'on' : 'off';
@@ -5570,6 +5610,53 @@
     }
     function hasUnuploadedLocalChanges(){
       return getLastLocalChangeAt() > getLastAutoUploadChangeAt();
+    }
+    function clearAutoSyncSchedule(setIdle=true){
+      clearTimeout(autoSyncUploadTimer);
+      autoSyncUploadTimer = null;
+      autoSyncScheduledReason = '';
+      autoSyncScheduledAt = 0;
+      if(setIdle && isAutoSyncEnabled() && autoSyncIndicatorState === 'scheduled'){
+        setAutoSyncIndicatorState('on');
+      }
+    }
+    function scheduleAutoSyncUpload(reason){
+      if(!isAutoSyncEnabled()) return;
+      if(syncApplyInProgress) return;
+      if(autoSyncIndicatorState === 'frozen' && !autoSyncFrozenAcknowledged) return;
+      if(!hasUnuploadedLocalChanges()) return;
+      const cfg = getAutoSyncConfig();
+      if(!cfg) return;
+      clearTimeout(autoSyncUploadTimer);
+      autoSyncScheduledReason = reason || 'state_change';
+      autoSyncScheduledAt = Date.now();
+      setAutoSyncIndicatorState('scheduled');
+      autoSyncUploadTimer = setTimeout(()=>{
+        performScheduledAutoSyncUpload(autoSyncScheduledReason || 'debounced', false);
+      }, AUTO_SYNC_DEBOUNCE_MS);
+    }
+    function markAutoSyncOverlayDirty(reason){
+      if(!isAutoSyncEnabled()) return;
+      autoSyncOverlayDirty = true;
+      autoSyncOverlayDirtyReason = reason || autoSyncOverlayDirtyReason || 'overlay_change';
+    }
+    function scheduleOverlayAutoSync(reason){
+      if(!autoSyncOverlayDirty) return;
+      const r = autoSyncOverlayDirtyReason || reason || 'overlay_return';
+      autoSyncOverlayDirty = false;
+      autoSyncOverlayDirtyReason = '';
+      scheduleAutoSyncUpload(r);
+    }
+    function closeOverlayToMain(reason, render=true){
+      hideOverlay();
+      if(render) renderAll();
+      scheduleOverlayAutoSync(reason);
+    }
+    function saveStateAndScheduleAutoSync(reason){
+      if(saveState()) scheduleAutoSyncUpload(reason);
+    }
+    function saveStateAndMarkOverlayDirty(reason){
+      if(saveState()) markAutoSyncOverlayDirty(reason);
     }
     function markCurrentStateForInitialAutoUpload(){
       localStorage.setItem(LS_SYNC_STATE_HASH, stableStringify(getCurrentComparableState()));
@@ -5640,6 +5727,7 @@
         markCloudSeen(snapshot);
         playSyncSuccessSound();
         playSyncStandbySound();
+        setAutoSyncIndicatorState('on');
         showToast('Synchronizacja wyslana.', 'ok');
         hideOverlay();
       }catch(e){
@@ -5673,9 +5761,12 @@
       });
     }
     function openWorkMenu(){
+      const frozenReason = autoSyncFrozenReason || '';
+      autoSyncFrozenReason = '';
       showOverlay(`
         <div class="big-panel">
           <h3>MENU START</h3>
+          ${frozenReason ? `<div class="sync-warning" style="font-size:18px;line-height:1.22;padding:8px 6px 4px;">Auto Sync zatrzymany:<br>${escapeHtml(frozenReason)}</div>` : ''}
           <div class="sync-menu">
             <button class="sync-menu-btn primary" type="button" data-sync-act="edit">Edytuj start / cel</button>
             <button class="sync-menu-btn ${isAutoSyncEnabled()?'primary':''}" type="button" data-sync-act="auto">Auto Sync: ${isAutoSyncEnabled()?'ON':'OFF'}</button>
@@ -5844,6 +5935,7 @@
         markCloudSeen(data.snapshot);
         playSyncSuccessSound();
         playSyncStandbySound();
+        setAutoSyncIndicatorState('on');
         hideOverlay();
         showToast('Synchronizacja pobrana.', 'ok');
       }catch(e){
@@ -5854,6 +5946,7 @@
       }
     }
     function applySyncSnapshot(snapshot){
+      clearAutoSyncSchedule(false);
       const state = JSON.parse(JSON.stringify(snapshot.state || {}));
       const persist = JSON.parse(JSON.stringify(snapshot.persist || {}));
       if(state.startWorkMinutes !== null && typeof state.startWorkMinutes !== 'undefined' &&
@@ -5909,7 +6002,7 @@
           return;
         }
         if(autoSyncConflictWithCloud(candidate)){
-          setAutoSyncIndicatorState('frozen');
+          setAutoSyncIndicatorState('frozen', 'Nowszy stan z innego telefonu istnieje w chmurze, a ten telefon ma lokalne niewyslane zmiany.');
           showToast('Konflikt synchronizacji - uzyj recznej synchronizacji.', 'err');
           return;
         }
@@ -5934,6 +6027,61 @@
       }finally{
         autoSyncBusy = false;
       }
+    }
+
+    async function performScheduledAutoSyncUpload(reason, keepalive){
+      clearAutoSyncSchedule(false);
+      if(!isAutoSyncEnabled()) return;
+      if(autoSyncBusy){
+        if(document.visibilityState === 'visible') scheduleAutoSyncUpload(reason || 'busy_retry');
+        return;
+      }
+      const cfg = getAutoSyncConfig();
+      if(!cfg) return;
+      if(!hasUnuploadedLocalChanges()){
+        setAutoSyncIndicatorState('on');
+        return;
+      }
+      autoSyncBusy = true;
+      setAutoSyncIndicatorState('checking');
+      try{
+        const list = await fetchSyncList(cfg);
+        if(list && list.ok){
+          const candidate = findNewestOtherSnapshot(list.snapshots || [], cfg.deviceId);
+          if(candidate){
+            const cloudChange = Number(candidate.lastLocalChangeAt || candidate.savedAtMs || 0);
+            if(cloudChange > getLastLocalChangeAt()){
+              markCloudSeen(candidate);
+              setAutoSyncIndicatorState('frozen', 'W chmurze jest nowszy stan z innego telefonu. Automatyczna wysylka zostala zatrzymana, zeby nie nadpisac danych.');
+              showToast('Auto Sync zatrzymany - nowszy stan w chmurze.', 'err');
+              return;
+            }
+            if(autoSyncConflictWithCloud(candidate)){
+              setAutoSyncIndicatorState('frozen', 'Wykryto ryzyko konfliktu: inny telefon zapisal stan, a ten telefon ma niewyslane zmiany.');
+              showToast('Konflikt synchronizacji - uzyj recznej synchronizacji.', 'err');
+              return;
+            }
+          }
+        } else if(list && !list.ok){
+          throw new Error(list.error || 'syncList failed');
+        }
+        const snapshot = buildSyncSnapshot(cfg.device);
+        await sendSyncPayload(cfg, snapshot, !!keepalive).catch(()=>sendSyncPayload(cfg, snapshot, false));
+        localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(snapshot.lastLocalChangeAt || Date.now()));
+        markCloudSeen(snapshot);
+        playSyncSuccessSound();
+        setAutoSyncIndicatorState('on');
+      }catch(e){
+        setAutoSyncIndicatorState('frozen', 'Automatyczna wysylka synchronizacji nie powiodla sie. Sprawdz polaczenie albo uzyj synchronizacji recznej.');
+      }finally{
+        autoSyncBusy = false;
+      }
+    }
+
+    function flushScheduledAutoSync(reason){
+      if(!isAutoSyncEnabled()) return;
+      if(!autoSyncUploadTimer && !autoSyncScheduledReason) return;
+      performScheduledAutoSyncUpload(reason || autoSyncScheduledReason || 'flush', true);
     }
 
     async function autoSyncUploadOnHide(reason){
@@ -6020,16 +6168,12 @@
         autoSyncHiddenUploaded = false;
         syncWorkWakeLock();
         autoSyncCheckOnForeground('visible');
-      } else if(document.visibilityState === 'hidden' && !autoSyncHiddenUploaded){
-        autoSyncHiddenUploaded = true;
-        autoSyncUploadOnHide('hidden');
+      } else if(document.visibilityState === 'hidden'){
+        flushScheduledAutoSync('hidden');
       }
     });
     window.addEventListener('pagehide', ()=>{
-      if(!autoSyncHiddenUploaded){
-        autoSyncHiddenUploaded = true;
-        autoSyncUploadOnHide('pagehide');
-      }
+      flushScheduledAutoSync('pagehide');
     });
     window.addEventListener('pageshow', ()=>{
       autoSyncHiddenUploaded = false;
@@ -6273,7 +6417,8 @@
           breakSegments.push({ start:currentBreakStart, end:now });
           breakActive = false;
           currentBreakStart = null;
-          saveState(); renderAll();
+          saveStateAndScheduleAutoSync('break_end_before_work_end');
+          renderAll();
         }
         if(startWorkMinutes!==null && endWorkMinutes===null){
           // praca trwa - włącz zabezpieczenie zamiast od razu kończyć
@@ -6299,7 +6444,7 @@
       const now=nowMinutes();
       lastExerciseMinutes=now;
       exerciseMarkers.push(now);
-      saveState();
+      saveStateAndScheduleAutoSync('exercise_done');
       // Uruchom animację przywracania koła
       startWheelRestore();
     });
@@ -6317,7 +6462,8 @@
           if(currentBreakStart!==null) breakSegments.push({ start:currentBreakStart, end:now });
           currentBreakStart=null;
         }
-        saveState(); renderAll();
+        saveStateAndScheduleAutoSync(breakActive ? 'break_start' : 'break_end');
+        renderAll();
       },
       // długi klik = korekta sumy przerw
       ()=> openTimeEditor('breakAdjust')
@@ -6342,7 +6488,8 @@
             potAckedDone=true;
           }
         }
-        saveState(); renderAll();
+        saveStateAndScheduleAutoSync('pot_state');
+        renderAll();
       },
       // długi klik = ustaw czas grzania
       ()=> openTimeEditor('pot')
@@ -6433,7 +6580,7 @@
         setAutoSyncIndicatorState('on');
         playSyncStandbySound(0);
       } else if(autoSyncIndicatorState === 'frozen'){
-        acknowledgeAutoSyncFrozen();
+        openWorkMenu();
       } else {
         openWorkMenu();
       }
