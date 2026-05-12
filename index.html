@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.3.12: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.3.13: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.3.12: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.3.13: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2564,7 +2564,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.3.12</div>
+  <div class="version">vGPT_5.3.13</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -4156,8 +4156,21 @@
 
     // ===== overlay =====
     const overlay=document.getElementById('overlay');
-    function showOverlay(html){ overlay.innerHTML=html; overlay.classList.add('show'); }
-    function hideOverlay(){ overlay.classList.remove('show'); overlay.innerHTML=''; }
+    const VIEW_TOUCH_LOCK_MS = 1000;
+    let viewTouchLockedUntil = 0;
+    function lockViewTouch(ms=VIEW_TOUCH_LOCK_MS){
+      viewTouchLockedUntil = Math.max(viewTouchLockedUntil, Date.now() + ms);
+    }
+    function blockLockedViewTouch(e){
+      if(!viewTouchLockedUntil || Date.now() >= viewTouchLockedUntil) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+    ['pointerdown','pointerup','click','touchstart','touchend','mousedown','mouseup'].forEach(type=>{
+      document.addEventListener(type, blockLockedViewTouch, true);
+    });
+    function showOverlay(html){ overlay.innerHTML=html; overlay.classList.add('show'); lockViewTouch(); }
+    function hideOverlay(){ overlay.classList.remove('show'); overlay.innerHTML=''; lockViewTouch(); }
     overlay.addEventListener('click',(e)=>{
       if(e.target!==overlay) return;
       if(pendingEndWorkExport) abortPendingEndWorkReview();
@@ -4249,6 +4262,7 @@
       setDrivingFocusInstantRestore(true);
       drivingFocusFaded = false;
       setDrivingFocusVisual(false);
+      lockViewTouch(DRIVING_FOCUS_RESTORE_TOUCH_LOCK_MS);
       const controls = document.querySelector('.controls');
       if(controls) void controls.offsetHeight;
       const startLine = document.querySelector('.date-work-start');
@@ -5606,7 +5620,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.3.12';
+      return el ? el.textContent.trim() : 'vGPT_5.3.13';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -6578,6 +6592,7 @@
       if(variant === 'blue') ov.classList.add('blue');
       if(mode === 'choice') ov.classList.add('choice-mode');
       if(mode === 'choice' && opts.choiceTitleMode) ov.classList.add('choice-title-mode');
+      lockViewTouch();
 
       // restart animacji fali (re-trigger)
       const wave = ov.querySelector('.end-wave');
@@ -6618,10 +6633,12 @@
         setTimeout(()=>{
           ov.classList.add('hidden');
           ov.classList.remove('yellow','blue','choice-mode','choice-title-mode','collapsing');
+          lockViewTouch();
         }, 500);
       } else {
         ov.classList.add('hidden');
         ov.classList.remove('yellow','blue','choice-mode','choice-title-mode','collapsing');
+        lockViewTouch();
       }
     }
     function confirmEndAndFinish(){
