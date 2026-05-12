@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.3.5: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.3.6: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.3.5: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.3.6: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2535,7 +2535,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.3.5</div>
+  <div class="version">vGPT_5.3.6</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -4924,6 +4924,88 @@
       if(!sym || sym==='•') return;
       recentNoteSymbols = [sym, ...recentNoteSymbols.filter(x=>x!==sym)].slice(0,50);
     }
+    const EMOJI_SEARCH_URL = 'https://sitech.com.pl/emotki/';
+    let emojiSearchReturnPending = false;
+    let emojiSearchOpenedAt = 0;
+
+    function recentNoteSymbolsHtml(){
+      if(!recentNoteSymbols.length) return '<span style="color:#777;font-size:15px;">Brak</span>';
+      return recentNoteSymbols.map(sym=>`
+        <button type="button" class="recent-symbol-btn" data-symbol="${escapeHtml(sym)}">${escapeHtml(sym)}</button>
+      `).join('');
+    }
+    function bindRecentNoteSymbolButtons(){
+      overlay.querySelectorAll('.recent-symbol-btn').forEach(btn=>{
+        btn.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          const input = document.getElementById('noteIcon');
+          if(input) input.value = trimNoteSymbol(btn.dataset.symbol || btn.textContent);
+        });
+      });
+    }
+    function renderRecentNoteSymbolsInEditor(){
+      const box = document.getElementById('recentSymbols');
+      if(!box) return;
+      box.innerHTML = recentNoteSymbolsHtml();
+      bindRecentNoteSymbolButtons();
+    }
+    function focusNoteSymbolField(){
+      const input = document.getElementById('noteIcon');
+      if(!input) return false;
+      try{ input.focus({preventScroll:true}); }
+      catch(e){ input.focus(); }
+      if(typeof input.select === 'function') input.select();
+      return true;
+    }
+    function looksLikeEmojiSymbol(s){
+      return /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(String(s||''));
+    }
+    async function tryImportEmojiFromClipboard(){
+      const input = document.getElementById('noteIcon');
+      if(!input || !window.isSecureContext || !navigator.clipboard || typeof navigator.clipboard.readText !== 'function') return false;
+      if(navigator.permissions && typeof navigator.permissions.query === 'function'){
+        try{
+          const perm = await navigator.permissions.query({name:'clipboard-read'});
+          if(!perm || perm.state !== 'granted') return false;
+        }catch(e){
+          return false;
+        }
+      } else {
+        return false;
+      }
+      try{
+        const sym = trimNoteSymbol(await navigator.clipboard.readText());
+        if(!sym || !looksLikeEmojiSymbol(sym)) return false;
+        input.value = sym;
+        rememberNoteSymbol(sym);
+        saveState();
+        if(typeof markAutoSyncOverlayDirty === 'function') markAutoSyncOverlayDirty('note_symbol_clipboard');
+        renderRecentNoteSymbolsInEditor();
+        return true;
+      }catch(e){
+        return false;
+      }
+    }
+    function markEmojiSearchOpened(){
+      emojiSearchReturnPending = true;
+      emojiSearchOpenedAt = Date.now();
+    }
+    async function handleEmojiSearchReturn(){
+      if(!emojiSearchReturnPending) return;
+      if(Date.now() - emojiSearchOpenedAt < 800) return;
+      if(!document.getElementById('noteIcon')){
+        emojiSearchReturnPending = false;
+        return;
+      }
+      emojiSearchReturnPending = false;
+      await tryImportEmojiFromClipboard();
+      setTimeout(focusNoteSymbolField, 120);
+    }
+    window.addEventListener('focus', handleEmojiSearchReturn);
+    window.addEventListener('pageshow', handleEmojiSearchReturn);
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.visibilityState === 'visible') handleEmojiSearchReturn();
+    });
     function defaultNoteAlarmTime(){
       const d = new Date(Date.now() + 3*60*60*1000);
       if(d.getMinutes() >= 30) d.setHours(d.getHours()+1);
@@ -4956,10 +5038,6 @@
       const alerts = (ex && Array.isArray(ex.alerts)) ? ex.alerts.slice() : [0];
       const customOffsets = normalizeNoteOffsets(ex && Array.isArray(ex.customOffsets) ? ex.customOffsets : null);
       const currentTimeLabel = formatHHMM(nowMinutes());
-
-      const recentButtons = recentNoteSymbols.map(sym=>`
-        <button type="button" class="recent-symbol-btn" data-symbol="${escapeHtml(sym)}">${escapeHtml(sym)}</button>
-      `).join('');
 
       showOverlay(`
         <div class="big-panel note-panel">
@@ -5009,7 +5087,7 @@
               <button type="button" class="emoji-search-btn" id="emojiSearchBtn">Szukaj emoji</button>
             </div>
             <label>Ostatnio używane symbole</label>
-            <div class="recent-symbols" id="recentSymbols">${recentButtons || '<span style="color:#777;font-size:15px;">Brak</span>'}</div>
+            <div class="recent-symbols" id="recentSymbols">${recentNoteSymbolsHtml()}</div>
           </div>
           <div class="panel-actions">
             <button class="cancel-btn" data-act="cancel">✕</button>
@@ -5131,18 +5209,14 @@
         btn.addEventListener('pointercancel',()=>{ clearTimeout(lp); stopHoldWarning(btn); });
       });
 
-      overlay.querySelectorAll('.recent-symbol-btn').forEach(btn=>{
-        btn.addEventListener('click',(e)=>{
-          e.stopPropagation();
-          document.getElementById('noteIcon').value = trimNoteSymbol(btn.dataset.symbol || btn.textContent);
-        });
-      });
+      bindRecentNoteSymbolButtons();
       document.getElementById('noteIcon').addEventListener('input',(e)=>{
         e.target.value = trimNoteSymbol(e.target.value);
       });
       document.getElementById('emojiSearchBtn').addEventListener('click',(e)=>{
         e.stopPropagation();
-        window.open('https://emoji-copypaste.com/', '_blank', 'noopener,noreferrer');
+        markEmojiSearchOpened();
+        window.open(EMOJI_SEARCH_URL, '_blank', 'noopener,noreferrer');
       });
 
       overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); hideOverlay(); });
@@ -5344,7 +5418,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.3.5';
+      return el ? el.textContent.trim() : 'vGPT_5.3.6';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
