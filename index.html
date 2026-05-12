@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.3.6: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.3.7: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,28 +330,26 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.3.6: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.3.7: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
     .driving-focus-restore-area{
       display:none;
-      grid-column:2 / span 2;
-      grid-row:1 / span 2;
-      align-self:stretch;
-      justify-self:stretch;
-      z-index:40;
+      position:absolute;
+      inset:auto;
+      width:0;
+      height:0;
+      z-index:-1;
       border:none;
       border-radius:16px;
       padding:0;
       margin:0;
       background:transparent;
-      cursor:pointer;
-      min-width:100%;
-      min-height:100%;
+      pointer-events:none;
     }
     .controls.driving-focus-faded .driving-focus-restore-area{
-      display:block;
+      display:none;
     }
     .driving-focus-fade-target{
       transition:opacity 5s ease, filter 5s ease, box-shadow 5s ease, background-color 5s ease, color 5s ease, text-shadow 5s ease;
@@ -360,7 +358,6 @@
       opacity:.025 !important;
       filter:brightness(0) saturate(0);
       box-shadow:none !important;
-      pointer-events:none;
     }
     .date-work-start.driving-focus-faded{
       opacity:.02 !important;
@@ -1029,10 +1026,14 @@
 
     .work-btn{ background:#000000; }
     /* Punkt 3: wyszarzenie przycisku pracy podczas trwania przerwy */
-    .work-btn.dimmed-during-break{
+    .btn.dimmed-during-break{
       opacity:.45;
       filter:grayscale(.7);
       transition:opacity .3s ease, filter .3s ease;
+    }
+    .money-btn.counter-start-warning.dimmed-during-break{
+      opacity:.72;
+      filter:grayscale(.25) brightness(.9);
     }
     .work-btn.on{
       background:#000000;
@@ -2535,7 +2536,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.3.6</div>
+  <div class="version">vGPT_5.3.7</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3241,8 +3242,13 @@
         breakBtn.classList.add('on');                  // obrazek przerwa.png stale
         if(blinkState) breakBtn.classList.add('blink-bg');  // tło miga
       }
-      // Punkt 3: przy aktywnej przerwie przycisk pracy wyszarzony
-      workBtn.classList.toggle('dimmed-during-break', breakActive && endWorkMinutes===null);
+      // Przy aktywnej przerwie wybrane moduły są tylko wizualnie przyciemnione, bez blokowania kliknięć.
+      const dimDuringBreak = breakActive && endWorkMinutes===null;
+      workBtn.classList.toggle('dimmed-during-break', dimDuringBreak);
+      ['potBtn','moneyBtn','exerciseBtn'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) el.classList.toggle('dimmed-during-break', dimDuringBreak);
+      });
 
       renderPotButton();
       renderMoneyButton();
@@ -4135,15 +4141,25 @@
              !endConfirmActive;
     }
     function hasDrivingFocusBlocker(){
-      const potBtn = document.getElementById('potBtn');
-      const moneyBtn = document.getElementById('moneyBtn');
       const breakBtn = document.getElementById('breakBtn');
-      if(potStartedAt !== null) return true;
-      if(potBtn && (potBtn.classList.contains('done-alarm') || potBtn.classList.contains('done-alarm-off'))) return true;
-      if(startWorkMinutes !== null && endWorkMinutes === null && counterStart === null) return true;
-      if(moneyBtn && moneyBtn.classList.contains('counter-start-warning')) return true;
       if(breakActive) return true;
       if(breakBtn && (breakBtn.classList.contains('on') || breakBtn.classList.contains('blink-bg'))) return true;
+      return false;
+    }
+    function shouldKeepDrivingFocusModuleVisible(id){
+      const el = document.getElementById(id);
+      if(id === 'potBtn'){
+        if(potStartedAt !== null) return true;
+        if(el && (el.classList.contains('done-alarm') || el.classList.contains('done-alarm-off'))) return true;
+      }
+      if(id === 'moneyBtn'){
+        if(startWorkMinutes !== null && endWorkMinutes === null && counterStart === null) return true;
+        if(el && el.classList.contains('counter-start-warning')) return true;
+      }
+      if(id === 'breakBtn'){
+        if(breakActive) return true;
+        if(el && (el.classList.contains('on') || el.classList.contains('blink-bg'))) return true;
+      }
       return false;
     }
     function setDrivingFocusVisual(faded){
@@ -4153,7 +4169,7 @@
         const el = document.getElementById(id);
         if(!el) return;
         el.classList.add('driving-focus-fade-target');
-        el.classList.toggle('driving-focus-faded', !!faded);
+        el.classList.toggle('driving-focus-faded', !!faded && !shouldKeepDrivingFocusModuleVisible(id));
       });
       const startLine = document.querySelector('.date-work-start');
       if(startLine){
@@ -4189,6 +4205,30 @@
       if(restartTimer && isWorkActiveForDrivingFocus() && isMainScreenVisibleForDrivingFocus() && !hasDrivingFocusBlocker()){
         scheduleDrivingFocusFade();
       }
+    }
+    let drivingFocusRestoredAt = 0;
+    function interceptDrivingFocusFadedTarget(e){
+      const target = e.currentTarget;
+      if(drivingFocusFaded && target && target.classList.contains('driving-focus-faded')){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        drivingFocusRestoredAt = Date.now();
+        restoreDrivingFocusFade(true);
+        return;
+      }
+      if(e.type === 'click' && drivingFocusRestoredAt && Date.now() - drivingFocusRestoredAt < 450){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    }
+    function bindDrivingFocusRestoreTargets(){
+      ['potBtn','moneyBtn','breakBtn','coinBtn'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(!el || el.dataset.drivingFocusRestoreBound === '1') return;
+        el.dataset.drivingFocusRestoreBound = '1';
+        el.addEventListener('pointerdown', interceptDrivingFocusFadedTarget, true);
+        el.addEventListener('click', interceptDrivingFocusFadedTarget, true);
+      });
     }
     function updateDrivingFocusFade(){
       if(!isWorkActiveForDrivingFocus() || !isMainScreenVisibleForDrivingFocus() || hasDrivingFocusBlocker()){
@@ -5418,7 +5458,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.3.6';
+      return el ? el.textContent.trim() : 'vGPT_5.3.7';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -6696,6 +6736,7 @@
       document.getElementById('workBtn').classList.add('on');
     }
     buildDots();
+    bindDrivingFocusRestoreTargets();
     renderAll();
     syncWorkWakeLock();
     updateAutoSyncIndicator();
