@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.3.13: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.3.14: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.3.13: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.3.14: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2211,6 +2211,26 @@
       font-family:inherit; resize:vertical;
     }
     .note-fields textarea{ min-height:130px; font-weight:700; }
+    .note-clear-text-btn{
+      align-self:flex-end;
+      min-width:160px;
+      border:none;
+      border-radius:10px;
+      padding:10px 16px;
+      background:linear-gradient(180deg,#3a1414,#190808);
+      color:#ffd9d9;
+      font-family:inherit;
+      font-size:17px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 0 10px rgba(180,0,0,.25);
+      touch-action:manipulation;
+    }
+    .note-clear-text-btn:active{
+      transform:scale(.985);
+      background:linear-gradient(180deg,#5d1b1b,#260909);
+    }
     .note-fields .icon-input{
       font-size:32px; font-weight:900;
       text-align:center; max-width:120px; letter-spacing:1px;
@@ -2564,7 +2584,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.3.13</div>
+  <div class="version">vGPT_5.3.14</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2620,6 +2640,7 @@
     let lastCounterEnd = null;
     let notes = [];
     let recentNoteSymbols = [];
+    let recentNoteTextBySymbol = {};
 
     let editMode = "start";
     let editHour = 0, editMinute = 0;
@@ -2670,7 +2691,7 @@
           workTargetMinutes
         };
         localStorage.setItem(LS_KEY, JSON.stringify(state));
-        const persist = { lastCounterEnd, notes, recentNoteSymbols };
+        const persist = { lastCounterEnd, notes, recentNoteSymbols, recentNoteTextBySymbol };
         localStorage.setItem(LS_PERSIST, JSON.stringify(persist));
         const comparable = stableStringify({state, persist});
         const previous = localStorage.getItem(LS_SYNC_STATE_HASH) || '';
@@ -2726,6 +2747,7 @@
           lastCounterEnd = p.lastCounterEnd ?? null;
           notes = Array.isArray(p.notes) ? p.notes : [];
           recentNoteSymbols = Array.isArray(p.recentNoteSymbols) ? p.recentNoteSymbols.slice(0,50) : [];
+          recentNoteTextBySymbol = (p.recentNoteTextBySymbol && typeof p.recentNoteTextBySymbol === 'object' && !Array.isArray(p.recentNoteTextBySymbol)) ? p.recentNoteTextBySymbol : {};
         }
       }catch(e){}
     }
@@ -2741,7 +2763,7 @@
           revenues, counterStart, counterEnd, privKmTotal,
           workTargetMinutes
         },
-        persist:{ lastCounterEnd, notes, recentNoteSymbols }
+        persist:{ lastCounterEnd, notes, recentNoteSymbols, recentNoteTextBySymbol }
       };
     }
     function applyStateObjects(state, persist){
@@ -2770,6 +2792,7 @@
       lastCounterEnd = p.lastCounterEnd ?? null;
       notes = Array.isArray(p.notes) ? p.notes : [];
       recentNoteSymbols = Array.isArray(p.recentNoteSymbols) ? p.recentNoteSymbols.slice(0,50) : [];
+      recentNoteTextBySymbol = (p.recentNoteTextBySymbol && typeof p.recentNoteTextBySymbol === 'object' && !Array.isArray(p.recentNoteTextBySymbol)) ? p.recentNoteTextBySymbol : {};
       syncApplyInProgress = true;
       try{ saveState(); }
       finally{ syncApplyInProgress = false; }
@@ -5032,12 +5055,19 @@
     function trimNoteSymbol(s){
       return Array.from(String(s||'').trim()).slice(0,4).join('');
     }
-    function rememberNoteSymbol(s){
+    function rememberNoteSymbol(s, text){
       const sym = trimNoteSymbol(s);
       if(!sym || sym==='•') return;
       recentNoteSymbols = [sym, ...recentNoteSymbols.filter(x=>x!==sym)].slice(0,50);
+      if(typeof text === 'string' && text.trim()){
+        recentNoteTextBySymbol[sym] = text.trim();
+      }
+      const keep = new Set(recentNoteSymbols);
+      Object.keys(recentNoteTextBySymbol).forEach(key=>{
+        if(!keep.has(key)) delete recentNoteTextBySymbol[key];
+      });
     }
-    const EMOJI_SEARCH_URL = 'https://sitech.com.pl/emotki/';
+    const EMOJI_SEARCH_URL = 'https://emojiterra.com/keyboard/pl/';
     let emojiSearchReturnPending = false;
     let emojiSearchOpenedAt = 0;
 
@@ -5051,8 +5081,15 @@
       overlay.querySelectorAll('.recent-symbol-btn').forEach(btn=>{
         btn.addEventListener('click',(e)=>{
           e.stopPropagation();
+          const sym = trimNoteSymbol(btn.dataset.symbol || btn.textContent);
           const input = document.getElementById('noteIcon');
-          if(input) input.value = trimNoteSymbol(btn.dataset.symbol || btn.textContent);
+          if(input) input.value = sym;
+          const rememberedText = recentNoteTextBySymbol[sym];
+          const textInput = document.getElementById('noteText');
+          if(textInput && typeof rememberedText === 'string' && rememberedText.trim()){
+            textInput.value = rememberedText.trim();
+          }
+          focusNoteTextField();
         });
       });
     }
@@ -5068,6 +5105,15 @@
       try{ input.focus({preventScroll:true}); }
       catch(e){ input.focus(); }
       if(typeof input.select === 'function') input.select();
+      return true;
+    }
+    function focusNoteTextField(){
+      const input = document.getElementById('noteText');
+      if(!input) return false;
+      try{ input.focus({preventScroll:true}); }
+      catch(e){ input.focus(); }
+      const end = input.value.length;
+      if(typeof input.setSelectionRange === 'function') input.setSelectionRange(end, end);
       return true;
     }
     function looksLikeEmojiSymbol(s){
@@ -5158,6 +5204,7 @@
           <div class="note-fields">
             <label>Treść</label>
             <textarea id="noteText" rows="4" placeholder="Np. kupić wodę...">${escapeHtml(text)}</textarea>
+            <button type="button" class="note-clear-text-btn" id="noteClearTextBtn">Wyczyść tekst</button>
             <div class="note-alarm-layout">
               <div class="note-now-display">
                 <div class="note-now-label">NOW</div>
@@ -5326,6 +5373,12 @@
       document.getElementById('noteIcon').addEventListener('input',(e)=>{
         e.target.value = trimNoteSymbol(e.target.value);
       });
+      document.getElementById('noteClearTextBtn').addEventListener('click',(e)=>{
+        e.stopPropagation();
+        const input = document.getElementById('noteText');
+        if(input) input.value = '';
+        focusNoteTextField();
+      });
       document.getElementById('emojiSearchBtn').addEventListener('click',(e)=>{
         e.stopPropagation();
         markEmojiSearchOpened();
@@ -5340,7 +5393,7 @@
         const aT=noteAlarmEnabled ? `${pad(noteAlarmHour)}:${pad(noteAlarmMinute)}` : '';
         const alertOffs = noteAlarmEnabled ? currentAlerts.slice().sort((a,b)=>a-b) : [];
         const savedOffsets = normalizeNoteOffsets(currentOffsets);
-        rememberNoteSymbol(i);
+        rememberNoteSymbol(i, t);
         if(ex){
           ex.text=t; ex.icon=i;
           ex.alarmTime = aT;
@@ -5620,7 +5673,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.3.13';
+      return el ? el.textContent.trim() : 'vGPT_5.3.14';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
