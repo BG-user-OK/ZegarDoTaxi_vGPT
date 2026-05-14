@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.3.15: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.3.16: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.3.15: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.3.16: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2255,20 +2255,31 @@
       font-family:inherit; resize:vertical;
     }
     .note-fields textarea{ min-height:130px; font-weight:700; }
+    .note-label-row{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-height:24px;
+      padding-left:4px;
+    }
+    .note-label-row label{
+      padding-left:0;
+    }
     .note-clear-text-btn{
-      align-self:flex-end;
-      min-width:160px;
+      width:30px;
+      height:26px;
+      flex:0 0 auto;
       border:none;
-      border-radius:10px;
-      padding:10px 16px;
-      background:linear-gradient(180deg,#3a1414,#190808);
-      color:#ffd9d9;
+      border-radius:7px;
+      padding:0;
+      background:linear-gradient(180deg,#8d1515,#420707);
+      color:#ffffff;
       font-family:inherit;
       font-size:17px;
       font-weight:900;
       text-transform:uppercase;
-      letter-spacing:.5px;
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 0 10px rgba(180,0,0,.25);
+      line-height:1;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 0 8px rgba(255,0,0,.34);
       touch-action:manipulation;
     }
     .note-clear-text-btn:active{
@@ -2633,7 +2644,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.3.15</div>
+  <div class="version">vGPT_5.3.16</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -5299,9 +5310,11 @@
         <div class="big-panel note-panel">
           <h3>${ex?'EDIT NOTE':'NEW NOTE'}</h3>
           <div class="note-fields">
-            <label>Treść</label>
+            <div class="note-label-row">
+              <label for="noteText">Treść</label>
+              <button type="button" class="note-clear-text-btn" id="noteClearTextBtn" aria-label="Wyczyść tekst">X</button>
+            </div>
             <textarea id="noteText" rows="4" placeholder="Np. kupić wodę...">${escapeHtml(text)}</textarea>
-            <button type="button" class="note-clear-text-btn" id="noteClearTextBtn">Wyczyść tekst</button>
             <div class="note-alarm-layout">
               <div class="note-now-display">
                 <div class="note-now-label">NOW</div>
@@ -5776,7 +5789,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.3.15';
+      return el ? el.textContent.trim() : 'vGPT_5.3.16';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
