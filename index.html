@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.3.14: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.3.15: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.3.14: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.3.15: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -838,6 +838,9 @@
       background-position:center;
       background-repeat:no-repeat;
       z-index:2;
+      opacity:1;
+      filter:none;
+      transition:opacity 1.2s ease, filter 1.2s ease;
     }
     .coin-cell.empty{ background-image:none !important; }
     .coin-cell-text{
@@ -859,6 +862,47 @@
     .coin-cell.coin-5 .coin-cell-text{
       color:#3a2a06;
       text-shadow:0 0 3px rgba(255,255,255,.85);
+    }
+    .eye-reminder-layer{
+      position:absolute;
+      inset:0;
+      z-index:4;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#000;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity 1.45s ease;
+    }
+    .eye-reminder-img{
+      width:92%;
+      height:92%;
+      object-fit:contain;
+      filter:
+        drop-shadow(0 0 10px rgba(150,225,255,.62))
+        drop-shadow(0 0 22px rgba(60,170,255,.38));
+    }
+    .eye-reminder-fallback{
+      display:none;
+      font-size:clamp(58px, 16vw, 118px);
+      line-height:1;
+      text-shadow:
+        0 0 10px rgba(150,225,255,.75),
+        0 0 24px rgba(60,170,255,.45);
+    }
+    .coin-btn.eye-reminder-active .coin-cell,
+    .coin-btn.eye-reminder-dismissing .coin-cell{
+      opacity:0;
+      filter:brightness(0) saturate(0);
+    }
+    .coin-btn.eye-reminder-active .eye-reminder-layer{
+      opacity:1;
+      transition-delay:.7s;
+    }
+    .coin-btn.eye-reminder-dismissing .eye-reminder-layer{
+      opacity:0;
+      transition-delay:0s;
     }
 
     /* === v1.12: garnek "spał" po wykorzystaniu === */
@@ -2576,6 +2620,11 @@
 
       <button class="btn coin-btn empty-slot" id="coinBtn" type="button">
         <div class="coin-cell empty" id="coinCell"></div>
+        <div class="eye-reminder-layer" id="eyeReminderLayer" aria-hidden="true">
+          <img src="Photos/oko.gif" alt="Ćwiczenie oczu" class="eye-reminder-img"
+               onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='Photos/oko.png';}else{this.style.display='none';this.nextElementSibling.style.display='block';}">
+          <span class="eye-reminder-fallback">👁</span>
+        </div>
       </button>
       <button class="driving-focus-restore-area" id="drivingFocusRestoreArea" type="button" aria-label="Pokaż ukryte moduły"></button>
     </div>
@@ -2584,7 +2633,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.3.14</div>
+  <div class="version">vGPT_5.3.15</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -2615,6 +2664,7 @@
     let startWorkMinutes = null;
     let endWorkMinutes = null;
     let lastExerciseMinutes = null;
+    let lastEyeExerciseMinutes = null;
     let breakActive = false;
     let currentBreakStart = null;
     let breakSegments = [];
@@ -2682,7 +2732,7 @@
     function saveState(){
       try{
         const state = {
-          startWorkMinutes, endWorkMinutes, lastExerciseMinutes,
+          startWorkMinutes, endWorkMinutes, lastExerciseMinutes, lastEyeExerciseMinutes,
           breakActive, currentBreakStart, breakSegments,
           exerciseMarkers, breakAdjustMinutes, workDate,
           pendingEndWorkExport,
@@ -2712,6 +2762,7 @@
           startWorkMinutes = s.startWorkMinutes ?? null;
           endWorkMinutes = s.endWorkMinutes ?? null;
           lastExerciseMinutes = s.lastExerciseMinutes ?? null;
+          lastEyeExerciseMinutes = s.lastEyeExerciseMinutes ?? null;
           breakActive = !!s.breakActive;
           currentBreakStart = s.currentBreakStart ?? null;
           breakSegments = Array.isArray(s.breakSegments) ? s.breakSegments : [];
@@ -2755,7 +2806,7 @@
     function collectStateObjects(){
       return {
         state:{
-          startWorkMinutes, endWorkMinutes, lastExerciseMinutes,
+          startWorkMinutes, endWorkMinutes, lastExerciseMinutes, lastEyeExerciseMinutes,
           breakActive, currentBreakStart, breakSegments,
           exerciseMarkers, breakAdjustMinutes, workDate,
           pendingEndWorkExport,
@@ -2771,6 +2822,7 @@
       startWorkMinutes = s.startWorkMinutes ?? null;
       endWorkMinutes = s.endWorkMinutes ?? null;
       lastExerciseMinutes = s.lastExerciseMinutes ?? null;
+      lastEyeExerciseMinutes = s.lastEyeExerciseMinutes ?? null;
       breakActive = !!s.breakActive;
       currentBreakStart = s.currentBreakStart ?? null;
       breakSegments = Array.isArray(s.breakSegments) ? s.breakSegments : [];
@@ -3118,6 +3170,39 @@
     function getEffectiveExerciseElapsed(){
       if(startWorkMinutes===null||lastExerciseMinutes===null) return 0;
       return Math.max(0, diffMinutes(lastExerciseMinutes,effectiveNow()) - getBreakOverlapSince(lastExerciseMinutes));
+    }
+    const EYE_EXERCISE_INTERVAL_MINUTES = 60;
+    const EYE_REMINDER_FADE_MS = 1600;
+    let eyeReminderFadeUntil = 0;
+    function getEyeExerciseAnchor(){
+      if(startWorkMinutes === null) return null;
+      return lastEyeExerciseMinutes !== null ? lastEyeExerciseMinutes : startWorkMinutes;
+    }
+    function getEffectiveEyeExerciseElapsed(){
+      const anchor = getEyeExerciseAnchor();
+      if(anchor === null || endWorkMinutes !== null) return 0;
+      return Math.max(0, diffMinutes(anchor, effectiveNow()) - getBreakOverlapSince(anchor));
+    }
+    function isEyeReminderDue(){
+      return startWorkMinutes !== null &&
+             endWorkMinutes === null &&
+             getEffectiveEyeExerciseElapsed() >= EYE_EXERCISE_INTERVAL_MINUTES;
+    }
+    function shouldShowEyeReminder(){
+      return isEyeReminderDue() && !breakActive;
+    }
+    function isEyeReminderFading(){
+      return startWorkMinutes !== null &&
+             endWorkMinutes === null &&
+             eyeReminderFadeUntil > Date.now();
+    }
+    function confirmEyeExerciseDone(){
+      if(!shouldShowEyeReminder()) return;
+      lastEyeExerciseMinutes = nowMinutes();
+      eyeReminderFadeUntil = Date.now() + EYE_REMINDER_FADE_MS;
+      saveStateAndScheduleAutoSync('eye_exercise_done');
+      renderAll();
+      setTimeout(renderAll, EYE_REMINDER_FADE_MS + 80);
     }
     // Płynna wersja w minutach z ułamkiem (uwzględnia sekundy z aktualnego zegara)
     function getEffectiveExerciseElapsedFractional(){
@@ -3828,7 +3913,16 @@
       } else {
         coinCell.classList.add('empty');
       }
-      if(coinBtn) coinBtn.classList.toggle('empty-slot', !coinVisible);
+      const eyeDue = shouldShowEyeReminder();
+      const eyeFading = isEyeReminderFading();
+      const eyeLayer = document.getElementById('eyeReminderLayer');
+      if(coinBtn){
+        coinBtn.classList.toggle('eye-reminder-active', eyeDue);
+        coinBtn.classList.toggle('eye-reminder-dismissing', !eyeDue && eyeFading);
+        coinBtn.classList.toggle('empty-slot', !coinVisible && !eyeDue && !eyeFading);
+        coinBtn.setAttribute('aria-label', eyeDue ? 'Potwierdź ćwiczenie oczu' : 'Obroty');
+      }
+      if(eyeLayer) eyeLayer.setAttribute('aria-hidden', eyeDue ? 'false' : 'true');
       if(controls){
         const resultsExpanded = startWorkMinutes !== null && endWorkMinutes !== null && total > 0 && coinVisible;
         controls.classList.toggle('results-ended', resultsExpanded);
@@ -4233,6 +4327,9 @@
       if(id === 'breakBtn'){
         if(breakActive) return true;
         if(el && (el.classList.contains('on') || el.classList.contains('blink-bg'))) return true;
+      }
+      if(id === 'coinBtn'){
+        if(shouldShowEyeReminder() || isEyeReminderFading()) return true;
       }
       return false;
     }
@@ -5436,6 +5533,8 @@
       startWorkMinutes=mins;
       endWorkMinutes=null;
       lastExerciseMinutes = fromEdit ? nowMinutes() : mins;
+      lastEyeExerciseMinutes = fromEdit ? nowMinutes() : mins;
+      eyeReminderFadeUntil = 0;
       resetTimeline();
       document.getElementById('workBtn').classList.add('on');
       workDate = todayISO();
@@ -5470,6 +5569,8 @@
       breakActive = false;
       currentBreakStart = null;
       lastExerciseMinutes = resumeAt;
+      if(lastEyeExerciseMinutes === null) lastEyeExerciseMinutes = resumeAt;
+      eyeReminderFadeUntil = 0;
       _wheelsState.restoring = false;
 
       if(potStartedAt!==null){
@@ -5605,6 +5706,8 @@
     function resetDayAfterExport(){
       startWorkMinutes=null; endWorkMinutes=null;
       lastExerciseMinutes=null;
+      lastEyeExerciseMinutes=null;
+      eyeReminderFadeUntil=0;
       breakActive=false; currentBreakStart=null;
       breakSegments=[]; exerciseMarkers=[]; breakAdjustMinutes=0;
       workDate=null;
@@ -5673,7 +5776,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.3.14';
+      return el ? el.textContent.trim() : 'vGPT_5.3.15';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -6859,6 +6962,11 @@
     });
     // === COIN === (też otwiera panel obrotów - to ten sam panel)
     document.getElementById('coinBtn').addEventListener('click', ()=>{
+      if(shouldShowEyeReminder()){
+        confirmEyeExerciseDone();
+        return;
+      }
+      if(isEyeReminderFading()) return;
       const btn=document.getElementById('coinBtn');
       if(btn && btn.classList.contains('empty-slot')) return;
       openMoneyPanel();
