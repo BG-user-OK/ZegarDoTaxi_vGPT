@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.3.16: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.4.3: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.3.16: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.4.3: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2286,6 +2286,122 @@
       transform:scale(.985);
       background:linear-gradient(180deg,#5d1b1b,#260909);
     }
+    .note-tomorrow-btn{
+      height:26px;
+      flex:0 0 auto;
+      border:none;
+      border-radius:7px;
+      padding:0 10px;
+      background:linear-gradient(180deg,#ffe65a,#d9b820);
+      color:#3b2c00;
+      font-family:inherit;
+      font-size:14px;
+      font-weight:900;
+      line-height:1;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.35),
+        inset 0 -8px 12px rgba(100,70,0,.22),
+        0 0 8px rgba(255,224,66,.24);
+      touch-action:manipulation;
+    }
+    .note-tomorrow-btn:active{
+      transform:scale(.985);
+      background:linear-gradient(180deg,#e2c533,#a68513);
+    }
+    .tomorrow-notes-panel{
+      background:#000;
+      border-color:#2a2a2a;
+      box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 0 34px rgba(0,0,0,.9);
+    }
+    .tomorrow-notes-panel h3{
+      color:#ffe45a;
+      text-shadow:0 0 10px rgba(255,224,70,.26);
+    }
+    .tomorrow-notes-list{
+      flex:1 1 auto;
+      min-height:0;
+      display:flex;
+      flex-wrap:wrap;
+      align-content:flex-start;
+      justify-content:flex-start;
+      gap:10px;
+      padding:10px 4px 12px;
+      overflow:auto;
+    }
+    .tomorrow-note-btn{
+      position:relative;
+      width:clamp(112px, 30vw, 156px);
+      min-height:96px;
+      border:none;
+      border-radius:8px 8px 16px 8px;
+      padding:10px 9px 9px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+      background:linear-gradient(145deg,#ffe86d,#dfbf2b);
+      color:#3a2c00;
+      font-family:inherit;
+      font-weight:900;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.36),
+        inset 0 -14px 18px rgba(104,77,0,.18),
+        0 4px 10px rgba(0,0,0,.75);
+      touch-action:manipulation;
+    }
+    .tomorrow-note-btn::before{
+      content:"";
+      position:absolute;
+      top:5px;
+      left:50%;
+      width:16px;
+      height:16px;
+      border-radius:50%;
+      transform:translateX(-50%);
+      background:radial-gradient(circle at 35% 30%, #fff 0 16%, #d31c1c 34%, #6b0505 100%);
+      box-shadow:0 1px 4px rgba(0,0,0,.55);
+    }
+    .tomorrow-note-icon{
+      max-width:100%;
+      margin-top:8px;
+      font-size:34px;
+      line-height:1;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:clip;
+    }
+    .tomorrow-note-time{
+      font-size:18px;
+      line-height:1;
+      color:#5a4300;
+      font-variant-numeric:tabular-nums;
+    }
+    .tomorrow-note-text{
+      width:100%;
+      max-height:2.5em;
+      overflow:hidden;
+      font-size:15px;
+      line-height:1.08;
+      overflow-wrap:anywhere;
+    }
+    .tomorrow-empty-msg{
+      width:100%;
+      padding:34px 8px;
+      color:#777;
+      font-size:24px;
+      font-weight:900;
+      text-align:center;
+      text-transform:lowercase;
+    }
+    .tomorrow-panel-actions{
+      justify-content:center;
+    }
+    .tomorrow-back-btn{
+      min-width:126px;
+      font-size:24px;
+      text-transform:lowercase;
+    }
     .note-fields .icon-input{
       font-size:32px; font-weight:900;
       text-align:center; max-width:120px; letter-spacing:1px;
@@ -2644,7 +2760,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.3.16</div>
+  <div class="version">vGPT_5.4.3</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -4297,10 +4413,11 @@
     ['pointerdown','pointerup','click','touchstart','touchend','mousedown','mouseup'].forEach(type=>{
       document.addEventListener(type, blockLockedViewTouch, true);
     });
-    function showOverlay(html){ overlay.innerHTML=html; overlay.classList.add('show'); lockViewTouch(); }
-    function hideOverlay(){ overlay.classList.remove('show'); overlay.innerHTML=''; lockViewTouch(); }
+    function showOverlay(html){ delete overlay.dataset.lockClose; overlay.innerHTML=html; overlay.classList.add('show'); lockViewTouch(); }
+    function hideOverlay(){ delete overlay.dataset.lockClose; overlay.classList.remove('show'); overlay.innerHTML=''; lockViewTouch(); }
     overlay.addEventListener('click',(e)=>{
       if(e.target!==overlay) return;
+      if(overlay.dataset.lockClose === 'tomorrowPreview') return;
       if(pendingEndWorkExport) abortPendingEndWorkReview();
       else closeOverlayToMain('overlay_close');
     });
@@ -5292,8 +5409,59 @@
       return Math.floor(min/60) + 'H' + (min%60) + 'm';
     }
 
-    function openNoteEditor(noteId){
+    function getPostponedNotesForPreview(){
+      return notes
+        .map((note, index)=>({note, index}))
+        .filter(item=>isNotePostponed(item.note));
+    }
+    function tomorrowNotePreviewHtml(note){
+      const icon = escapeHtml(trimNoteSymbol(note.icon || '')) || '&bull;';
+      const time = note.alarmTime ? `<span class="tomorrow-note-time">${escapeHtml(note.alarmTime)}</span>` : '';
+      const text = String(note.text || '').trim();
+      const textHtml = text ? `<span class="tomorrow-note-text">${escapeHtml(text)}</span>` : '';
+      return `
+        <button type="button" class="tomorrow-note-btn" data-note-id="${note.id}">
+          <span class="tomorrow-note-icon">${icon}</span>
+          ${time}
+          ${textHtml}
+        </button>
+      `;
+    }
+    function openTomorrowNotesPreview(){
+      const postponed = getPostponedNotesForPreview();
+      const listHtml = postponed.length
+        ? postponed.map(item=>tomorrowNotePreviewHtml(item.note)).join('')
+        : '<div class="tomorrow-empty-msg">brak karteczek na jutro</div>';
+      showOverlay(`
+        <div class="big-panel tomorrow-notes-panel">
+          <h3>KARTECZKI NA JUTRO</h3>
+          <div class="tomorrow-notes-list">${listHtml}</div>
+          <div class="panel-actions tomorrow-panel-actions">
+            <button class="cancel-btn tomorrow-back-btn" data-act="back">wróć</button>
+          </div>
+        </div>
+      `);
+      overlay.dataset.lockClose = 'tomorrowPreview';
+      overlay.querySelector('[data-act="back"]').addEventListener('click',(e)=>{
+        e.stopPropagation();
+        closeOverlayToMain('tomorrow_notes_preview');
+      });
+      overlay.querySelectorAll('[data-note-id]').forEach(btn=>{
+        btn.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          const id = parseInt(btn.dataset.noteId, 10);
+          if(Number.isFinite(id)) openNoteEditor(id, { returnToTomorrowPreview:true });
+        });
+      });
+    }
+
+    function openNoteEditor(noteId, options={}){
+      const returnToTomorrowPreview = !!(options && options.returnToTomorrowPreview);
       const ex = noteId!==null?notes.find(n=>n.id===noteId):null;
+      if(noteId!==null && !ex && returnToTomorrowPreview){
+        openTomorrowNotesPreview();
+        return;
+      }
       const text=ex?ex.text:'';
       const icon=trimNoteSymbol(ex?ex.icon:'');
       const storedAlarmTime = ex && ex.alarmTime ? ex.alarmTime : '';
@@ -5313,6 +5481,7 @@
             <div class="note-label-row">
               <label for="noteText">Treść</label>
               <button type="button" class="note-clear-text-btn" id="noteClearTextBtn" aria-label="Wyczyść tekst">X</button>
+              <button type="button" class="note-tomorrow-btn" id="noteTomorrowBtn">jutro</button>
             </div>
             <textarea id="noteText" rows="4" placeholder="Np. kupić wodę...">${escapeHtml(text)}</textarea>
             <div class="note-alarm-layout">
@@ -5368,6 +5537,7 @@
           </div>
         </div>
       `);
+      if(returnToTomorrowPreview) overlay.dataset.lockClose = 'tomorrowPreview';
 
       const currentAlerts = [...new Set(alerts.map(x=>parseInt(x,10)).filter(x=>Number.isFinite(x)))];
       const currentOffsets = customOffsets.slice();
@@ -5489,13 +5659,21 @@
         if(input) input.value = '';
         focusNoteTextField();
       });
+      document.getElementById('noteTomorrowBtn').addEventListener('click',(e)=>{
+        e.stopPropagation();
+        openTomorrowNotesPreview();
+      });
       document.getElementById('emojiSearchBtn').addEventListener('click',(e)=>{
         e.stopPropagation();
         markEmojiSearchOpened();
         window.open(EMOJI_SEARCH_URL, '_blank', 'noopener,noreferrer');
       });
 
-      overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); hideOverlay(); });
+      overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{
+        e.stopPropagation();
+        if(returnToTomorrowPreview) openTomorrowNotesPreview();
+        else hideOverlay();
+      });
       overlay.querySelector('[data-act="ok"]').addEventListener('click',(e)=>{
         e.stopPropagation();
         const t=document.getElementById('noteText').value.trim();
@@ -5519,14 +5697,16 @@
           });
         }
         saveStateAndMarkOverlayDirty('note_edit');
-        closeOverlayToMain('note_edit');
+        if(returnToTomorrowPreview) openTomorrowNotesPreview();
+        else closeOverlayToMain('note_edit');
       });
       const del=overlay.querySelector('[data-act="delete"]');
       if(del) del.addEventListener('click',(e)=>{
         e.stopPropagation();
         notes = notes.filter(n=>n.id!==noteId);
         saveStateAndMarkOverlayDirty('note_delete');
-        closeOverlayToMain('note_delete');
+        if(returnToTomorrowPreview) openTomorrowNotesPreview();
+        else closeOverlayToMain('note_delete');
       });
     }
 
@@ -5789,7 +5969,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.3.16';
+      return el ? el.textContent.trim() : 'vGPT_5.4.3';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
