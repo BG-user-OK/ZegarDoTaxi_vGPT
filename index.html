@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.4.7: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.5.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.4.7: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.5.0: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2770,8 +2770,8 @@
       <button class="btn coin-btn empty-slot" id="coinBtn" type="button">
         <div class="coin-cell empty" id="coinCell"></div>
         <div class="eye-reminder-layer" id="eyeReminderLayer" aria-hidden="true">
-          <img src="Photos/oko.gif" alt="Ćwiczenie oczu" class="eye-reminder-img"
-               onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='Photos/oko.png';}else{this.style.display='none';this.nextElementSibling.style.display='block';}">
+          <img src="Photos/oko_otwarte_v2.png" alt="Ćwiczenie oczu" class="eye-reminder-img" id="eyeReminderImg"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
           <span class="eye-reminder-fallback">👁</span>
         </div>
       </button>
@@ -2782,7 +2782,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.4.7</div>
+  <div class="version">vGPT_5.5.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3323,6 +3323,125 @@
     const EYE_EXERCISE_INTERVAL_MINUTES = 60;
     const EYE_REMINDER_FADE_MS = 1600;
     let eyeReminderFadeUntil = 0;
+    const EYE_OPEN_SRC = 'Photos/oko_otwarte_v2.png';
+    const EYE_BLINK_BUFFER_MS = 120;
+    const EYE_BLINK_SCHEDULE_MS = 3 * 60 * 1000;
+    const EYE_BLINKS = [
+      { src:'Photos/blink_normal_v2.gif', weight:60, durationMs:2020 },
+      { src:'Photos/blink_fast_v2.gif', weight:20, durationMs:510 },
+      { src:'Photos/blink_double_v2.gif', weight:15, durationMs:940 },
+      { src:'Photos/blink_slow_v2.gif', weight:5, durationMs:2300 }
+    ];
+    let eyeBlinkControllerActive = false;
+    let eyeBlinkSchedule = [];
+    let eyeBlinkScheduleStartedAt = 0;
+    let eyeBlinkTimer = null;
+    let eyeBlinkReturnTimer = null;
+
+    function randomBetween(min, max){
+      return min + Math.random() * (max - min);
+    }
+    function pickWeighted(items){
+      const total = items.reduce((sum, item)=>sum + item.weight, 0);
+      let r = Math.random() * total;
+      for(const item of items){
+        r -= item.weight;
+        if(r <= 0) return item;
+      }
+      return items[items.length - 1];
+    }
+    function pickEyeBlinkDelayMs(){
+      const r = Math.random();
+      if(r < 0.70) return randomBetween(5, 10) * 1000;
+      if(r < 0.90) return randomBetween(12, 18) * 1000;
+      return randomBetween(1, 3) * 1000;
+    }
+    function generateEyeBlinkSchedule(){
+      const schedule = [];
+      let at = pickEyeBlinkDelayMs();
+      while(at < EYE_BLINK_SCHEDULE_MS){
+        const blink = pickWeighted(EYE_BLINKS);
+        schedule.push({ atMs:at, blink });
+        at += blink.durationMs + EYE_BLINK_BUFFER_MS + pickEyeBlinkDelayMs();
+      }
+      return schedule;
+    }
+    function setEyeReminderImage(src, restart=false){
+      const img = document.getElementById('eyeReminderImg');
+      if(!img) return;
+      const fallback = img.nextElementSibling;
+      img.style.display = '';
+      if(fallback) fallback.style.display = 'none';
+      if(!restart && img.dataset.eyeSrc === src && img.getAttribute('src') === src) return;
+      if(restart){
+        img.removeAttribute('src');
+        void img.offsetHeight;
+      }
+      img.dataset.eyeSrc = src;
+      img.src = src;
+    }
+    function stopEyeBlinkController(){
+      eyeBlinkControllerActive = false;
+      clearTimeout(eyeBlinkTimer);
+      clearTimeout(eyeBlinkReturnTimer);
+      eyeBlinkTimer = null;
+      eyeBlinkReturnTimer = null;
+      eyeBlinkSchedule = [];
+      eyeBlinkScheduleStartedAt = 0;
+      setEyeReminderImage(EYE_OPEN_SRC);
+    }
+    function scheduleNextEyeBlink(){
+      if(!eyeBlinkControllerActive) return;
+      if(!shouldShowEyeReminder()){
+        stopEyeBlinkController();
+        return;
+      }
+      if(!eyeBlinkSchedule.length){
+        eyeBlinkSchedule = generateEyeBlinkSchedule();
+        eyeBlinkScheduleStartedAt = Date.now();
+      }
+      const item = eyeBlinkSchedule.shift();
+      if(!item){
+        eyeBlinkSchedule = [];
+        scheduleNextEyeBlink();
+        return;
+      }
+      const delay = eyeBlinkScheduleStartedAt + item.atMs - Date.now();
+      if(delay < -1000){
+        eyeBlinkSchedule = [];
+        scheduleNextEyeBlink();
+        return;
+      }
+      clearTimeout(eyeBlinkTimer);
+      eyeBlinkTimer = setTimeout(()=>playEyeBlink(item.blink), Math.max(0, delay));
+    }
+    function playEyeBlink(blink){
+      if(!eyeBlinkControllerActive || !shouldShowEyeReminder()){
+        stopEyeBlinkController();
+        return;
+      }
+      setEyeReminderImage(blink.src, true);
+      clearTimeout(eyeBlinkReturnTimer);
+      eyeBlinkReturnTimer = setTimeout(()=>{
+        if(!eyeBlinkControllerActive) return;
+        setEyeReminderImage(EYE_OPEN_SRC);
+        scheduleNextEyeBlink();
+      }, blink.durationMs + EYE_BLINK_BUFFER_MS);
+    }
+    function syncEyeBlinkController(active){
+      if(active){
+        if(eyeBlinkControllerActive) return;
+        eyeBlinkControllerActive = true;
+        eyeBlinkSchedule = [];
+        eyeBlinkScheduleStartedAt = 0;
+        setEyeReminderImage(EYE_OPEN_SRC);
+        scheduleNextEyeBlink();
+      } else if(eyeBlinkControllerActive){
+        stopEyeBlinkController();
+      } else {
+        setEyeReminderImage(EYE_OPEN_SRC);
+      }
+    }
     function getEyeExerciseAnchor(){
       if(startWorkMinutes === null) return null;
       return lastEyeExerciseMinutes !== null ? lastEyeExerciseMinutes : startWorkMinutes;
@@ -4072,6 +4191,7 @@
         coinBtn.setAttribute('aria-label', eyeDue ? 'Potwierdź ćwiczenie oczu' : 'Obroty');
       }
       if(eyeLayer) eyeLayer.setAttribute('aria-hidden', eyeDue ? 'false' : 'true');
+      syncEyeBlinkController(eyeDue);
       if(controls){
         const resultsExpanded = startWorkMinutes !== null && endWorkMinutes !== null && total > 0 && coinVisible;
         controls.classList.toggle('results-ended', resultsExpanded);
@@ -5998,7 +6118,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.4.7';
+      return el ? el.textContent.trim() : 'vGPT_5.5.0';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){

@@ -1,7 +1,7 @@
 // Service Worker dla Tarczy czasu pracy
 // WAŻNE: przy każdej nowej wersji aplikacji zmień nazwę cache - stare wersje automatycznie się usuną.
-// vGPT_5.4.7: based on a previously developed v:1.28 version created by another AI.
-const CACHE_NAME = 'tarcza-vGPT-5.4.7';
+// vGPT_5.5.0: based on a previously developed v:1.28 version created by another AI.
+const CACHE_NAME = 'tarcza-vGPT-5.5.0';
 
 const FILES_TO_CACHE = [
   './',
@@ -10,7 +10,11 @@ const FILES_TO_CACHE = [
   './icon-192.png',
   './icon-512.png',
   './icon-512-maskable.png',
-  './Photos/oko.gif'
+  './Photos/oko_otwarte_v2.png',
+  './Photos/blink_normal_v2.gif',
+  './Photos/blink_fast_v2.gif',
+  './Photos/blink_double_v2.gif',
+  './Photos/blink_slow_v2.gif'
 ];
 
 self.addEventListener('install', (event) => {
