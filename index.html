@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.4.6: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.4.7: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.4.6: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.4.7: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1311,12 +1311,8 @@
       left:3%;
       right:3%;
       height:94%;
-      background:var(--no-exercise-red);
-      box-shadow:
-        inset 0 0 0 1px rgba(255,210,210,.42),
-        inset 0 8px 14px rgba(255,255,255,.14),
-        inset 0 -12px 16px rgba(95,0,0,.34),
-        0 0 16px rgba(255,56,56,.24);
+      background:#000;
+      box-shadow:none;
       -webkit-mask-image:linear-gradient(180deg,
         transparent 0%,
         rgba(0,0,0,.06) 5%,
@@ -2786,7 +2782,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.4.6</div>
+  <div class="version">vGPT_5.4.7</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -6002,7 +5998,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.4.6';
+      return el ? el.textContent.trim() : 'vGPT_5.4.7';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
