@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_5.5.2: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_5.5.3: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -78,7 +78,7 @@
     }
 
     *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
-    button, .btn, .ok-btn, .cancel-btn, .delete-btn, .arrow-btn, .prov-btn, .prov-amount[data-prov], .counter-edit, .note-sticker, .keypad button {
+    button, .btn, .ok-btn, .cancel-btn, .delete-btn, .arrow-btn, .prov-btn, .prov-amount[data-prov], .counter-row[data-cnt], .note-sticker, .keypad button {
       touch-action: manipulation;
     }
     html,body{ margin:0; padding:0; width:100%; height:100%; background:#000; color:var(--txt); font-family:Arial, Helvetica, sans-serif; overflow:hidden; }
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_5.5.2: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_5.5.3: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -367,6 +367,15 @@
       opacity:.02 !important;
       color:rgba(0,0,0,0);
       text-shadow:none;
+    }
+    .controls.results-ended.results-no-breaks .exercise-btn,
+    .controls.results-ended.results-no-breaks .break-btn{
+      opacity:.025 !important;
+      filter:brightness(0) saturate(0);
+      box-shadow:none !important;
+      background:#000 !important;
+      color:#000 !important;
+      text-shadow:none !important;
     }
 
     /* Data pod zegarem (zmiana 11) */
@@ -416,7 +425,7 @@
       position:fixed;
       top:35px;
       right:20px;
-      z-index:21;
+      z-index:90;
       width:24px;
       height:24px;
       border-radius:50%;
@@ -444,10 +453,12 @@
       box-shadow:none;
     }
     .auto-sync-indicator.checking{
+      opacity:1;
       background:#f4d03f;
       animation:autoSyncBlink .7s infinite alternate;
     }
     .auto-sync-indicator.scheduled{
+      opacity:1;
       background:#ff7a00;
       box-shadow:
         0 0 0 1px rgba(255,154,31,.55),
@@ -455,16 +466,19 @@
         0 0 24px rgba(255,122,0,.68);
     }
     .auto-sync-indicator.downloading{
+      opacity:1;
       background:#ff3333;
       animation:autoSyncBlink .45s infinite alternate;
     }
     .auto-sync-indicator.applied{
+      opacity:1;
       background:#e02020;
       width:26px;
       height:26px;
       box-shadow:0 0 0 1px rgba(255,80,80,.35), 0 0 10px rgba(255,0,0,.7);
     }
     .auto-sync-indicator.frozen{
+      opacity:1;
       width:34px;
       height:34px;
       background:transparent;
@@ -1781,6 +1795,58 @@
       background:linear-gradient(180deg,#1d4d2a,#0c2a14);
       color:#d8ffdf;
     }
+    .sync-menu.busy .sync-menu-btn{
+      opacity:.58;
+      pointer-events:none;
+    }
+    .sync-menu-btn.sync-pressed{
+      transform:translateY(2px) scale(.985);
+      background:linear-gradient(180deg,#090909,#030303);
+      color:#bdbdbd;
+      box-shadow:
+        inset 0 5px 14px rgba(0,0,0,.96),
+        inset 0 0 0 1px rgba(255,255,255,.03);
+    }
+    .sync-working{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      min-height:132px;
+      color:#f4f4f4;
+      font-size:18px;
+      font-weight:900;
+      text-align:center;
+    }
+    .sync-spinner{
+      position:relative;
+      width:78px;
+      height:78px;
+    }
+    .sync-spinner::before,
+    .sync-spinner::after{
+      content:'';
+      position:absolute;
+      border-radius:50%;
+      border-style:solid;
+      border-color:rgba(255,255,255,.94);
+      filter:drop-shadow(0 0 8px rgba(255,255,255,.35));
+    }
+    .sync-spinner::before{
+      inset:0;
+      border-width:8px;
+      border-right-color:transparent;
+      animation:syncSpin 1s linear infinite;
+    }
+    .sync-spinner::after{
+      inset:20px;
+      border-width:5px;
+      border-left-color:transparent;
+      animation:syncSpinReverse .72s linear infinite;
+    }
+    @keyframes syncSpin{ to{ transform:rotate(360deg); } }
+    @keyframes syncSpinReverse{ to{ transform:rotate(-360deg); } }
     .sync-menu-btn.warn{
       background:linear-gradient(180deg,#5b1616,#250808);
       color:#ffdede;
@@ -2241,25 +2307,27 @@
 
     .counter-fields{ display:flex; flex-direction:column; gap:8px; }
     .counter-row{
-      display:grid; grid-template-columns:1fr auto auto;
-      align-items:center; gap:6px;
+      display:grid; grid-template-columns:1fr auto;
+      align-items:center; gap:10px;
       background:#141414; border-radius:10px;
-      padding:8px 10px;
+      padding:12px 14px;
+      min-height:58px;
+    }
+    .counter-row[data-cnt]{ cursor:pointer; }
+    .counter-row[data-cnt]:active{
+      transform:translateY(1px);
+      background:#0d0d0d;
     }
     .counter-row.disabled{ opacity:.4; pointer-events:none; }
-    .counter-label{ color:#ccc; font-size:15px; font-weight:700; }
+    .counter-label{ color:#ccc; font-size:20px; font-weight:900; line-height:1.08; }
     .counter-value{
       color:#fff;
-      font-size:22px; font-weight:900;
+      font-size:25px; font-weight:900;
       font-variant-numeric:tabular-nums;
       min-width:100px; text-align:right;
     }
     .counter-value.empty{ color:#555; }
-    .counter-edit{
-      width:36px; height:36px;
-      border-radius:8px; border:none;
-      background:#222; color:#d5d5d5; font-size:16px;
-    }
+    .counter-row.service-row .counter-label{ font-size:20px; }
 
     .note-panel{
       height:min(98.5vh, 850px);
@@ -2788,7 +2856,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_5.5.2</div>
+  <div class="version">vGPT_5.5.3</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -4201,6 +4269,7 @@
       if(controls){
         const resultsExpanded = startWorkMinutes !== null && endWorkMinutes !== null && total > 0 && coinVisible;
         controls.classList.toggle('results-ended', resultsExpanded);
+        controls.classList.toggle('results-no-breaks', resultsExpanded && getClosedBreakMinutes() <= 0);
       }
     }
 
@@ -5355,25 +5424,21 @@
         <div class="big-panel">
           <h3>Licznik kilometrów</h3>
           <div class="counter-fields">
-            <div class="counter-row">
+            <div class="counter-row" data-cnt="start" role="button" tabindex="0">
               <div class="counter-label">Początkowy${sIsHint?' <span style="color:#888;font-weight:400;">(z wczoraj)</span>':''}</div>
               <div class="counter-value ${sDisplay!==null?'':'empty'}" style="${sIsHint?'color:#aaa;':''}">${sT}</div>
-              <button class="counter-edit" data-cnt="start">✎</button>
             </div>
-            <div class="counter-row${endDis}">
+            <div class="counter-row${endDis}" data-cnt="end" role="button" tabindex="0">
               <div class="counter-label">Końcowy</div>
               <div class="counter-value ${counterEnd!==null?'':'empty'}">${eT}</div>
-              <button class="counter-edit" data-cnt="end">✎</button>
             </div>
-            <div class="counter-row">
+            <div class="counter-row" data-cnt="priv" role="button" tabindex="0">
               <div class="counter-label">km PRIV (dodaj)</div>
               <div class="counter-value ${privKmTotal>0?'':'empty'}">${pT}</div>
-              <button class="counter-edit" data-cnt="priv">＋</button>
             </div>
-            <div class="counter-row" style="background:#0a1f0d;">
+            <div class="counter-row service-row" style="background:#0a1f0d;">
               <div class="counter-label" style="color:#7adf8a;">Przebieg służbowy</div>
               <div class="counter-value ${kmZaw!==null?'':'empty'}" style="${kmZaw!==null?'color:#7adf8a;':''}">${kmZawT}</div>
-              <span style="width:36px;"></span>
             </div>
           </div>
           <div style="flex:1;"></div>
@@ -6124,7 +6189,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_5.5.2';
+      return el ? el.textContent.trim() : 'vGPT_5.5.3';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -6334,7 +6399,12 @@
       }, AUTO_SYNC_GREEN_VISIBLE_MS);
     }
     function setAutoSyncIndicatorState(state, reason){
+      const previousState = autoSyncIndicatorState;
       autoSyncIndicatorState = state || 'off';
+      const importantState = ['checking','scheduled','downloading','applied','frozen'].includes(autoSyncIndicatorState);
+      if(importantState || (autoSyncIndicatorState === 'on' && previousState && previousState !== 'on')){
+        clearAutoSyncGreenFade();
+      }
       if(autoSyncIndicatorState === 'frozen'){
         autoSyncFrozenAcknowledged = false;
         if(reason) autoSyncFrozenReason = reason;
@@ -6524,9 +6594,44 @@
         excludeDeviceId:cfg.deviceId
       });
     }
+    let manualSyncBusy = false;
+    function setSyncMenuBusy(action, text){
+      manualSyncBusy = true;
+      const menu = overlay.querySelector('.sync-menu');
+      if(menu) menu.classList.add('busy');
+      overlay.querySelectorAll('.sync-menu-btn').forEach(btn=>{
+        btn.disabled = true;
+        btn.classList.toggle('sync-pressed', btn.dataset.syncAct === action);
+      });
+      let busy = overlay.querySelector('.sync-working');
+      if(!busy && menu){
+        busy = document.createElement('div');
+        busy.className = 'sync-working';
+        menu.insertAdjacentElement('afterend', busy);
+      }
+      if(busy){
+        busy.innerHTML = `
+          <div class="sync-spinner" aria-hidden="true"></div>
+          <div>${escapeHtml(text || 'Pracuję online...')}</div>
+        `;
+      }
+    }
+    function clearSyncMenuBusy(){
+      manualSyncBusy = false;
+      const menu = overlay.querySelector('.sync-menu');
+      if(menu) menu.classList.remove('busy');
+      overlay.querySelectorAll('.sync-menu-btn').forEach(btn=>{
+        btn.disabled = false;
+        btn.classList.remove('sync-pressed');
+      });
+      const busy = overlay.querySelector('.sync-working');
+      if(busy) busy.remove();
+    }
     async function sendSyncSnapshot(){
+      if(manualSyncBusy) return;
       const cfg = getSyncConfig(true);
       if(!cfg) return;
+      setSyncMenuBusy('send', 'Wysyłam synchronizację...');
       const snapshot = buildSyncSnapshot(cfg.device);
       showToast('Wysylam synchronizacje...', 'ok');
       playSyncStartedSound();
@@ -6542,6 +6647,8 @@
       }catch(e){
         setAutoSyncIndicatorState('frozen');
         showToast('Synchronizacja nieudana.', 'err');
+      }finally{
+        clearSyncMenuBusy();
       }
     }
     function confirmResetSyncSettings(){
@@ -6614,10 +6721,14 @@
         setupLongPress(
           btn,
           ()=>{
+            if(manualSyncBusy) return;
             if(a === 'send'){ sendSyncSnapshot(); return; }
             if(a === 'load'){ openSyncSnapshotList(); return; }
           },
-          ()=>confirmResetSyncSettings()
+          ()=>{
+            if(manualSyncBusy) return;
+            confirmResetSyncSettings();
+          }
         );
       });
     }
@@ -6635,9 +6746,10 @@
       overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); hideOverlay(); });
     }
     async function openSyncSnapshotList(){
+      if(manualSyncBusy) return;
       const cfg = getSyncConfig(false);
       if(!cfg) return;
-      renderSyncLoading('Pobieram liste...');
+      setSyncMenuBusy('load', 'Pobieram synchronizację...');
       try{
         const data = await jsonpRequest(cfg.url, { action:'syncList', pin:cfg.pin, limit:30 });
         if(!data || !data.ok) throw new Error(data && data.error ? data.error : 'syncList failed');
@@ -6646,6 +6758,8 @@
         localStorage.removeItem(LS_SYNC_PIN);
         showToast('Nie udalo sie pobrac synchronizacji.', 'err');
         openWorkMenu();
+      }finally{
+        clearSyncMenuBusy();
       }
     }
     function renderSyncSnapshotList(items, cfg){
