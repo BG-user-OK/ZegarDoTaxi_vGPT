@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_6.1.2: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_6.1.3: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_6.1.2: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_6.1.3: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2978,7 +2978,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_6.1.2</div>
+  <div class="version">vGPT_6.1.3</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3937,12 +3937,12 @@
         const x = Math.cos(theta) * radiusNorm;
         const y = Math.sin(theta) * radiusNorm;
         const angle = normalizeClockDeg(Math.atan2(y, x) * 180 / Math.PI + 90);
-        const jitter = (rnd() - 0.5) * 30 + (rnd() - 0.5) * 12;
         const large = rnd() < 0.11;
         particles.push({
           x, y,
           angle,
-          threshold: Math.max(0, Math.min(360, angle + jitter)),
+          activationLag: Math.pow(rnd(), 0.6) * 16,
+          densitySpan: 18 + rnd() * 76,
           size: large ? 0.028 + rnd() * 0.032 : 0.008 + Math.pow(rnd(), 1.8) * 0.022,
           alpha: large ? 0.48 + rnd() * 0.22 : 0.68 + rnd() * 0.28
         });
@@ -3993,6 +3993,28 @@
       ctx.restore();
       ctx.globalAlpha = 1;
     }
+    function exerciseSpraySoftStart(angle){
+      return Math.pow(smoothstep((angle - 6) / 18), 1.35);
+    }
+    function exerciseSprayParticleAlpha(p, angle){
+      const a = Math.max(0, Math.min(360, angle));
+      if(a >= 359.8) return 1;
+      if(a <= 0.01 || p.angle > a) return 0;
+      const age = a - p.angle;
+      if(age <= p.activationLag) return 0;
+      const activeAge = age - p.activationLag;
+      const density = smoothstep(activeAge / p.densitySpan);
+      const repeatedPasses = smoothstep(age / 82);
+      const softStart = exerciseSpraySoftStart(a);
+      return clamp01(softStart * (0.18 + 0.82 * repeatedPasses) * (0.16 + 0.84 * density));
+    }
+    function drawExerciseSprayCoverage(surface, angle, color, alphaMultiplier=1){
+      const particles = ensureExerciseSprayParticles();
+      particles.forEach((p)=>{
+        const alpha = exerciseSprayParticleAlpha(p, angle) * alphaMultiplier;
+        drawExerciseParticle(surface, p, color, alpha);
+      });
+    }
     function paintExerciseSprayVanish(vanishedDeg){
       const angle = Math.max(0, Math.min(360, vanishedDeg));
       setExerciseCircleProgress(angle / 360);
@@ -4007,13 +4029,7 @@
           surface.ctx.fillRect(0, 0, surface.w, surface.h);
           return;
         }
-        const softEdge = 22;
-        particles.forEach((p)=>{
-          const diff = angle - p.threshold;
-          if(diff < -softEdge) return;
-          const alpha = diff >= softEdge ? 1 : (diff + softEdge) / softEdge;
-          drawExerciseParticle(surface, p, '#000', alpha);
-        });
+        drawExerciseSprayCoverage(surface, angle, '#000');
       });
     }
     function paintExerciseSprayRestore(fromAngle, currentAngle){
@@ -4032,22 +4048,11 @@
       }
       withExerciseCircleClip(surface, ()=>{
         if(!fromOverage){
-          const softEdge = 20;
-          particles.forEach((p)=>{
-            const diff = current - p.threshold;
-            if(diff < -softEdge) return;
-            const alpha = diff >= softEdge ? 1 : (diff + softEdge) / softEdge;
-            drawExerciseParticle(surface, p, '#000', alpha);
-          });
+          drawExerciseSprayCoverage(surface, current, '#000');
         }
-        const softEdge = 18;
         particles.forEach((p)=>{
-          const afterMovingEdge = p.threshold - current;
-          const beforeOriginalEdge = start - p.threshold;
-          if(afterMovingEdge < -softEdge || beforeOriginalEdge < -softEdge) return;
-          const alphaA = afterMovingEdge >= softEdge ? 1 : (afterMovingEdge + softEdge) / softEdge;
-          const alphaB = beforeOriginalEdge >= softEdge ? 1 : (beforeOriginalEdge + softEdge) / softEdge;
-          drawExerciseParticle(surface, p, '#45ee73', Math.min(alphaA, alphaB) * 1.08);
+          const restoredAlpha = Math.max(0, exerciseSprayParticleAlpha(p, start) - exerciseSprayParticleAlpha(p, current));
+          drawExerciseParticle(surface, p, '#45ee73', restoredAlpha * 1.08);
         });
       });
     }
@@ -6571,7 +6576,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.1.2';
+      return el ? el.textContent.trim() : 'vGPT_6.1.3';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
