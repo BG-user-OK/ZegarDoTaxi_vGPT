@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_6.1.6: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_6.1.7: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_6.1.6: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_6.1.7: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2976,7 +2976,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_6.1.6</div>
+  <div class="version">vGPT_6.1.7</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3874,7 +3874,7 @@
       restoreDurationMs: 0,
       restoreRaf: 0
     };
-    let _exerciseSprayOperations = null;
+    let _exerciseCloudMap = null;
     function getWheelVanishAngle(elapsedMinutes){
       return Math.min(360, Math.max(0, elapsedMinutes) / 60 * 360);
     }
@@ -3922,47 +3922,6 @@
       if(sector) sector.setAttribute('d', '');
       if(edge) edge.setAttribute('d', '');
     }
-    const EXERCISE_SPRAY_SLICES = 12;
-    const EXERCISE_SPRAY_CLEAN_DEG = 6;
-    const EXERCISE_SPRAY_TOTAL_OPS = 144;
-    function buildExerciseSpraySequence(){
-      const sequence = [];
-      for(let end=1; end<=EXERCISE_SPRAY_SLICES; end++){
-        for(let slice=1; slice<=end; slice++) sequence.push(slice);
-      }
-      for(let start=2; start<=EXERCISE_SPRAY_SLICES; start++){
-        for(let slice=start; slice<=EXERCISE_SPRAY_SLICES; slice++) sequence.push(slice);
-      }
-      return sequence;
-    }
-    function ensureExerciseSprayOperations(){
-      if(_exerciseSprayOperations) return _exerciseSprayOperations;
-      let seed = 61423;
-      const rnd = ()=>{
-        seed = (seed * 1664525 + 1013904223) >>> 0;
-        return seed / 4294967296;
-      };
-      _exerciseSprayOperations = buildExerciseSpraySequence().map((slice)=>{
-        const blobs = [];
-        const sliceStart = (slice - 1) * 30;
-        const blobCount = 18 + Math.floor(rnd() * 10);
-        for(let i=0; i<blobCount; i++){
-          const clockDeg = sliceStart + 1.2 + rnd() * 27.6;
-          const theta = (clockDeg - 90) * Math.PI / 180;
-          const radiusNorm = Math.sqrt(rnd()) * 0.94;
-          const large = rnd() < 0.16;
-          blobs.push({
-            x: Math.cos(theta) * radiusNorm,
-            y: Math.sin(theta) * radiusNorm,
-            size: large ? 0.031 + rnd() * 0.042 : 0.014 + Math.pow(rnd(), 1.5) * 0.026,
-            alpha: large ? 0.58 + rnd() * 0.22 : 0.72 + rnd() * 0.24,
-            reveal: rnd() * 0.82
-          });
-        }
-        return { slice, blobs };
-      });
-      return _exerciseSprayOperations;
-    }
     function getExerciseSpraySurface(){
       const canvas = document.getElementById('exerciseSprayCanvas');
       if(!canvas) return null;
@@ -3970,120 +3929,126 @@
       const w = rect.width;
       const h = rect.height;
       if(w < 2 || h < 2) return null;
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const dpr = Math.min(1.6, window.devicePixelRatio || 1);
       const pxW = Math.max(1, Math.round(w * dpr));
       const pxH = Math.max(1, Math.round(h * dpr));
       if(canvas.width !== pxW || canvas.height !== pxH){
         canvas.width = pxW;
         canvas.height = pxH;
       }
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { alpha:true });
       if(!ctx) return null;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
-      return { ctx, w, h, cx: w / 2, cy: h / 2, radius: Math.min(w, h) * 0.45 };
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, pxW, pxH);
+      return { ctx, w:pxW, h:pxH, cx:pxW / 2, cy:pxH / 2, radius: Math.min(pxW, pxH) * 0.45 };
     }
-    function drawExerciseParticle(surface, particle, color, alphaScale){
-      const alpha = clamp01(particle.alpha * alphaScale);
-      if(alpha <= 0.01) return;
-      const {ctx, cx, cy, radius} = surface;
-      const x = cx + particle.x * radius;
-      const y = cy + particle.y * radius;
-      const r = Math.max(1.1, particle.size * radius);
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
+    function cloudHash(ix, iy, seed){
+      let n = (ix * 374761393 + iy * 668265263 + seed * 1442695041) >>> 0;
+      n = (n ^ (n >>> 13)) >>> 0;
+      n = Math.imul(n, 1274126177) >>> 0;
+      n = (n ^ (n >>> 16)) >>> 0;
+      return n / 4294967295;
     }
-    function withExerciseCircleClip(surface, draw){
-      const {ctx, cx, cy, radius} = surface;
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.clip();
-      draw();
-      ctx.restore();
-      ctx.globalAlpha = 1;
+    function cloudValueNoise(x, y, scale, seed){
+      const gx = x / scale;
+      const gy = y / scale;
+      const x0 = Math.floor(gx), y0 = Math.floor(gy);
+      const tx = smoothstep(gx - x0);
+      const ty = smoothstep(gy - y0);
+      const a = cloudHash(x0, y0, seed);
+      const b = cloudHash(x0 + 1, y0, seed);
+      const c = cloudHash(x0, y0 + 1, seed);
+      const d = cloudHash(x0 + 1, y0 + 1, seed);
+      return mix(mix(a, b, tx), mix(c, d, tx), ty);
     }
-    function getExerciseSprayPhase(vanishedDeg){
-      const angle = Math.max(0, Math.min(360, vanishedDeg));
-      if(angle <= EXERCISE_SPRAY_CLEAN_DEG) return 0;
-      const active = (angle - EXERCISE_SPRAY_CLEAN_DEG) / (360 - EXERCISE_SPRAY_CLEAN_DEG);
-      return clamp01(active) * EXERCISE_SPRAY_TOTAL_OPS;
-    }
-    function operationProgressAtPhase(phase, index){
-      return clamp01(phase - index);
-    }
-    function blobRevealAt(operationProgress, blob){
-      if(operationProgress >= 1) return 1;
-      return clamp01((operationProgress - blob.reveal) / 0.18);
-    }
-    function drawExerciseSprayOperation(surface, operation, operationProgress, color, alphaMultiplier=1){
-      const progress = clamp01(operationProgress);
-      if(progress <= 0) return;
-      operation.blobs.forEach((blob)=>{
-        drawExerciseParticle(surface, blob, color, blobRevealAt(progress, blob) * alphaMultiplier);
-      });
-    }
-    function drawExerciseSprayOperationDelta(surface, operation, fromProgress, toProgress, color, alphaMultiplier=1){
-      const from = clamp01(fromProgress);
-      const to = clamp01(toProgress);
-      if(to <= from) return;
-      operation.blobs.forEach((blob)=>{
-        const alpha = Math.max(0, blobRevealAt(to, blob) - blobRevealAt(from, blob));
-        drawExerciseParticle(surface, blob, color, alpha * alphaMultiplier);
-      });
-    }
-    function drawExerciseSprayCoverage(surface, phase, color, alphaMultiplier=1){
-      const operations = ensureExerciseSprayOperations();
-      const visiblePhase = Math.max(0, Math.min(EXERCISE_SPRAY_TOTAL_OPS, phase));
-      for(let i=0; i<operations.length; i++){
-        const progress = operationProgressAtPhase(visiblePhase, i);
-        if(progress <= 0) break;
-        drawExerciseSprayOperation(surface, operations[i], progress, color, alphaMultiplier);
+    function ensureExerciseCloudMap(surface){
+      if(_exerciseCloudMap && _exerciseCloudMap.w === surface.w && _exerciseCloudMap.h === surface.h){
+        return _exerciseCloudMap;
       }
+      const total = surface.w * surface.h;
+      const angle = new Float32Array(total);
+      const radial = new Float32Array(total);
+      const cloud = new Float32Array(total);
+      const grain = new Float32Array(total);
+      const inside = [];
+      for(let y=0; y<surface.h; y++){
+        for(let x=0; x<surface.w; x++){
+          const idx = y * surface.w + x;
+          const dx = x + 0.5 - surface.cx;
+          const dy = y + 0.5 - surface.cy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if(dist > surface.radius) continue;
+          const rNorm = dist / surface.radius;
+          const clockDeg = normalizeClockDeg(Math.atan2(dy, dx) * 180 / Math.PI + 90);
+          const broad = cloudValueNoise(x, y, Math.max(10, surface.radius * 0.38), 17);
+          const medium = cloudValueNoise(x, y, Math.max(6, surface.radius * 0.18), 31);
+          const fine = cloudValueNoise(x, y, Math.max(3, surface.radius * 0.075), 59);
+          angle[idx] = clockDeg;
+          radial[idx] = rNorm;
+          cloud[idx] = ((broad * 0.58 + medium * 0.30 + fine * 0.12) - 0.5) * 2;
+          grain[idx] = cloudHash(x, y, 83);
+          inside.push(idx);
+        }
+      }
+      _exerciseCloudMap = {
+        w:surface.w,
+        h:surface.h,
+        angle,
+        radial,
+        cloud,
+        grain,
+        inside:Uint32Array.from(inside)
+      };
+      return _exerciseCloudMap;
     }
-    function paintExerciseSprayVanish(vanishedDeg){
-      const angle = Math.max(0, Math.min(360, vanishedDeg));
-      setExerciseCircleProgress(angle / 360);
+    function drawExerciseCloudMask(vanishedDeg){
+      const angleDeg = Math.max(0, Math.min(360, vanishedDeg));
+      setExerciseCircleProgress(angleDeg / 360);
       clearLegacyWheelSvg();
       const surface = getExerciseSpraySurface();
       if(!surface) return;
-      const phase = getExerciseSprayPhase(angle);
-      if(phase <= 0.001) return;
-      withExerciseCircleClip(surface, ()=>{
-        drawExerciseSprayCoverage(surface, phase, '#000');
-      });
+      if(angleDeg <= 0.15) return;
+
+      const map = ensureExerciseCloudMap(surface);
+      const image = surface.ctx.createImageData(surface.w, surface.h);
+      const data = image.data;
+      const edgeWidth = 58;
+      const cleanStartDeg = 3;
+      const effectiveAngle = Math.max(0, angleDeg - cleanStartDeg);
+      const finalFill = smoothstep((angleDeg - 350) / 10);
+      const startBleed = smoothstep(angleDeg / 70);
+
+      for(let i=0; i<map.inside.length; i++){
+        const idx = map.inside[i];
+        const a = map.angle[idx];
+        const r = map.radial[idx];
+        const noise = map.cloud[idx];
+        const jitter = noise * 34 + (r - 0.5) * 7;
+        let alpha = smoothstep((effectiveAngle + jitter - a) / edgeWidth);
+
+        if(a > 342 && angleDeg > 8){
+          const startCloud = smoothstep((a - 342) / 18) * 0.12 * startBleed;
+          alpha = Math.max(alpha, startCloud);
+        }
+
+        alpha = Math.max(alpha, finalFill);
+        if(alpha <= 0.01) continue;
+        alpha *= 0.88 + map.grain[idx] * 0.12;
+        const base = idx * 4;
+        data[base] = 0;
+        data[base + 1] = 0;
+        data[base + 2] = 0;
+        data[base + 3] = Math.round(clamp01(alpha) * 255);
+      }
+      surface.ctx.putImageData(image, 0, 0);
+    }
+    function paintExerciseSprayVanish(vanishedDeg){
+      drawExerciseCloudMask(vanishedDeg);
     }
     function paintExerciseSprayRestore(fromAngle, currentAngle){
       const start = Math.max(0, Math.min(360, fromAngle));
       const current = Math.max(0, Math.min(start, currentAngle));
-      const exBtn = document.getElementById('exerciseBtn');
-      const fromOverage = !!(exBtn && exBtn.classList.contains('restore-overage'));
-      setExerciseCircleProgress(current / 360);
-      clearLegacyWheelSvg();
-      const surface = getExerciseSpraySurface();
-      if(!surface) return;
-      const operations = ensureExerciseSprayOperations();
-      const startPhase = getExerciseSprayPhase(start);
-      const currentPhase = getExerciseSprayPhase(current);
-      withExerciseCircleClip(surface, ()=>{
-        if(fromOverage && currentPhase >= EXERCISE_SPRAY_TOTAL_OPS - 0.001){
-          surface.ctx.fillStyle = '#000';
-          surface.ctx.fillRect(0, 0, surface.w, surface.h);
-          return;
-        }
-        if(!fromOverage){
-          drawExerciseSprayCoverage(surface, currentPhase, '#000');
-        }
-        for(let i=0; i<operations.length; i++){
-          const fromProgress = operationProgressAtPhase(currentPhase, i);
-          const toProgress = operationProgressAtPhase(startPhase, i);
-          if(toProgress <= 0) break;
-          drawExerciseSprayOperationDelta(surface, operations[i], fromProgress, toProgress, '#45ee73', 1.08);
-        }
-      });
+      drawExerciseCloudMask(current);
     }
     function fullCirclePath(){
       return 'M 100 100 m -150 0 a 150 150 0 1 0 300 0 a 150 150 0 1 0 -300 0';
@@ -6605,7 +6570,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.1.6';
+      return el ? el.textContent.trim() : 'vGPT_6.1.7';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
