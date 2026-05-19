@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_6.1.5: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_6.1.6: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_6.1.5: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_6.1.6: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1344,18 +1344,16 @@
     .break-btn.on{ background:transparent; }
     .break-btn.on.blink-bg{
       background:#ffe84d;
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.22),
-                 0 0 24px rgba(255,232,77,.55),
-                 0 0 0 1px rgba(255,232,77,.55);
+      box-shadow:none;
     }
 
     /* === Garnek z obrazkiem === */
     .pot-btn{ background:linear-gradient(180deg,var(--btn-pot-off-1),var(--btn-pot-off-2)); }
     .pot-btn.done-alarm{ background:linear-gradient(180deg,#ff4b22,#e00000); box-shadow:inset 0 0 0 2px rgba(255,235,220,.5), inset 0 0 36px rgba(255,40,0,.45), 0 0 34px rgba(255,48,0,.85); }
-    .pot-btn.done-alarm-off{ background:linear-gradient(180deg,#d01800,#850000); box-shadow:inset 0 0 0 1px rgba(255,130,100,.35), inset 0 0 26px rgba(160,0,0,.5), 0 0 18px rgba(255,20,0,.48); }
+    .pot-btn.done-alarm-off{ background:#000; box-shadow:none; }
     .pot-btn.pot-has-img{ background:#000 !important; }
     .pot-btn.pot-has-img.done-alarm{ background:linear-gradient(180deg,#ff4b22,#e00000) !important; }
-    .pot-btn.pot-has-img.done-alarm-off{ background:linear-gradient(180deg,#d01800,#850000) !important; }
+    .pot-btn.pot-has-img.done-alarm-off{ background:#000 !important; box-shadow:none !important; }
     .pot-img{
       position:absolute; inset:0;
       width:100%; height:100%;
@@ -2978,7 +2976,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_6.1.5</div>
+  <div class="version">vGPT_6.1.6</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -6607,7 +6605,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.1.5';
+      return el ? el.textContent.trim() : 'vGPT_6.1.6';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
