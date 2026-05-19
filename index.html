@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_6.1.7: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_6.1.8: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_6.1.7: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_6.1.8: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2976,7 +2976,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_6.1.7</div>
+  <div class="version">vGPT_6.1.8</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3942,34 +3942,12 @@
       ctx.clearRect(0, 0, pxW, pxH);
       return { ctx, w:pxW, h:pxH, cx:pxW / 2, cy:pxH / 2, radius: Math.min(pxW, pxH) * 0.45 };
     }
-    function cloudHash(ix, iy, seed){
-      let n = (ix * 374761393 + iy * 668265263 + seed * 1442695041) >>> 0;
-      n = (n ^ (n >>> 13)) >>> 0;
-      n = Math.imul(n, 1274126177) >>> 0;
-      n = (n ^ (n >>> 16)) >>> 0;
-      return n / 4294967295;
-    }
-    function cloudValueNoise(x, y, scale, seed){
-      const gx = x / scale;
-      const gy = y / scale;
-      const x0 = Math.floor(gx), y0 = Math.floor(gy);
-      const tx = smoothstep(gx - x0);
-      const ty = smoothstep(gy - y0);
-      const a = cloudHash(x0, y0, seed);
-      const b = cloudHash(x0 + 1, y0, seed);
-      const c = cloudHash(x0, y0 + 1, seed);
-      const d = cloudHash(x0 + 1, y0 + 1, seed);
-      return mix(mix(a, b, tx), mix(c, d, tx), ty);
-    }
     function ensureExerciseCloudMap(surface){
       if(_exerciseCloudMap && _exerciseCloudMap.w === surface.w && _exerciseCloudMap.h === surface.h){
         return _exerciseCloudMap;
       }
       const total = surface.w * surface.h;
       const angle = new Float32Array(total);
-      const radial = new Float32Array(total);
-      const cloud = new Float32Array(total);
-      const grain = new Float32Array(total);
       const inside = [];
       for(let y=0; y<surface.h; y++){
         for(let x=0; x<surface.w; x++){
@@ -3978,15 +3956,8 @@
           const dy = y + 0.5 - surface.cy;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if(dist > surface.radius) continue;
-          const rNorm = dist / surface.radius;
           const clockDeg = normalizeClockDeg(Math.atan2(dy, dx) * 180 / Math.PI + 90);
-          const broad = cloudValueNoise(x, y, Math.max(10, surface.radius * 0.38), 17);
-          const medium = cloudValueNoise(x, y, Math.max(6, surface.radius * 0.18), 31);
-          const fine = cloudValueNoise(x, y, Math.max(3, surface.radius * 0.075), 59);
           angle[idx] = clockDeg;
-          radial[idx] = rNorm;
-          cloud[idx] = ((broad * 0.58 + medium * 0.30 + fine * 0.12) - 0.5) * 2;
-          grain[idx] = cloudHash(x, y, 83);
           inside.push(idx);
         }
       }
@@ -3994,9 +3965,6 @@
         w:surface.w,
         h:surface.h,
         angle,
-        radial,
-        cloud,
-        grain,
         inside:Uint32Array.from(inside)
       };
       return _exerciseCloudMap;
@@ -4012,28 +3980,18 @@
       const map = ensureExerciseCloudMap(surface);
       const image = surface.ctx.createImageData(surface.w, surface.h);
       const data = image.data;
-      const edgeWidth = 58;
+      const edgeWidth = 44;
       const cleanStartDeg = 3;
       const effectiveAngle = Math.max(0, angleDeg - cleanStartDeg);
       const finalFill = smoothstep((angleDeg - 350) / 10);
-      const startBleed = smoothstep(angleDeg / 70);
 
       for(let i=0; i<map.inside.length; i++){
         const idx = map.inside[i];
         const a = map.angle[idx];
-        const r = map.radial[idx];
-        const noise = map.cloud[idx];
-        const jitter = noise * 34 + (r - 0.5) * 7;
-        let alpha = smoothstep((effectiveAngle + jitter - a) / edgeWidth);
-
-        if(a > 342 && angleDeg > 8){
-          const startCloud = smoothstep((a - 342) / 18) * 0.12 * startBleed;
-          alpha = Math.max(alpha, startCloud);
-        }
+        let alpha = smoothstep((effectiveAngle - a) / edgeWidth);
 
         alpha = Math.max(alpha, finalFill);
         if(alpha <= 0.01) continue;
-        alpha *= 0.88 + map.grain[idx] * 0.12;
         const base = idx * 4;
         data[base] = 0;
         data[base + 1] = 0;
@@ -6570,7 +6528,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.1.7';
+      return el ? el.textContent.trim() : 'vGPT_6.1.8';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
