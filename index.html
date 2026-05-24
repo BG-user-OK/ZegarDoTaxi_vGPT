@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_6.1.8: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_6.1.9: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_6.1.8: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_6.1.9: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1984,12 +1984,21 @@
       min-height:74px;
       font-size:16px;
       line-height:1.22;
+      background:linear-gradient(180deg,#090909,#020202);
+    }
+    .sync-list .sync-snapshot-btn:nth-of-type(even){
+      background:linear-gradient(180deg,#171717,#0b0b0b);
     }
     .sync-snapshot-btn strong{
       display:block;
       font-size:19px;
       color:#fff;
       margin-bottom:2px;
+    }
+    .sync-snapshot-btn.sync-ended,
+    .sync-snapshot-btn.sync-ended strong{
+      color:#ff4a4a;
+      text-shadow:0 0 10px rgba(255,0,0,.28);
     }
     .sync-meta{
       display:block;
@@ -2976,7 +2985,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_6.1.8</div>
+  <div class="version">vGPT_6.1.9</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -6528,7 +6537,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.1.8';
+      return el ? el.textContent.trim() : 'vGPT_6.1.9';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -7142,9 +7151,10 @@
           s.phone || s.deviceLabel || 'Telefon'
         ].join(' | ');
       };
+      const isEndedSync = (s)=>String(s.workStatus || '').trim().toLowerCase() === 'ended';
       const displayItems = (items || []).filter(s=>Number(s.snapshotNo) > 0 && (s.savedDate || s.savedDay || s.savedTime || s.phone));
       const list = displayItems.length ? displayItems.map(s=>`
-        <button class="sync-snapshot-btn" type="button" data-sync-id="${escapeHtml(s.id)}">
+        <button class="sync-snapshot-btn${isEndedSync(s) ? ' sync-ended' : ''}" type="button" data-sync-id="${escapeHtml(s.id)}">
           <strong>${escapeHtml(syncLine(s))}</strong>
         </button>
       `).join('') : '<div class="sync-loading">Brak zapisanych synchronizacji.</div>';
