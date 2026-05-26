@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_6.3.0: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_6.3.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_6.3.0: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_6.3.1: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -3196,7 +3196,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_6.3.0</div>
+  <div class="version">vGPT_6.3.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3829,8 +3829,8 @@
       const now = new Date();
       const h = now.getHours(), m = now.getMinutes();
       const hourDeg = (h % 12) * 30 + m * 0.5;
-      // Minuta stoi przy indeksie aktualnej godziny i zmienia pozycję dopiero o pełnej godzinie.
-      const minDeg  = (h % 12) * 30;
+      // Minuta stoi przy kierunku wskazówki godzinowej, lekko poza tarczą.
+      const minDeg  = hourDeg;
 
       // === Strzałka godzinowa - jako polygon (grot strzałki) ===
       const aRad = (hourDeg - 90) * Math.PI / 180;
@@ -3874,10 +3874,10 @@
       gHour.appendChild(hIn);
 
       // === Liczba minut na obwodzie ===
-      // Pozycja zależy od aktualnej godziny, a treść od aktualnej minuty.
+      // Pozycja zależy od kierunku wskazówki godzinowej, a treść od aktualnej minuty.
       const mRad = (minDeg - 90) * Math.PI / 180;
       // Etykieta minut na zewnątrz
-      const lblR = radius;
+      const lblR = radius + 10;
       const lblX = cx + Math.cos(mRad) * lblR, lblY = cy + Math.sin(mRad) * lblR;
       const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
       lbl.setAttribute('x', lblX.toFixed(2)); lbl.setAttribute('y', lblY.toFixed(2));
@@ -7127,7 +7127,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.3.0';
+      return el ? el.textContent.trim() : 'vGPT_6.3.1';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
