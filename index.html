@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_6.1.12: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_6.2.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_6.1.12: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_6.2.0: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1354,6 +1354,35 @@
     .pot-btn.pot-has-img{ background:#000 !important; }
     .pot-btn.pot-has-img.done-alarm{ background:linear-gradient(180deg,#ff4b22,#e00000) !important; }
     .pot-btn.pot-has-img.done-alarm-off{ background:#000 !important; box-shadow:none !important; }
+    .pot-btn.pot-waiting{
+      background:#000 !important;
+      box-shadow:inset 0 0 0 1px rgba(255,42,42,.52), inset 0 0 28px rgba(255,0,0,.14), 0 0 32px rgba(255,0,0,.68);
+    }
+    .pot-btn.pot-final{
+      background:#000 !important;
+      box-shadow:inset 0 0 0 1px rgba(255,42,42,.22), 0 0 18px rgba(255,0,0,.24);
+    }
+    .pot-btn.pot-waiting .pot-img,
+    .pot-btn.pot-final .pot-img{
+      opacity:.16;
+    }
+    .pot-radar{
+      position:absolute; inset:0;
+      border-radius:14px;
+      z-index:4;
+      pointer-events:none;
+      opacity:0;
+      background:
+        radial-gradient(circle at center, rgba(255,40,40,.34) 0 4%, rgba(255,40,40,0) 17%),
+        conic-gradient(from -10deg, rgba(255,0,0,0) 0deg 336deg, rgba(255,40,30,.12) 342deg, rgba(255,60,40,.88) 356deg, rgba(255,0,0,0) 360deg);
+      filter:blur(.2px);
+      mix-blend-mode:screen;
+    }
+    .pot-btn.pot-waiting .pot-radar{
+      opacity:1;
+      animation:potRadarSpin 1s linear infinite;
+    }
+    @keyframes potRadarSpin{ to{ transform:rotate(360deg); } }
     .pot-img{
       position:absolute; inset:0;
       width:100%; height:100%;
@@ -1386,6 +1415,19 @@
       text-shadow:0 0 6px rgba(0,0,0,.9),0 1px 0 rgba(0,0,0,.7);
       font-variant-numeric:tabular-nums;
       line-height:1; pointer-events:none;
+    }
+    .pot-btn.pot-waiting .pot-counter-box,
+    .pot-btn.pot-final .pot-counter-box{
+      left:50%; top:50%;
+      font-size:clamp(16px,4.3vw,34px);
+      color:#ff3838;
+      white-space:nowrap;
+      letter-spacing:0;
+      text-shadow:0 0 12px rgba(255,0,0,.95),0 2px 0 rgba(0,0,0,.9);
+    }
+    .pot-btn.pot-final .pot-counter-box{
+      color:#ff7777;
+      text-shadow:0 0 8px rgba(255,0,0,.7),0 2px 0 rgba(0,0,0,.9);
     }
     /* Gdy brak obrazka - centralnie i większa czcionka */
     .pot-btn:not(.pot-has-img) .pot-counter-box{
@@ -2956,6 +2998,7 @@
       <button class="btn pot-btn" id="potBtn" type="button">
         <div class="lp-ring"></div>
         <div class="pot-fire-bar" id="potFireBar" style="height:0%"></div>
+        <div class="pot-radar" id="potRadar"></div>
         <img src="Photos/gotowanie.png" alt="Gotowanie" class="pot-img" id="potImg"
              onload="this.parentElement.classList.add('pot-has-img')"
              onerror="this.style.display='none'" />
@@ -2985,7 +3028,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_6.1.12</div>
+  <div class="version">vGPT_6.2.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3032,6 +3075,10 @@
     let potStartedAt = null;
     let potAckedDone = false;
     let potUsedToday = false;
+    let potPhase = 'idle';
+    let potHeatingElapsedSec = null;
+    let potWaitingStartedAt = null;
+    let potWaitingElapsedSec = null;
 
     let revenues = {};
     PROVIDERS.forEach(p => revenues[p.key] = 0);
@@ -3090,6 +3137,7 @@
           exerciseMarkers, breakAdjustMinutes, workDate,
           pendingEndWorkExport, dailyExportStatus,
           potDurationMin, potStartedAt, potAckedDone, potUsedToday,
+          potPhase, potHeatingElapsedSec, potWaitingStartedAt, potWaitingElapsedSec,
           revenues, counterStart, counterEnd, privKmTotal,
           workTargetMinutes
         };
@@ -3128,6 +3176,10 @@
           potStartedAt = s.potStartedAt ?? null;
           potAckedDone = !!s.potAckedDone;
           potUsedToday = !!s.potUsedToday;
+          potPhase = s.potPhase || (potStartedAt !== null ? 'heating' : 'idle');
+          potHeatingElapsedSec = s.potHeatingElapsedSec ?? null;
+          potWaitingStartedAt = s.potWaitingStartedAt ?? null;
+          potWaitingElapsedSec = s.potWaitingElapsedSec ?? null;
           workTargetMinutes = s.workTargetMinutes ?? 480;
           // Sanitacja: jeśli pot był uruchomiony >24h temu (np. zostawiony z innego dnia
           // i apka się sama nie wygasiła) - resetujemy. Inaczej miga z zawyżonymi liczbami.
@@ -3137,6 +3189,7 @@
             if(ageMs > maxAgeMs || ageMs < 0){
               potStartedAt = null;
               potAckedDone = false;
+              potPhase = 'idle';
             }
           }
           if(s.revenues){
@@ -3165,6 +3218,7 @@
           exerciseMarkers, breakAdjustMinutes, workDate,
           pendingEndWorkExport, dailyExportStatus,
           potDurationMin, potStartedAt, potAckedDone, potUsedToday,
+          potPhase, potHeatingElapsedSec, potWaitingStartedAt, potWaitingElapsedSec,
           revenues, counterStart, counterEnd, privKmTotal,
           workTargetMinutes
         },
@@ -3189,6 +3243,10 @@
       potStartedAt = s.potStartedAt ?? null;
       potAckedDone = !!s.potAckedDone;
       potUsedToday = !!s.potUsedToday;
+      potPhase = s.potPhase || (potStartedAt !== null ? 'heating' : 'idle');
+      potHeatingElapsedSec = s.potHeatingElapsedSec ?? null;
+      potWaitingStartedAt = s.potWaitingStartedAt ?? null;
+      potWaitingElapsedSec = s.potWaitingElapsedSec ?? null;
       workTargetMinutes = s.workTargetMinutes ?? 480;
       PROVIDERS.forEach(p => revenues[p.key] = s.revenues ? (s.revenues[p.key] || 0) : 0);
       counterStart = s.counterStart ?? null;
@@ -4548,19 +4606,85 @@
       inner.style.transform = `translateY(${offset}px)`;
     }
 
+    function getPotPhase(){
+      if(potPhase === 'waiting' && potWaitingStartedAt !== null) return 'waiting';
+      if(potPhase === 'done') return 'done';
+      if(potStartedAt !== null) return 'heating';
+      return 'idle';
+    }
     function potRemainingSeconds(){
-      if(potStartedAt===null) return null;
+      if(getPotPhase() !== 'heating' || potStartedAt===null) return null;
       const el=(Date.now()-potStartedAt)/1000;
       return potDurationMin*60 - el;
+    }
+    function potHeatingElapsedSeconds(){
+      if(getPotPhase() === 'heating' && potStartedAt !== null){
+        return Math.max(0, Math.floor((Date.now() - potStartedAt) / 1000));
+      }
+      return Math.max(0, Math.floor(potHeatingElapsedSec || 0));
+    }
+    function potWaitingElapsedSeconds(){
+      if(getPotPhase() === 'waiting' && potWaitingStartedAt !== null){
+        return Math.max(0, Math.floor((Date.now() - potWaitingStartedAt) / 1000));
+      }
+      return Math.max(0, Math.floor(potWaitingElapsedSec || 0));
+    }
+    function formatPotHeatingTime(seconds){
+      return String(Math.max(0, Math.floor((seconds || 0) / 60)));
+    }
+    function formatPotWaitingTime(seconds){
+      const sec = Math.max(0, Math.floor(seconds || 0));
+      if(sec < 3600){
+        return Math.floor(sec / 60) + ':' + pad(sec % 60);
+      }
+      return Math.floor(sec / 3600) + ':' + pad(Math.floor((sec % 3600) / 60));
+    }
+    function formatPotSplitTime(){
+      return formatPotHeatingTime(potHeatingElapsedSeconds()) + ' / ' + formatPotWaitingTime(potWaitingElapsedSeconds());
+    }
+    function startPotHeating(){
+      potPhase = 'heating';
+      potStartedAt = Date.now();
+      potAckedDone = false;
+      potUsedToday = false;
+      potHeatingElapsedSec = null;
+      potWaitingStartedAt = null;
+      potWaitingElapsedSec = null;
+    }
+    function stopPotHeatingAndStartWaiting(){
+      potHeatingElapsedSec = potHeatingElapsedSeconds();
+      potStartedAt = null;
+      potAckedDone = false;
+      potPhase = 'waiting';
+      potWaitingStartedAt = Date.now();
+      potWaitingElapsedSec = null;
+    }
+    function finishPotWaiting(){
+      potWaitingElapsedSec = potWaitingElapsedSeconds();
+      potWaitingStartedAt = null;
+      potStartedAt = null;
+      potAckedDone = false;
+      potPhase = 'done';
+      potUsedToday = true;
+    }
+    function clearPotStateForDay(){
+      potStartedAt = null;
+      potAckedDone = false;
+      potUsedToday = false;
+      potPhase = 'idle';
+      potHeatingElapsedSec = null;
+      potWaitingStartedAt = null;
+      potWaitingElapsedSec = null;
     }
 
     function renderPotButton(){
       const btn=document.getElementById('potBtn');
       const ctr=document.getElementById('potCenter');
       const bar=document.getElementById('potFireBar');
-      btn.classList.remove('done-alarm','done-alarm-off','dimmed');
+      btn.classList.remove('done-alarm','done-alarm-off','dimmed','pot-waiting','pot-final');
+      const phase = getPotPhase();
 
-      if(potStartedAt===null){
+      if(phase === 'idle'){
         // spoczynek - gdy jest obrazek: ukryj counter-box; gdy brak: emoji garnek
         if(btn.classList.contains('pot-has-img')){
           ctr.removeAttribute('data-show');
@@ -4572,11 +4696,25 @@
         if(potUsedToday) btn.classList.add('dimmed');
         return;
       }
+      if(phase === 'waiting'){
+        if(bar) bar.style.height='0%';
+        btn.classList.add('pot-waiting');
+        ctr.setAttribute('data-show','1');
+        ctr.textContent = formatPotSplitTime();
+        return;
+      }
+      if(phase === 'done'){
+        if(bar) bar.style.height='0%';
+        btn.classList.add('pot-final','dimmed');
+        ctr.setAttribute('data-show','1');
+        ctr.textContent = formatPotSplitTime();
+        return;
+      }
       // Gdy grzeje - zawsze pokaż licznik (data-show żeby CSS go pokazał)
       ctr.setAttribute('data-show','1');
       const rem=potRemainingSeconds();
       const totalSec=potDurationMin*60;
-      const elapsedSec=totalSec - rem;
+      const elapsedSec=potHeatingElapsedSeconds();
       if(rem>0){
         const pct=Math.min(100,(elapsedSec/totalSec)*100);
         if(bar) bar.style.height=pct.toFixed(1)+'%';
@@ -4585,7 +4723,7 @@
         if(bar) bar.style.height='0%';
         if(!potAckedDone){
           btn.classList.add(blinkState?'done-alarm':'done-alarm-off');
-          const totalMin=Math.ceil(elapsedSec/60);
+          const totalMin=Math.max(0, Math.floor(elapsedSec/60));
           ctr.textContent=formatMinuteValue(totalMin);
         } else {
           if(btn.classList.contains('pot-has-img')){
@@ -5111,7 +5249,8 @@
     function shouldKeepDrivingFocusModuleVisible(id){
       const el = document.getElementById(id);
       if(id === 'potBtn'){
-        if(potStartedAt !== null) return true;
+        const phase = getPotPhase();
+        if(phase === 'heating' || phase === 'waiting') return true;
         if(el && (el.classList.contains('done-alarm') || el.classList.contains('done-alarm-off'))) return true;
       }
       if(id === 'moneyBtn'){
@@ -6436,14 +6575,7 @@
       eyeReminderFadeUntil = 0;
       _wheelsState.restoring = false;
 
-      if(potStartedAt!==null){
-        const rem = potRemainingSeconds();
-        if(rem!==null && rem<=0){
-          potStartedAt = null;
-          potAckedDone = false;
-          potUsedToday = true;
-        }
-      }
+      if(getPotPhase() === 'heating') renderPotButton();
 
       document.getElementById('workBtn').classList.add('on');
       saveStateAndScheduleAutoSync('work_continue');
@@ -6578,9 +6710,8 @@
       pendingEndWorkExport=false;
       PROVIDERS.forEach(p=>revenues[p.key]=0);
       counterStart=null; counterEnd=null; privKmTotal=0;
-      potUsedToday=false;
+      clearPotStateForDay();
       // Reset garnka - nawet jeśli był w trakcie grzania albo alarmu z wczoraj
-      potStartedAt=null; potAckedDone=false;
       // Punkt 7: cel godzinowy wraca do domyślnych 8h
       workTargetMinutes=480;
       syncWorkWakeLock();
@@ -6589,7 +6720,6 @@
       // Pełny reset bez eksportu - na potrzeby testowania / przypadkowego uruchomienia
       resetDayAfterExport();
       // Także garnek - jakby był aktywny
-      potStartedAt=null; potAckedDone=false;
       saveStateAndScheduleAutoSync('soft_reset');
       renderAll();
     }
@@ -6658,7 +6788,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.1.12';
+      return el ? el.textContent.trim() : 'vGPT_6.2.0';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -7914,6 +8044,13 @@
       document.getElementById('potBtn'),
       // krótki klik
       ()=>{
+        const phase = getPotPhase();
+        if(phase === 'heating') stopPotHeatingAndStartWaiting();
+        else if(phase === 'waiting') finishPotWaiting();
+        else startPotHeating();
+        saveStateAndScheduleAutoSync('pot_state');
+        renderAll();
+        return;
         if(potStartedAt===null){
           potStartedAt=Date.now();
           potAckedDone=false;
@@ -8060,7 +8197,7 @@
       if(startWorkMinutes!==null && lastExerciseMinutes!==null && getEffectiveExerciseElapsed()>60){
         renderRadarSweep();
       }
-      if(potStartedAt!==null){
+      if(getPotPhase() === 'heating' || getPotPhase() === 'waiting'){
         renderPotButton();
       }
       // Animacja przywracania koła trwa 2s - aktualizuj klatki
