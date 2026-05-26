@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_6.2.0: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_6.2.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_6.2.0: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_6.2.1: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -544,6 +544,27 @@
       width:3px; height:9px;
       background:#2ecc71;
       border-radius:0 2px 2px 0;
+    }
+    .battery-indicator::before{
+      content:'\26A1';
+      position:absolute;
+      top:50%;
+      left:-17px;
+      transform:translateY(-50%);
+      color:#2ecc71;
+      font-size:17px;
+      font-weight:900;
+      line-height:1;
+      opacity:0;
+      text-shadow:0 0 8px rgba(46,204,113,.78);
+      pointer-events:none;
+    }
+    .battery-indicator.charging::before{
+      opacity:1;
+    }
+    .battery-indicator.low.charging::before{
+      color:#ff3838;
+      text-shadow:0 0 8px rgba(255,56,56,.8);
     }
     .auto-sync-indicator{
       position:fixed;
@@ -3028,7 +3049,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_6.2.0</div>
+  <div class="version">vGPT_6.2.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -5185,12 +5206,19 @@
     function renderBattery(){
       const el = document.getElementById('batteryIndicator');
       if(!el) return;
-      if(batteryObj === null){ el.textContent='—'; return; }
+      if(batteryObj === null){
+        el.textContent='—';
+        el.classList.remove('low','charging');
+        el.style.visibility='visible';
+        return;
+      }
       const pct = Math.round(batteryObj.level * 100);
+      const charging = !!batteryObj.charging;
       el.textContent = pct + '%';
       el.classList.toggle('low', pct <= 30);
-      // Miganie: gdy low, ukrywaj co sekundę
-      if(pct <= 30 && !blinkState){
+      el.classList.toggle('charging', charging);
+      // Miganie: gdy low i bez ladowania, ukrywaj co sekunde.
+      if(pct <= 30 && !charging && !blinkState){
         el.style.visibility='hidden';
       } else {
         el.style.visibility='visible';
@@ -5200,6 +5228,7 @@
       navigator.getBattery().then(b => {
         batteryObj = b;
         b.addEventListener('levelchange', renderBattery);
+        b.addEventListener('chargingchange', renderBattery);
         renderBattery();
       }).catch(()=>{});
     }
@@ -6788,7 +6817,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.2.0';
+      return el ? el.textContent.trim() : 'vGPT_6.2.1';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
