@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_6.2.1: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_6.2.4: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_6.2.1: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_6.2.4: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -534,6 +534,10 @@
       min-width:48px;
       text-align:center;
       pointer-events:none;
+      transition:right .18s ease;
+    }
+    .battery-indicator.charging{
+      right:30px;
     }
     .battery-indicator::after{
       content:'';
@@ -549,7 +553,7 @@
       content:'\26A1';
       position:absolute;
       top:50%;
-      left:-17px;
+      right:-25px;
       transform:translateY(-50%);
       color:#2ecc71;
       font-size:17px;
@@ -563,8 +567,8 @@
       opacity:1;
     }
     .battery-indicator.low.charging::before{
-      color:#ff3838;
-      text-shadow:0 0 8px rgba(255,56,56,.8);
+      color:#2ecc71;
+      text-shadow:0 0 8px rgba(46,204,113,.78);
     }
     .auto-sync-indicator{
       position:fixed;
@@ -1383,9 +1387,12 @@
       background:#000 !important;
       box-shadow:inset 0 0 0 1px rgba(255,42,42,.22), 0 0 18px rgba(255,0,0,.24);
     }
-    .pot-btn.pot-waiting .pot-img,
-    .pot-btn.pot-final .pot-img{
+    .pot-btn.pot-waiting .pot-img{
       opacity:.16;
+    }
+    .pot-btn.pot-final .pot-img{
+      opacity:.56;
+      filter:brightness(.82) saturate(.9);
     }
     .pot-radar{
       position:absolute; inset:0;
@@ -1401,7 +1408,7 @@
     }
     .pot-btn.pot-waiting .pot-radar{
       opacity:1;
-      animation:potRadarSpin 1s linear infinite;
+      animation:potRadarSpin 2s linear infinite;
     }
     @keyframes potRadarSpin{ to{ transform:rotate(360deg); } }
     .pot-img{
@@ -1439,16 +1446,69 @@
     }
     .pot-btn.pot-waiting .pot-counter-box,
     .pot-btn.pot-final .pot-counter-box{
-      left:50%; top:50%;
-      font-size:clamp(16px,4.3vw,34px);
-      color:#ff3838;
+      left:auto;
+      right:7%;
+      top:8%;
+      transform:none;
+      display:inline-flex;
+      align-items:baseline;
+      justify-content:flex-end;
+      gap:.11em;
+      font-size:clamp(13px,3.7vw,25px);
+      color:#252525;
       white-space:nowrap;
       letter-spacing:0;
-      text-shadow:0 0 12px rgba(255,0,0,.95),0 2px 0 rgba(0,0,0,.9);
+      text-align:right;
+      text-shadow:0 0 3px rgba(255,255,255,.06),0 1px 0 rgba(0,0,0,.85);
+    }
+    .pot-split-part{
+      color:#252525;
+      opacity:.86;
+      text-shadow:0 0 3px rgba(255,255,255,.06),0 1px 0 rgba(0,0,0,.85);
+    }
+    .pot-heat-time{
+      --pot-lit:#31ff66;
+      --pot-glow:rgba(42,255,98,.92);
+    }
+    .pot-sep,
+    .pot-wait-time{
+      --pot-lit:#ff3030;
+      --pot-glow:rgba(255,32,32,.92);
+    }
+    .pot-btn.pot-waiting .pot-split-part{
+      animation:potRadarTextReveal 2s linear infinite;
+    }
+    .pot-btn.pot-waiting .pot-sep{
+      animation-delay:.08s;
+    }
+    .pot-btn.pot-waiting .pot-wait-time{
+      animation-delay:.16s;
     }
     .pot-btn.pot-final .pot-counter-box{
-      color:#ff7777;
-      text-shadow:0 0 8px rgba(255,0,0,.7),0 2px 0 rgba(0,0,0,.9);
+      font-size:clamp(13px,3.8vw,26px);
+    }
+    .pot-btn.pot-final .pot-heat-time{
+      color:#35ee62;
+      opacity:1;
+      text-shadow:0 0 9px rgba(42,255,98,.72),0 2px 0 rgba(0,0,0,.9);
+    }
+    .pot-btn.pot-final .pot-sep,
+    .pot-btn.pot-final .pot-wait-time{
+      color:#ff5656;
+      opacity:1;
+      text-shadow:0 0 8px rgba(255,0,0,.62),0 2px 0 rgba(0,0,0,.9);
+    }
+    @keyframes potRadarTextReveal{
+      0%,25%{
+        color:var(--pot-lit);
+        opacity:1;
+        text-shadow:0 0 13px var(--pot-glow),0 0 24px var(--pot-glow),0 2px 0 rgba(0,0,0,.9);
+      }
+      75%,100%{
+        color:#252525;
+        opacity:.86;
+        text-shadow:0 0 3px rgba(255,255,255,.06),0 1px 0 rgba(0,0,0,.85);
+      }
     }
     /* Gdy brak obrazka - centralnie i większa czcionka */
     .pot-btn:not(.pot-has-img) .pot-counter-box{
@@ -3049,7 +3109,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_6.2.1</div>
+  <div class="version">vGPT_6.2.4</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3533,8 +3593,8 @@
       const now = new Date();
       const h = now.getHours(), m = now.getMinutes();
       const hourDeg = (h % 12) * 30 + m * 0.5;
-      // Minuty stoją na pełnej minucie - bez płynnego ruchu sekund
-      const minDeg  = m * 6;
+      // Minuta stoi przy indeksie aktualnej godziny i zmienia pozycję dopiero o pełnej godzinie.
+      const minDeg  = (h % 12) * 30;
 
       // === Strzałka godzinowa - jako polygon (grot strzałki) ===
       const aRad = (hourDeg - 90) * Math.PI / 180;
@@ -3577,27 +3637,20 @@
       hIn.setAttribute('fill', '#ffffff');
       gHour.appendChild(hIn);
 
-      // === Kropka minut na obwodzie + liczba minut na zewnątrz ===
-      // Kropka pokazuje aktualną minutę i nie porusza się w obrębie minuty.
+      // === Liczba minut na obwodzie ===
+      // Pozycja zależy od aktualnej godziny, a treść od aktualnej minuty.
       const mRad = (minDeg - 90) * Math.PI / 180;
       // Etykieta minut na zewnątrz
       const lblR = radius;
       const lblX = cx + Math.cos(mRad) * lblR, lblY = cy + Math.sin(mRad) * lblR;
-      const lblBg = document.createElementNS('http://www.w3.org/2000/svg','circle');
-      lblBg.setAttribute('cx', lblX.toFixed(2)); lblBg.setAttribute('cy', lblY.toFixed(2));
-      lblBg.setAttribute('r','29');
-      lblBg.setAttribute('fill','#000');
-      lblBg.setAttribute('stroke','rgba(255,255,255,.22)');
-      lblBg.setAttribute('stroke-width','2');
-      gMin.appendChild(lblBg);
       const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
       lbl.setAttribute('x', lblX.toFixed(2)); lbl.setAttribute('y', lblY.toFixed(2));
       lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('dominant-baseline','central');
-      lbl.setAttribute('fill','#fff'); lbl.setAttribute('font-size','43');
+      lbl.setAttribute('fill','#fff'); lbl.setAttribute('font-size','30');
       lbl.setAttribute('font-weight','900'); lbl.setAttribute('font-family','inherit');
       lbl.setAttribute('opacity','0.95');
       lbl.style.filter = 'drop-shadow(0 0 5px rgba(255,255,255,.98)) drop-shadow(0 0 13px rgba(255,255,255,.76)) drop-shadow(0 0 22px rgba(185,220,255,.48))';
-      lbl.textContent = String(m);
+      lbl.textContent = pad(m);
       gMin.appendChild(lbl);
 
       // === Podświetlenie aktualnej godziny (tryb 24h dla świecących) ===
@@ -4660,8 +4713,16 @@
       }
       return Math.floor(sec / 3600) + ':' + pad(Math.floor((sec % 3600) / 60));
     }
-    function formatPotSplitTime(){
-      return formatPotHeatingTime(potHeatingElapsedSeconds()) + ' / ' + formatPotWaitingTime(potWaitingElapsedSeconds());
+    function formatPotWaitingFinalTime(seconds){
+      const totalMinutes = Math.max(0, Math.floor((seconds || 0) / 60));
+      if(totalMinutes < 60) return String(totalMinutes);
+      return Math.floor(totalMinutes / 60) + ':' + pad(totalMinutes % 60);
+    }
+    function formatPotSplitTime(final=false){
+      const waitText = final ? formatPotWaitingFinalTime(potWaitingElapsedSeconds()) : formatPotWaitingTime(potWaitingElapsedSeconds());
+      return '<span class="pot-split-part pot-heat-time">' + formatPotHeatingTime(potHeatingElapsedSeconds()) + '</span>' +
+             '<span class="pot-split-part pot-sep">/</span>' +
+             '<span class="pot-split-part pot-wait-time">' + waitText + '</span>';
     }
     function startPotHeating(){
       potPhase = 'heating';
@@ -4721,14 +4782,14 @@
         if(bar) bar.style.height='0%';
         btn.classList.add('pot-waiting');
         ctr.setAttribute('data-show','1');
-        ctr.textContent = formatPotSplitTime();
+        ctr.innerHTML = formatPotSplitTime(false);
         return;
       }
       if(phase === 'done'){
         if(bar) bar.style.height='0%';
-        btn.classList.add('pot-final','dimmed');
+        btn.classList.add('pot-final');
         ctr.setAttribute('data-show','1');
-        ctr.textContent = formatPotSplitTime();
+        ctr.innerHTML = formatPotSplitTime(true);
         return;
       }
       // Gdy grzeje - zawsze pokaż licznik (data-show żeby CSS go pokazał)
@@ -6817,7 +6878,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.2.1';
+      return el ? el.textContent.trim() : 'vGPT_6.2.4';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
