@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_6.2.4: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_6.3.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_6.2.4: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_6.3.0: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -486,6 +486,13 @@
       .controls.results-ended #moneyBot{
         position:absolute;
         right:0;
+        bottom:0;
+        width:50%;
+        height:50%;
+        transform:translateY(calc(100% + 5px));
+      }
+      .controls.results-ended .post-work-verify{
+        left:0;
         bottom:0;
         width:50%;
         height:50%;
@@ -1014,6 +1021,70 @@
       height:50%;
       display:flex;
       z-index:2;
+    }
+    .post-work-verify{
+      display:none;
+      position:absolute;
+      left:0;
+      bottom:0;
+      width:calc((100% - 6px) / 2);
+      height:50%;
+      z-index:7;
+      grid-template-columns:1fr 1fr;
+      gap:3px;
+      padding:4px;
+      box-sizing:border-box;
+      background:#000;
+      border-radius:4px;
+      pointer-events:auto;
+      touch-action:manipulation;
+    }
+    .controls.results-ended .post-work-verify{
+      display:grid;
+    }
+    .post-work-verify-cell{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-width:0;
+      border-radius:5px;
+      color:#5b5b5b;
+      background:radial-gradient(circle at 50% 38%, rgba(255,255,255,.06), rgba(0,0,0,.96) 68%);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+      transition:color .25s ease, box-shadow .25s ease, background .25s ease, opacity .25s ease;
+    }
+    .post-work-verify-icon{
+      width:58%;
+      height:58%;
+      max-width:54px;
+      max-height:54px;
+      display:block;
+      fill:none;
+      stroke:currentColor;
+      stroke-width:7;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      filter:drop-shadow(0 0 5px rgba(255,255,255,.06));
+    }
+    .post-work-verify-cell.state-busy{
+      color:#ffd83d;
+      background:radial-gradient(circle at 50% 38%, rgba(255,216,61,.2), rgba(0,0,0,.95) 72%);
+      box-shadow:inset 0 0 0 1px rgba(255,216,61,.32), 0 0 15px rgba(255,216,61,.26);
+      animation:postVerifyBusyPulse .72s ease-in-out infinite alternate;
+    }
+    .post-work-verify-cell.state-ok{
+      color:#32f06b;
+      background:radial-gradient(circle at 50% 38%, rgba(50,240,107,.16), rgba(0,0,0,.96) 70%);
+      box-shadow:inset 0 0 0 1px rgba(50,240,107,.28), 0 0 13px rgba(50,240,107,.22);
+    }
+    .post-work-verify-cell.state-error{
+      color:#ff3535;
+      background:radial-gradient(circle at 50% 38%, rgba(255,53,53,.19), rgba(0,0,0,.96) 70%);
+      box-shadow:inset 0 0 0 1px rgba(255,53,53,.36), 0 0 16px rgba(255,53,53,.32);
+    }
+    @keyframes postVerifyBusyPulse{
+      from{ opacity:.48; filter:brightness(.9); }
+      to{ opacity:1; filter:brightness(1.24); }
     }
 
     /* moneta (przycisk dolny prawy) */
@@ -3092,6 +3163,22 @@
           <div class="money-cell empty" id="moneyTop"></div>
           <div class="money-cell empty" id="moneyBot"></div>
         </div>
+        <div class="post-work-verify" id="postWorkVerify" aria-hidden="true" title="Status synchronizacji i eksportu">
+          <div class="post-work-verify-cell state-idle" id="postWorkVerifySync" data-part="sync" aria-label="Synchronizacja">
+            <svg class="post-work-verify-icon" viewBox="0 0 100 100" aria-hidden="true">
+              <path d="M28 66h42a17 17 0 0 0 1-34 24 24 0 0 0-45-7A20 20 0 0 0 28 66Z"/>
+              <path d="M38 47h23l-7-7"/>
+              <path d="M62 53H39l7 7"/>
+            </svg>
+          </div>
+          <div class="post-work-verify-cell state-idle" id="postWorkVerifyExport" data-part="export" aria-label="Eksport dniówki">
+            <svg class="post-work-verify-icon" viewBox="0 0 100 100" aria-hidden="true">
+              <rect x="20" y="18" width="60" height="64" rx="5"/>
+              <path d="M20 36h60M20 54h60M20 72h60M40 36v46M60 36v46"/>
+              <path d="M50 12v15M43 20l7 7 7-7"/>
+            </svg>
+          </div>
+        </div>
       </button>
 
       <button class="btn coin-btn empty-slot" id="coinBtn" type="button">
@@ -3109,7 +3196,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_6.2.4</div>
+  <div class="version">vGPT_6.3.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3124,6 +3211,7 @@
     const LS_LAST_SEEN_SYNC_ID = 'tarcza_last_seen_sync_id';
     const LS_LAST_SEEN_CLOUD_CHANGE_AT = 'tarcza_last_seen_cloud_change_at';
     const LS_SYNC_STATE_HASH = 'tarcza_sync_state_hash';
+    const LS_POST_WORK_VERIFY = 'tarcza_post_work_verify_v1';
 
     const PROVIDERS = [
       { key:'uber',    label:'UBER',    bg:'#000000', fg:'#ffffff' },
@@ -3187,6 +3275,7 @@
     const cx=200, cy=200, radius=200;
     let blinkState = false;
     let syncApplyInProgress = false;
+    let postWorkVerification = null;
 
     function normalizeForSyncCompare(value, key){
       if(Array.isArray(value)) return value.map(v=>normalizeForSyncCompare(v, key));
@@ -3366,7 +3455,9 @@
         attempts:Number(s.attempts || 0),
         sheet:String(s.sheet || ''),
         row:Number(s.row || 0),
-        reason:String(s.reason || '')
+        reason:String(s.reason || ''),
+        verified:s.verified === true,
+        verification:(s.verification && typeof s.verification === 'object' && !Array.isArray(s.verification)) ? s.verification : null
       };
     }
     function hasEndedWorkdayForExport(){
@@ -3444,9 +3535,154 @@
         lastAttemptAt:dailyExportStatus ? dailyExportStatus.lastAttemptAt : 0,
         attempts:dailyExportStatus ? dailyExportStatus.attempts : 0,
         sheet:response && response.sheet ? response.sheet : '',
-        row:response && response.row ? response.row : 0
+        row:response && response.row ? response.row : 0,
+        verified:response && response.verified === true,
+        verification:response && response.verification ? response.verification : null
       });
       saveState();
+    }
+
+    function normalizePostWorkVerification(value){
+      const v = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+      const cleanState = (state)=>['idle','busy','ok','error'].includes(state) ? state : 'idle';
+      return {
+        workDate:String(v.workDate || ''),
+        exportSignature:String(v.exportSignature || ''),
+        syncId:String(v.syncId || ''),
+        sync:cleanState(v.sync),
+        export:cleanState(v.export),
+        syncMessage:String(v.syncMessage || ''),
+        exportMessage:String(v.exportMessage || ''),
+        updatedAt:Number(v.updatedAt || 0)
+      };
+    }
+    function loadPostWorkVerification(){
+      try{
+        postWorkVerification = normalizePostWorkVerification(JSON.parse(localStorage.getItem(LS_POST_WORK_VERIFY) || '{}'));
+      }catch(e){
+        postWorkVerification = normalizePostWorkVerification(null);
+      }
+    }
+    function savePostWorkVerification(){
+      try{ localStorage.setItem(LS_POST_WORK_VERIFY, JSON.stringify(normalizePostWorkVerification(postWorkVerification))); }catch(e){}
+    }
+    function getPostWorkIdentityForPayload(payload){
+      if(!payload) return null;
+      return {
+        workDate:String(payload.date || payload.work_date || ''),
+        exportSignature:dailyExportSignature(payload)
+      };
+    }
+    function currentPostWorkIdentity(){
+      if(!hasEndedWorkdayForExport()) return null;
+      return getPostWorkIdentityForPayload(buildDailyExportPayload());
+    }
+    function ensurePostWorkVerificationForPayload(payload){
+      const id = getPostWorkIdentityForPayload(payload);
+      if(!id || !id.workDate || !id.exportSignature) return null;
+      const current = normalizePostWorkVerification(postWorkVerification);
+      if(current.workDate !== id.workDate || current.exportSignature !== id.exportSignature){
+        postWorkVerification = normalizePostWorkVerification({
+          workDate:id.workDate,
+          exportSignature:id.exportSignature,
+          sync:'idle',
+          export:'idle',
+          updatedAt:Date.now()
+        });
+        savePostWorkVerification();
+      } else {
+        postWorkVerification = current;
+      }
+      return postWorkVerification;
+    }
+    function ensureCurrentPostWorkVerification(){
+      if(!hasEndedWorkdayForExport()) return null;
+      return ensurePostWorkVerificationForPayload(buildDailyExportPayload());
+    }
+    function isCurrentPostWorkPayload(payload){
+      const current = currentPostWorkIdentity();
+      const candidate = getPostWorkIdentityForPayload(payload);
+      return !!(current && candidate &&
+        current.workDate === candidate.workDate &&
+        current.exportSignature === candidate.exportSignature);
+    }
+    function isFinalPostWorkSnapshot(snapshot){
+      if(!snapshot || String(snapshot.workStatus || '').toLowerCase() !== 'ended') return false;
+      const current = currentPostWorkIdentity();
+      return !!(current && String(snapshot.workDate || '') === current.workDate);
+    }
+    function setPostWorkVerificationState(part, state, options={}){
+      const payload = options.payload || (hasEndedWorkdayForExport() ? buildDailyExportPayload() : null);
+      const current = ensurePostWorkVerificationForPayload(payload);
+      if(!current || (part !== 'sync' && part !== 'export')) return;
+      current[part] = ['idle','busy','ok','error'].includes(state) ? state : 'idle';
+      current[part + 'Message'] = String(options.message || '');
+      if(part === 'sync' && options.syncId) current.syncId = String(options.syncId);
+      current.updatedAt = Date.now();
+      postWorkVerification = current;
+      savePostWorkVerification();
+      updatePostWorkVerificationDom();
+    }
+    function syncPostWorkVerificationWithExportStatus(){
+      if(!hasEndedWorkdayForExport()) return;
+      const payload = buildDailyExportPayload();
+      const current = ensurePostWorkVerificationForPayload(payload);
+      if(!current || current.export === 'busy') return;
+      const status = normalizeDailyExportStatus(dailyExportStatus);
+      if(status.date !== String(payload.date || '') || status.signature !== dailyExportSignature(payload)) return;
+      if(status.status === 'confirmed' && status.verified === true && current.export !== 'ok'){
+        setPostWorkVerificationState('export', 'ok', { payload, message:'Eksport potwierdzony w Arkuszu.' });
+      } else if((status.status === 'pending' || (status.status === 'confirmed' && status.verified !== true)) && current.export !== 'error' && current.export !== 'ok'){
+        setPostWorkVerificationState('export', 'error', { payload, message:'Brak potwierdzenia danych w Arkuszu.' });
+      }
+    }
+    function expireStalePostWorkVerification(){
+      const current = normalizePostWorkVerification(postWorkVerification);
+      if(!current.updatedAt) return;
+      if(Date.now() - current.updatedAt < 120000) return;
+      let changed = false;
+      if(current.sync === 'busy'){
+        current.sync = 'error';
+        current.syncMessage = 'Nie udało się potwierdzić synchronizacji.';
+        changed = true;
+      }
+      if(current.export === 'busy'){
+        current.export = 'error';
+        current.exportMessage = 'Nie udało się potwierdzić eksportu dniówki.';
+        changed = true;
+      }
+      if(changed){
+        current.updatedAt = Date.now();
+        postWorkVerification = current;
+        savePostWorkVerification();
+      }
+    }
+    function updatePostWorkVerificationDom(){
+      const panel = document.getElementById('postWorkVerify');
+      if(!panel) return;
+      const current = normalizePostWorkVerification(postWorkVerification);
+      const syncEl = document.getElementById('postWorkVerifySync');
+      const exportEl = document.getElementById('postWorkVerifyExport');
+      const setCell = (el, state, message)=>{
+        if(!el) return;
+        el.classList.remove('state-idle','state-busy','state-ok','state-error');
+        el.classList.add('state-' + (['idle','busy','ok','error'].includes(state) ? state : 'idle'));
+        if(message) el.setAttribute('title', message);
+        else el.removeAttribute('title');
+      };
+      setCell(syncEl, current.sync, current.syncMessage || 'Synchronizacja: brak potwierdzenia.');
+      setCell(exportEl, current.export, current.exportMessage || 'Eksport dniówki: brak potwierdzenia.');
+    }
+    function renderPostWorkVerification(visible){
+      const panel = document.getElementById('postWorkVerify');
+      if(!panel) return;
+      panel.setAttribute('aria-hidden', visible ? 'false' : 'true');
+      if(visible){
+        ensureCurrentPostWorkVerification();
+        expireStalePostWorkVerification();
+        syncPostWorkVerificationWithExportStatus();
+      }
+      updatePostWorkVerificationDom();
     }
 
     // ===== pomocnicze =====
@@ -4941,6 +5177,7 @@
         const resultsExpanded = startWorkMinutes !== null && endWorkMinutes !== null && total > 0 && coinVisible;
         controls.classList.toggle('results-ended', resultsExpanded);
         controls.classList.toggle('results-no-breaks', resultsExpanded && getClosedBreakMinutes() <= 0);
+        renderPostWorkVerification(resultsExpanded);
       }
     }
 
@@ -6844,12 +7081,24 @@
     async function doExport(url, payloadOverride){
       const payload = payloadOverride || buildDailyExportPayload();
       markDailyExportAttempt(payload);
+      if(isCurrentPostWorkPayload(payload)){
+        setPostWorkVerificationState('export', 'busy', { payload, message:'Wysyłam i sprawdzam eksport dniówki.' });
+      }
       try{
         const response = await jsonpRequest(url, Object.assign({ action:'dailyExport' }, payload));
         if(!response || !response.ok) throw new Error(response && response.error ? response.error : 'dailyExport failed');
+        if(response.verified !== true) throw new Error(response && response.error ? response.error : 'dailyExport not verified');
         markDailyExportConfirmed(payload, response);
-        return true;
-      }catch(e){ return false; }
+        if(isCurrentPostWorkPayload(payload)){
+          setPostWorkVerificationState('export', 'ok', { payload, message:'Eksport dniówki potwierdzony w Arkuszu.' });
+        }
+        return response;
+      }catch(e){
+        if(isCurrentPostWorkPayload(payload)){
+          setPostWorkVerificationState('export', 'error', { payload, message:'Eksport dniówki nie został potwierdzony w Arkuszu.' });
+        }
+        return false;
+      }
     }
     async function retryPendingDailyExportIfNeeded(reason, options={}){
       if(!hasPendingDailyExport()) return true;
@@ -6878,7 +7127,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.2.4';
+      return el ? el.textContent.trim() : 'vGPT_6.3.0';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -6991,6 +7240,59 @@
         headers:{ 'Content-Type':'text/plain' },
         body: JSON.stringify({ action:'syncSave', pin:cfg.pin, snapshot })
       });
+    }
+    function waitMs(ms){
+      return new Promise(resolve=>setTimeout(resolve, ms));
+    }
+    async function verifySyncSnapshotOnServer(cfg, snapshot){
+      if(!cfg || !snapshot || !snapshot.syncId) return false;
+      const delays = [300, 900, 1700];
+      for(const delay of delays){
+        if(delay) await waitMs(delay);
+        try{
+          const loaded = await jsonpRequest(cfg.url, { action:'syncLoad', pin:cfg.pin, id:snapshot.syncId });
+          const remote = loaded && loaded.snapshot;
+          if(!loaded || !loaded.ok || !remote) continue;
+          if(String(remote.syncId || remote.id || '') !== String(snapshot.syncId)) continue;
+          if(String(remote.workDate || '') !== String(snapshot.workDate || '')) continue;
+          if(String(remote.workStatus || '').toLowerCase() !== String(snapshot.workStatus || '').toLowerCase()) continue;
+          if(comparableSnapshotState(remote) !== comparableSnapshotState(snapshot)) continue;
+          return true;
+        }catch(e){}
+      }
+      return false;
+    }
+    async function sendAndVerifySyncSnapshot(cfg, snapshot, keepalive){
+      const finalSync = isFinalPostWorkSnapshot(snapshot);
+      if(finalSync){
+        setPostWorkVerificationState('sync', 'busy', { syncId:snapshot.syncId, message:'Wysyłam i sprawdzam końcową synchronizację.' });
+      }
+      await sendSyncPayload(cfg, snapshot, keepalive);
+      if(finalSync){
+        const verified = await verifySyncSnapshotOnServer(cfg, snapshot);
+        if(!verified){
+          setPostWorkVerificationState('sync', 'error', { syncId:snapshot.syncId, message:'Końcowa synchronizacja nie została potwierdzona na serwerze.' });
+          throw new Error('sync verification failed');
+        }
+        setPostWorkVerificationState('sync', 'ok', { syncId:snapshot.syncId, message:'Końcowa synchronizacja potwierdzona na serwerze.' });
+      }
+      return true;
+    }
+    async function sendAndVerifySyncSnapshotWithFallback(cfg, snapshot, keepalive){
+      const finalSync = isFinalPostWorkSnapshot(snapshot);
+      if(finalSync){
+        setPostWorkVerificationState('sync', 'busy', { syncId:snapshot.syncId, message:'Wysyłam i sprawdzam końcową synchronizację.' });
+      }
+      await sendSyncPayload(cfg, snapshot, !!keepalive).catch(()=>sendSyncPayload(cfg, snapshot, false));
+      if(finalSync){
+        const verified = await verifySyncSnapshotOnServer(cfg, snapshot);
+        if(!verified){
+          setPostWorkVerificationState('sync', 'error', { syncId:snapshot.syncId, message:'Końcowa synchronizacja nie została potwierdzona na serwerze.' });
+          throw new Error('sync verification failed');
+        }
+        setPostWorkVerificationState('sync', 'ok', { syncId:snapshot.syncId, message:'Końcowa synchronizacja potwierdzona na serwerze.' });
+      }
+      return true;
     }
     let syncAudioCtx = null;
     const SYNC_SOUND_FILES = {
@@ -7331,7 +7633,7 @@
           return;
         }
         const snapshot = buildSyncSnapshot(cfg.device);
-        await sendSyncPayload(cfg, snapshot, false);
+        await sendAndVerifySyncSnapshot(cfg, snapshot, false);
         localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(snapshot.lastLocalChangeAt || Date.now()));
         markCloudSeen(snapshot);
         playSyncSuccessSound();
@@ -7723,7 +8025,7 @@
           return;
         }
         const snapshot = buildSyncSnapshot(cfg.device);
-        await sendSyncPayload(cfg, snapshot, !!keepalive).catch(()=>sendSyncPayload(cfg, snapshot, false));
+        await sendAndVerifySyncSnapshotWithFallback(cfg, snapshot, !!keepalive);
         localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(snapshot.lastLocalChangeAt || Date.now()));
         markCloudSeen(snapshot);
         playSyncSuccessSound();
@@ -7775,7 +8077,7 @@
           return;
         }
         const snapshot = buildSyncSnapshot(cfg.device);
-        await sendSyncPayload(cfg, snapshot, true).catch(()=>sendSyncPayload(cfg, snapshot, false));
+        await sendAndVerifySyncSnapshotWithFallback(cfg, snapshot, true);
         localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(snapshot.lastLocalChangeAt || Date.now()));
         markCloudSeen(snapshot);
         playSyncSuccessSound();
@@ -8170,6 +8472,19 @@
       }
       openMoneyPanel();
     });
+    const postWorkVerifyEl = document.getElementById('postWorkVerify');
+    if(postWorkVerifyEl){
+      ['pointerdown','pointerup'].forEach(type=>{
+        postWorkVerifyEl.addEventListener(type, (e)=>{
+          e.stopPropagation();
+        });
+      });
+      postWorkVerifyEl.addEventListener('click', (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        openWorkMenu();
+      });
+    }
     // === COIN === (też otwiera panel obrotów - to ten sam panel)
     document.getElementById('coinBtn').addEventListener('click', ()=>{
       if(shouldShowEyeReminder()){
@@ -8265,6 +8580,7 @@
 
     // ===== init =====
     loadState();
+    loadPostWorkVerification();
     initializeDailyExportStatus();
     initializeSyncTracking();
     if(startWorkMinutes!==null && endWorkMinutes===null){
