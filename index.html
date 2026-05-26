@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_6.1.11: based on a previously developed v:1.28 version created by another AI. -->
+  <!-- vGPT_6.1.12: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -330,7 +330,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_6.1.11: matches the size and baseline of the other top-row buttons. */
+      /* vGPT_6.1.12: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2985,7 +2985,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_6.1.11</div>
+  <div class="version">vGPT_6.1.12</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3024,6 +3024,7 @@
     let breakAdjustMinutes = 0;
     let workDate = null;
     let pendingEndWorkExport = false;
+    let dailyExportStatus = null;
     // Punkt 7: planowany cel pracy w minutach (domyślnie 8h = 480min)
     let workTargetMinutes = 480;
 
@@ -3087,7 +3088,7 @@
           startWorkMinutes, endWorkMinutes, lastExerciseMinutes, lastEyeExerciseMinutes,
           breakActive, currentBreakStart, breakSegments,
           exerciseMarkers, breakAdjustMinutes, workDate,
-          pendingEndWorkExport,
+          pendingEndWorkExport, dailyExportStatus,
           potDurationMin, potStartedAt, potAckedDone, potUsedToday,
           revenues, counterStart, counterEnd, privKmTotal,
           workTargetMinutes
@@ -3122,6 +3123,7 @@
           breakAdjustMinutes = s.breakAdjustMinutes || 0;
           workDate = s.workDate || null;
           pendingEndWorkExport = !!s.pendingEndWorkExport;
+          dailyExportStatus = s.dailyExportStatus ? normalizeDailyExportStatus(s.dailyExportStatus) : null;
           potDurationMin = s.potDurationMin ?? 20;
           potStartedAt = s.potStartedAt ?? null;
           potAckedDone = !!s.potAckedDone;
@@ -3161,7 +3163,7 @@
           startWorkMinutes, endWorkMinutes, lastExerciseMinutes, lastEyeExerciseMinutes,
           breakActive, currentBreakStart, breakSegments,
           exerciseMarkers, breakAdjustMinutes, workDate,
-          pendingEndWorkExport,
+          pendingEndWorkExport, dailyExportStatus,
           potDurationMin, potStartedAt, potAckedDone, potUsedToday,
           revenues, counterStart, counterEnd, privKmTotal,
           workTargetMinutes
@@ -3182,6 +3184,7 @@
       breakAdjustMinutes = s.breakAdjustMinutes || 0;
       workDate = s.workDate || null;
       pendingEndWorkExport = !!s.pendingEndWorkExport;
+      dailyExportStatus = s.dailyExportStatus ? normalizeDailyExportStatus(s.dailyExportStatus) : buildConfirmedDailyExportStatusForCurrentState();
       potDurationMin = s.potDurationMin ?? 20;
       potStartedAt = s.potStartedAt ?? null;
       potAckedDone = !!s.potAckedDone;
@@ -3205,6 +3208,106 @@
       const comparable = stableStringify(getCurrentComparableState());
       if(!localStorage.getItem(LS_SYNC_STATE_HASH)) localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
       if(!localStorage.getItem(LS_LAST_LOCAL_CHANGE_AT)) localStorage.setItem(LS_LAST_LOCAL_CHANGE_AT, '0');
+    }
+    function saveStateSilently(){
+      syncApplyInProgress = true;
+      try{ saveState(); }
+      finally{ syncApplyInProgress = false; }
+    }
+    function normalizeDailyExportStatus(value){
+      const s = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+      const status = s.status === 'pending' ? 'pending' : 'confirmed';
+      return {
+        status,
+        date:String(s.date || ''),
+        signature:String(s.signature || ''),
+        payload:(s.payload && typeof s.payload === 'object' && !Array.isArray(s.payload)) ? s.payload : null,
+        confirmedAt:Number(s.confirmedAt || 0),
+        lastAttemptAt:Number(s.lastAttemptAt || 0),
+        attempts:Number(s.attempts || 0),
+        sheet:String(s.sheet || ''),
+        row:Number(s.row || 0),
+        reason:String(s.reason || '')
+      };
+    }
+    function hasEndedWorkdayForExport(){
+      return startWorkMinutes !== null && endWorkMinutes !== null;
+    }
+    function dailyExportSignature(payload){
+      return stableStringify(payload || {});
+    }
+    function buildConfirmedDailyExportStatusForCurrentState(){
+      const payload = hasEndedWorkdayForExport() ? buildDailyExportPayload() : null;
+      return normalizeDailyExportStatus({
+        status:'confirmed',
+        date:payload ? String(payload.date || '') : '',
+        signature:payload ? dailyExportSignature(payload) : '',
+        payload,
+        confirmedAt:payload ? Date.now() : 0
+      });
+    }
+    function initializeDailyExportStatus(){
+      if(dailyExportStatus){
+        dailyExportStatus = normalizeDailyExportStatus(dailyExportStatus);
+        return;
+      }
+      dailyExportStatus = buildConfirmedDailyExportStatusForCurrentState();
+      saveStateSilently();
+    }
+    function setDailyExportPendingPayload(payload, reason){
+      if(!payload) return false;
+      const signature = dailyExportSignature(payload);
+      const current = normalizeDailyExportStatus(dailyExportStatus);
+      const samePending = current.status === 'pending' && current.signature === signature;
+      dailyExportStatus = normalizeDailyExportStatus({
+        status:'pending',
+        date:String(payload.date || ''),
+        signature,
+        payload,
+        attempts:samePending ? current.attempts : 0,
+        lastAttemptAt:current.lastAttemptAt || 0,
+        reason:reason || current.reason || 'pending'
+      });
+      return true;
+    }
+    function refreshDailyExportPendingFromCurrentState(){
+      if(!dailyExportStatus) initializeDailyExportStatus();
+      if(pendingEndWorkExport) return false;
+      if(!hasEndedWorkdayForExport()) return false;
+      const payload = buildDailyExportPayload();
+      const signature = dailyExportSignature(payload);
+      const current = normalizeDailyExportStatus(dailyExportStatus);
+      if(current.status !== 'confirmed' || current.date !== payload.date || current.signature !== signature){
+        setDailyExportPendingPayload(payload, 'ended_workday_changed');
+        saveState();
+        return true;
+      }
+      return false;
+    }
+    function hasPendingDailyExport(){
+      refreshDailyExportPendingFromCurrentState();
+      const current = normalizeDailyExportStatus(dailyExportStatus);
+      return current.status === 'pending' && !!current.payload;
+    }
+    function markDailyExportAttempt(payload){
+      setDailyExportPendingPayload(payload, 'attempt');
+      dailyExportStatus.lastAttemptAt = Date.now();
+      dailyExportStatus.attempts = Number(dailyExportStatus.attempts || 0) + 1;
+      saveState();
+    }
+    function markDailyExportConfirmed(payload, response){
+      dailyExportStatus = normalizeDailyExportStatus({
+        status:'confirmed',
+        date:String(payload && payload.date ? payload.date : ''),
+        signature:dailyExportSignature(payload),
+        payload,
+        confirmedAt:Date.now(),
+        lastAttemptAt:dailyExportStatus ? dailyExportStatus.lastAttemptAt : 0,
+        attempts:dailyExportStatus ? dailyExportStatus.attempts : 0,
+        sheet:response && response.sheet ? response.sheet : '',
+        row:response && response.row ? response.row : 0
+      });
+      saveState();
     }
 
     // ===== pomocnicze =====
@@ -6404,30 +6507,30 @@
       }
       const url=localStorage.getItem(LS_APPSCRIPT);
       if(counterEnd!==null) lastCounterEnd=counterEnd;
+      const payload = buildDailyExportPayload();
+      setDailyExportPendingPayload(payload, 'work_end_confirmed');
+      pendingEndWorkExport = false;
+      saveState();
       if(!url){
-        pendingEndWorkExport = true;
-        saveState();
         clearOverlayAutoSyncDirty();
         hideOverlay();
         renderAll();
-        showToast('Eksport wstrzymany. URL eksportu nie skonfigurowany.', 'err');
+        showToast('Eksport dniowki oczekuje. URL eksportu nie skonfigurowany.', 'err');
         return;
       }
       hideOverlay();
       renderAll();
       showToast('Eksport...','ok');
-      const ok=await doExport(url);
+      const ok=await doExport(url, payload);
       if(ok){
-        pendingEndWorkExport = false;
         showToast('Eksport OK. Dane pozostaja na ekranie.','ok');
         saveStateAndScheduleAutoSync('work_end_export');
         renderAll();
       } else {
-        pendingEndWorkExport = true;
         saveState();
         clearOverlayAutoSyncDirty();
         renderAll();
-        showToast('Eksport nieudany. Otworz obroty i zatwierdz ponownie.', 'err');
+        showToast('Eksport dniowki nieudany. Aplikacja bedzie ponawiac.', 'err');
       }
     }
     async function endWork(){
@@ -6491,39 +6594,57 @@
       renderAll();
     }
 
-    async function doExport(url){
-      try{
-        const km_total = (counterStart!==null && counterEnd!==null) ? (counterEnd-counterStart) : 0;
-        const km_zaw = Math.max(0, km_total - privKmTotal);
-        const net = getNetWorkMinutes();
-        const breakMinutes = getTotalBreakMinutes(true);
-        const exportWorkDate = workDate || todayISO();
-        const payload = {
-          date: exportWorkDate,
-          work_date: exportWorkDate,
-          export_date: todayISO(),
-          start: startWorkMinutes!==null?formatHHMM(startWorkMinutes):'',
-          end: endWorkMinutes!==null?formatHHMM(endWorkMinutes):'',
-          work_duration: minutesToHHMM(Math.max(0,net)),
-          work_minutes: Math.max(0,net),
-          break_duration: minutesToHHMM(breakMinutes),
-          break_minutes: breakMinutes,
-          counter_start: counterStart!==null?counterStart:'',
-          counter_end: counterEnd!==null?counterEnd:'',
-          km_priv: privKmTotal,
-          km_zaw: km_zaw
-        };
+    function buildDailyExportPayload(){
+      const km_total = (counterStart!==null && counterEnd!==null) ? (counterEnd-counterStart) : 0;
+      const km_zaw = Math.max(0, km_total - privKmTotal);
+      const net = getNetWorkMinutes();
+      const breakMinutes = getTotalBreakMinutes(true);
+      const exportWorkDate = workDate || todayISO();
+      const payload = {
+        date: exportWorkDate,
+        work_date: exportWorkDate,
+        export_date: todayISO(),
+        start: startWorkMinutes!==null?formatHHMM(startWorkMinutes):'',
+        end: endWorkMinutes!==null?formatHHMM(endWorkMinutes):'',
+        work_duration: minutesToHHMM(Math.max(0,net)),
+        work_minutes: Math.max(0,net),
+        break_duration: minutesToHHMM(breakMinutes),
+        break_minutes: breakMinutes,
+        counter_start: counterStart!==null?counterStart:'',
+        counter_end: counterEnd!==null?counterEnd:'',
+        km_priv: privKmTotal,
+        km_zaw: km_zaw
+      };
 
-        PROVIDERS.forEach(p => {
-          payload[p.key] = (revenues[p.key]||0)/100;
-        });
-        await fetch(url, {
-          method:'POST', mode:'no-cors',
-          headers:{ 'Content-Type':'text/plain' },
-          body: JSON.stringify(payload)
-        });
+      PROVIDERS.forEach(p => {
+        payload[p.key] = (revenues[p.key]||0)/100;
+      });
+      return payload;
+    }
+    async function doExport(url, payloadOverride){
+      const payload = payloadOverride || buildDailyExportPayload();
+      markDailyExportAttempt(payload);
+      try{
+        const response = await jsonpRequest(url, Object.assign({ action:'dailyExport' }, payload));
+        if(!response || !response.ok) throw new Error(response && response.error ? response.error : 'dailyExport failed');
+        markDailyExportConfirmed(payload, response);
         return true;
       }catch(e){ return false; }
+    }
+    async function retryPendingDailyExportIfNeeded(reason, options={}){
+      if(!hasPendingDailyExport()) return true;
+      const url = localStorage.getItem(LS_APPSCRIPT);
+      if(!url) return false;
+      if(options.notify) showToast('Wysylam zalegla dniowke...', 'ok');
+      const payload = normalizeDailyExportStatus(dailyExportStatus).payload;
+      const ok = await doExport(url, payload);
+      if(ok){
+        if(options.notify) showToast('Eksport dniowki OK.', 'ok');
+        if(options.scheduleSyncAfterSuccess && isAutoSyncEnabled()) scheduleAutoSyncUpload(reason || 'daily_export_confirmed');
+      } else if(options.notify){
+        showToast('Eksport dniowki nieudany.', 'err');
+      }
+      return ok;
     }
 
     function showToast(msg, kind='ok'){
@@ -6537,7 +6658,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.1.11';
+      return el ? el.textContent.trim() : 'vGPT_6.1.12';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -6847,7 +6968,7 @@
       if(pendingEndWorkExport) return;
       if(syncApplyInProgress) return;
       if(autoSyncIndicatorState === 'frozen' && !autoSyncFrozenAcknowledged) return;
-      if(!hasUnuploadedLocalChanges()) return;
+      if(!hasPendingDailyExport() && !hasUnuploadedLocalChanges()) return;
       const cfg = getAutoSyncConfig();
       if(!cfg) return;
       clearTimeout(autoSyncUploadTimer);
@@ -6980,10 +7101,16 @@
       const cfg = getSyncConfig(true);
       if(!cfg) return;
       setSyncMenuBusy('send', 'Wysyłam synchronizację...');
-      const snapshot = buildSyncSnapshot(cfg.device);
       showToast('Wysylam synchronizacje...', 'ok');
       playSyncStartedSound();
       try{
+        const exportOk = await retryPendingDailyExportIfNeeded('manual_sync', { notify:true });
+        if(!exportOk){
+          setAutoSyncIndicatorState('frozen', 'Eksport zakonczonej dniowki nie powiodl sie. Synchronizacja zostala wstrzymana, zeby nie oznaczac dnia jako zamknietego bez eksportu.');
+          showToast('Najpierw niech powiedzie sie eksport dniowki.', 'err');
+          return;
+        }
+        const snapshot = buildSyncSnapshot(cfg.device);
         await sendSyncPayload(cfg, snapshot, false);
         localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(snapshot.lastLocalChangeAt || Date.now()));
         markCloudSeen(snapshot);
@@ -6995,6 +7122,27 @@
       }catch(e){
         setAutoSyncIndicatorState('frozen');
         showToast('Synchronizacja nieudana.', 'err');
+      }finally{
+        clearSyncMenuBusy();
+      }
+    }
+    async function sendPendingDailyExportFromMenu(){
+      if(manualSyncBusy) return;
+      if(!hasPendingDailyExport()){
+        showToast('Brak zaleglej dniowki do wyslania.', 'ok');
+        openWorkMenu();
+        return;
+      }
+      setSyncMenuBusy('daily', 'Wysylam dniowke...');
+      try{
+        const ok = await retryPendingDailyExportIfNeeded('manual_daily_export', { notify:false, scheduleSyncAfterSuccess:true });
+        if(ok){
+          showToast('Eksport dniowki OK.', 'ok');
+          openWorkMenu();
+        } else {
+          setAutoSyncIndicatorState('frozen', 'Eksport zakonczonej dniowki nie powiodl sie. Sprobuj ponownie przy lepszym polaczeniu.');
+          showToast('Eksport dniowki nieudany.', 'err');
+        }
       }finally{
         clearSyncMenuBusy();
       }
@@ -7027,6 +7175,7 @@
     function openWorkMenu(){
       const frozenReason = autoSyncFrozenReason || '';
       autoSyncFrozenReason = '';
+      const dailyExportPending = hasPendingDailyExport();
       showOverlay(`
         <div class="big-panel">
           <h3>MENU START</h3>
@@ -7034,6 +7183,7 @@
           <div class="sync-menu">
             <button class="sync-menu-btn primary" type="button" data-sync-act="edit">Edytuj start / cel</button>
             <button class="sync-menu-btn ${isAutoSyncEnabled()?'primary':''}" type="button" data-sync-act="auto">Auto Sync: ${isAutoSyncEnabled()?'ON':'OFF'}</button>
+            ${dailyExportPending ? '<button class="sync-menu-btn warn" type="button" data-sync-act="daily">Wy&#347;lij dniówk&#281;</button>' : ''}
             <button class="sync-menu-btn" type="button" data-sync-act="send">Wy&#347;lij synchronizacj&#281;</button>
             <button class="sync-menu-btn" type="button" data-sync-act="load">Pobierz synchronizacj&#281;</button>
           </div>
@@ -7070,6 +7220,7 @@
           btn,
           ()=>{
             if(manualSyncBusy) return;
+            if(a === 'daily'){ sendPendingDailyExportFromMenu(); return; }
             if(a === 'send'){ sendSyncSnapshot(); return; }
             if(a === 'load'){ openSyncSnapshotList(); return; }
           },
@@ -7253,6 +7404,12 @@
       playSyncStartedSound();
       showToast('Sprawdzam synchronizacje...', 'ok');
       try{
+        const exportOk = await retryPendingDailyExportIfNeeded('auto_sync_foreground', { notify:false, scheduleSyncAfterSuccess:true });
+        if(!exportOk){
+          setAutoSyncIndicatorState('frozen', 'Eksport zakonczonej dniowki nie powiodl sie. Auto Sync sprobuje ponownie przy nastepnej okazji.');
+          showToast('Eksport dniowki nieudany.', 'err');
+          return;
+        }
         const list = await fetchSyncList(cfg);
         if(!list || !list.ok) throw new Error(list && list.error ? list.error : 'syncList failed');
         const candidate = findNewestOtherSnapshot(list.snapshots || [], cfg.deviceId);
@@ -7311,7 +7468,8 @@
       }
       const cfg = getAutoSyncConfig();
       if(!cfg) return;
-      if(!hasUnuploadedLocalChanges()){
+      const pendingDailyExportBeforeUpload = hasPendingDailyExport();
+      if(!pendingDailyExportBeforeUpload && !hasUnuploadedLocalChanges()){
         setAutoSyncIndicatorState('on');
         return;
       }
@@ -7338,6 +7496,12 @@
         } else if(list && !list.ok){
           throw new Error(list.error || 'syncList failed');
         }
+        const exportOk = await retryPendingDailyExportIfNeeded('auto_sync_upload', { notify:false });
+        if(!exportOk){
+          setAutoSyncIndicatorState('frozen', 'Eksport zakonczonej dniowki nie powiodl sie. Automatyczna synchronizacja zostala wstrzymana.');
+          showToast('Eksport dniowki nieudany.', 'err');
+          return;
+        }
         const snapshot = buildSyncSnapshot(cfg.device);
         await sendSyncPayload(cfg, snapshot, !!keepalive).catch(()=>sendSyncPayload(cfg, snapshot, false));
         localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(snapshot.lastLocalChangeAt || Date.now()));
@@ -7361,7 +7525,8 @@
       if(autoSyncBusy || !isAutoSyncEnabled()) return;
       const cfg = getAutoSyncConfig();
       if(!cfg) return;
-      if(!hasUnuploadedLocalChanges()) return;
+      const pendingDailyExportBeforeHideUpload = hasPendingDailyExport();
+      if(!pendingDailyExportBeforeHideUpload && !hasUnuploadedLocalChanges()) return;
       autoSyncBusy = true;
       playSyncStartedSound();
       try{
@@ -7382,6 +7547,12 @@
               return;
             }
           }
+        }
+        const exportOk = await retryPendingDailyExportIfNeeded('auto_sync_hide', { notify:false });
+        if(!exportOk){
+          setAutoSyncIndicatorState('frozen');
+          showToast('Eksport dniowki nieudany.', 'err');
+          return;
         }
         const snapshot = buildSyncSnapshot(cfg.device);
         await sendSyncPayload(cfg, snapshot, true).catch(()=>sendSyncPayload(cfg, snapshot, false));
@@ -7867,6 +8038,7 @@
 
     // ===== init =====
     loadState();
+    initializeDailyExportStatus();
     initializeSyncTracking();
     if(startWorkMinutes!==null && endWorkMinutes===null){
       document.getElementById('workBtn').classList.add('on');
