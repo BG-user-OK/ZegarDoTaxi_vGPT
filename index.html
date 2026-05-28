@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- vGPT_6.3.3: based on a previously developed v:1.28 version created by another AI. -->
+<!-- vGPT_6.4.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -337,7 +337,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-    /* vGPT_6.3.3: matches the size and baseline of the other top-row buttons. */
+    /* vGPT_6.4.0: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1540,9 +1540,9 @@
       text-shadow:0 0 3px rgba(255,255,255,.06),0 1px 0 rgba(0,0,0,.85);
     }
     .pot-split-part{
-      color:#252525;
-      opacity:.86;
-      text-shadow:0 0 3px rgba(255,255,255,.06),0 1px 0 rgba(0,0,0,.85);
+      color:#121212;
+      opacity:.34;
+      text-shadow:0 0 2px rgba(255,255,255,.025),0 1px 0 rgba(0,0,0,.9);
     }
     .pot-heat-time{
       --pot-lit:#31ff66;
@@ -1557,10 +1557,10 @@
       animation:potRadarTextReveal 2s linear infinite;
     }
     .pot-btn.pot-waiting .pot-sep{
-      animation-delay:.08s;
+      animation-delay:0s;
     }
     .pot-btn.pot-waiting .pot-wait-time{
-      animation-delay:.16s;
+      animation-delay:0s;
     }
     .pot-btn.pot-final .pot-counter-box{
       font-size:clamp(13px,3.8vw,26px);
@@ -1583,9 +1583,9 @@
         text-shadow:0 0 13px var(--pot-glow),0 0 24px var(--pot-glow),0 2px 0 rgba(0,0,0,.9);
       }
       75%,100%{
-        color:#252525;
-        opacity:.86;
-        text-shadow:0 0 3px rgba(255,255,255,.06),0 1px 0 rgba(0,0,0,.85);
+        color:#121212;
+        opacity:.34;
+        text-shadow:0 0 2px rgba(255,255,255,.025),0 1px 0 rgba(0,0,0,.9);
       }
     }
     /* Gdy brak obrazka - centralnie i większa czcionka */
@@ -1719,7 +1719,7 @@
 
     /* === Data w środku tarczy - na czarnym kole pod nią === */
     .date-center{
-      --date-main-size:clamp(20px,5.4vw,32px);
+      --date-main-size:clamp(22px,6.8vw,42px);
       position:absolute;
       top:50%; left:50%;
       transform:translate(-50%,-50%);
@@ -1760,7 +1760,7 @@
       text-shadow:0 1px 0 rgba(0,0,0,.55);
     }
     .date-center.has-work-end{
-      --date-main-size:clamp(18px,4.8vw,29px);
+      --date-main-size:clamp(19px,5.9vw,38px);
       font-size:var(--date-main-size);
     }
     .date-center.has-work-end .date-work-time{
@@ -1844,6 +1844,12 @@
       z-index:1000; padding:8px;
     }
     .overlay.show{ display:flex; }
+    .overlay.keypad-overlay{
+      align-items:flex-end;
+      justify-content:flex-end;
+      padding:10px;
+    }
+    .overlay.keypad-overlay.keypad-left{ justify-content:flex-start; }
 
     .editor{
       width:min(96vw, 520px);
@@ -2051,6 +2057,50 @@
       padding:6px 10px 10px;
       display:flex; flex-direction:column; gap:4px;
       position:relative;
+    }
+    .keypad-dock{
+      display:flex;
+      align-items:flex-end;
+      gap:7px;
+      max-width:calc(100vw - 20px);
+      max-height:calc(100vh - 20px);
+    }
+    .keypad-dock-right{ flex-direction:row; }
+    .keypad-dock-left{ flex-direction:row-reverse; }
+    .big-panel.keypad-panel{
+      width:min(66vw, 280px);
+      height:auto;
+      max-height:calc(100vh - 20px);
+      max-width:280px;
+      padding:6px;
+      gap:4px;
+      border-radius:14px;
+      overflow:hidden;
+    }
+    .big-panel.keypad-panel.keypad-with-help{
+      width:min(70vw, 320px);
+      max-width:320px;
+      overflow-y:auto;
+    }
+    .keypad-side-switch{
+      width:42px;
+      height:58px;
+      flex:0 0 42px;
+      margin-bottom:2px;
+      border:none;
+      border-radius:12px;
+      background:#111;
+      color:#d8d8d8;
+      font-size:25px;
+      font-weight:900;
+      line-height:1;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.09),0 0 16px rgba(0,0,0,.65);
+      touch-action:none;
+    }
+    .keypad-side-switch:active{
+      transform:scale(.96);
+      color:#fff;
+      box-shadow:inset 0 0 0 2px rgba(255,255,255,.32),0 0 18px rgba(255,255,255,.22);
     }
     .big-panel h3{
       margin:0 0 4px;
@@ -2536,6 +2586,9 @@
     .keypad{
       display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;
     }
+    .keypad-panel .keypad{
+      gap:4px;
+    }
     .keypad button{
       --key-bg:#1a1a1a;
       position:relative;
@@ -2546,6 +2599,12 @@
       padding:18px 0;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
       touch-action:none;
+    }
+    .keypad-panel .keypad button{
+      border-radius:9px;
+      font-size:20px;
+      padding:8px 0;
+      min-height:42px;
     }
     .keypad button > span{
       position:relative;
@@ -2599,6 +2658,12 @@
       font-variant-numeric:tabular-nums;
       letter-spacing:2px;
     }
+    .keypad-panel .keypad-display{
+      border-radius:10px;
+      padding:8px 10px;
+      font-size:clamp(26px, 8vw, 34px);
+      letter-spacing:1px;
+    }
     .keypad-display .underline{
       text-decoration:underline;
       text-decoration-color:#ffc48a;
@@ -2609,6 +2674,16 @@
       padding:0 8px;
       font-size:13px; color:#777;
       text-transform:uppercase; letter-spacing:.8px;
+    }
+    .keypad-panel .keypad-label{
+      padding:0 4px;
+      font-size:10px;
+      line-height:1.15;
+      letter-spacing:.45px;
+    }
+    .keypad-panel .keypad-live-preview{
+      font-size:12px !important;
+      padding:1px 0 2px !important;
     }
     .keypad-start-counter-help{
       flex:1;
@@ -2621,6 +2696,11 @@
       padding:12px 8px 6px;
       text-align:center;
     }
+    .keypad-panel .keypad-start-counter-help{
+      min-height:96px;
+      gap:6px;
+      padding:6px 4px 0;
+    }
     .keypad-start-counter-help-text{
       max-width:360px;
       color:#f2f2f2;
@@ -2631,12 +2711,21 @@
       letter-spacing:0;
       text-shadow:0 0 14px rgba(255,255,255,.24);
     }
+    .keypad-panel .keypad-start-counter-help-text{
+      max-width:100%;
+      font-size:clamp(13px, 3.2vw, 18px);
+      line-height:1.08;
+    }
     .keypad-start-counter-help img{
       width:min(50vw, 200px);
       height:auto;
       max-height:22vh;
       object-fit:contain;
       filter:drop-shadow(0 0 18px rgba(255,255,255,.18));
+    }
+    .keypad-panel .keypad-start-counter-help img{
+      width:min(34vw, 140px);
+      max-height:15vh;
     }
 
     .counter-fields{ display:flex; flex-direction:column; gap:8px; }
@@ -3206,7 +3295,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">vGPT_6.3.3</div>
+    <div class="version">vGPT_6.4.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3281,6 +3370,7 @@
     let keypadRaw = '';
     let keypadCounterDigits = [];
     let keypadCursorFromRight = 0;
+    let keypadSide = 'right';
 
     const cx=200, cy=200, radius=200;
     let blinkState = false;
@@ -3894,8 +3984,8 @@
       lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('dominant-baseline','central');
       lbl.setAttribute('fill','#fff'); lbl.setAttribute('font-size','30');
       lbl.setAttribute('font-weight','900'); lbl.setAttribute('font-family','inherit');
-      lbl.setAttribute('opacity','0.95');
-      lbl.style.filter = 'drop-shadow(0 0 5px rgba(255,255,255,.98)) drop-shadow(0 0 13px rgba(255,255,255,.76)) drop-shadow(0 0 22px rgba(185,220,255,.48))';
+      lbl.setAttribute('opacity','1');
+      lbl.style.filter = 'drop-shadow(0 0 7px rgba(255,255,255,1)) drop-shadow(0 0 16px rgba(255,255,255,.9)) drop-shadow(0 0 30px rgba(185,220,255,.72)) drop-shadow(0 0 42px rgba(180,255,200,.42))';
       lbl.textContent = pad(m);
       gMin.appendChild(lbl);
 
@@ -4971,6 +5061,27 @@
              '<span class="pot-split-part pot-sep">/</span>' +
              '<span class="pot-split-part pot-wait-time">' + waitText + '</span>';
     }
+    function ensurePotSplitParts(ctr){
+      let heat = ctr.querySelector('.pot-heat-time');
+      let sep = ctr.querySelector('.pot-sep');
+      let wait = ctr.querySelector('.pot-wait-time');
+      if(!heat || !sep || !wait){
+        ctr.innerHTML = '<span class="pot-split-part pot-heat-time"></span>' +
+                        '<span class="pot-split-part pot-sep">/</span>' +
+                        '<span class="pot-split-part pot-wait-time"></span>';
+        heat = ctr.querySelector('.pot-heat-time');
+        sep = ctr.querySelector('.pot-sep');
+        wait = ctr.querySelector('.pot-wait-time');
+      }
+      return {heat, sep, wait};
+    }
+    function updatePotSplitTime(ctr, final=false){
+      const waitText = final ? formatPotWaitingFinalTime(potWaitingElapsedSeconds()) : formatPotWaitingTime(potWaitingElapsedSeconds());
+      const parts = ensurePotSplitParts(ctr);
+      parts.heat.textContent = formatPotHeatingTime(potHeatingElapsedSeconds());
+      parts.sep.textContent = '/';
+      parts.wait.textContent = waitText;
+    }
     function startPotHeating(){
       potPhase = 'heating';
       potStartedAt = Date.now();
@@ -5029,14 +5140,14 @@
         if(bar) bar.style.height='0%';
         btn.classList.add('pot-waiting');
         ctr.setAttribute('data-show','1');
-        ctr.innerHTML = formatPotSplitTime(false);
+        updatePotSplitTime(ctr, false);
         return;
       }
       if(phase === 'done'){
         if(bar) bar.style.height='0%';
         btn.classList.add('pot-final');
         ctr.setAttribute('data-show','1');
-        ctr.innerHTML = formatPotSplitTime(true);
+        updatePotSplitTime(ctr, true);
         return;
       }
       // Gdy grzeje - zawsze pokaż licznik (data-show żeby CSS go pokazał)
@@ -5509,7 +5620,7 @@
 
       el.style.removeProperty('--date-main-size');
       const computedSize = parseFloat(getComputedStyle(mainLines[0]).fontSize) || 32;
-      const maxSize = Math.min(computedSize, el.classList.contains('has-work-end') ? 29 : 32);
+      const maxSize = Math.max(computedSize, el.classList.contains('has-work-end') ? 38 : 42);
       const minSize = 13;
       function fits(size){
         el.style.setProperty('--date-main-size', `${size}px`);
@@ -5599,8 +5710,19 @@
     ['pointerdown','pointerup','click','touchstart','touchend','mousedown','mouseup'].forEach(type=>{
       document.addEventListener(type, blockLockedViewTouch, true);
     });
-    function showOverlay(html){ delete overlay.dataset.lockClose; overlay.innerHTML=html; overlay.classList.add('show'); lockViewTouch(); }
-    function hideOverlay(){ delete overlay.dataset.lockClose; overlay.classList.remove('show'); overlay.innerHTML=''; lockViewTouch(); }
+    function showOverlay(html){
+      delete overlay.dataset.lockClose;
+      overlay.classList.remove('keypad-overlay','keypad-left','keypad-right');
+      overlay.innerHTML=html;
+      overlay.classList.add('show');
+      lockViewTouch();
+    }
+    function hideOverlay(){
+      delete overlay.dataset.lockClose;
+      overlay.classList.remove('show','keypad-overlay','keypad-left','keypad-right');
+      overlay.innerHTML='';
+      lockViewTouch();
+    }
     overlay.addEventListener('click',(e)=>{
       if(e.target!==overlay) return;
       if(overlay.dataset.lockClose === 'tomorrowPreview') return;
@@ -6206,6 +6328,7 @@
       keypadMode=mode;
       keypadContext=ctx;
       keypadRaw='';
+      keypadSide='right';
       if(mode==='counter'){
         let hint=ctx.hint;
         if(hint===null||hint===undefined) hint=0;
@@ -6237,8 +6360,13 @@
         // Kursor zawsze na ostatniej pozycji (idx=5)
         disp=keypadCounterDigits.map((d,i)=> i===5?`<span class="underline">${d}</span>`:String(d)).join('');
       }
+      const sideClass = keypadSide === 'left' ? 'keypad-left' : 'keypad-right';
+      const dockClass = keypadSide === 'left' ? 'keypad-dock-left' : 'keypad-dock-right';
+      const sideArrow = keypadSide === 'left' ? '›' : '‹';
       showOverlay(`
-        <div class="big-panel" style="max-width:420px;">
+        <div class="keypad-dock ${dockClass}">
+          <button class="keypad-side-switch" type="button" data-keypad-side-switch aria-label="Przełącz stronę klawiatury"><span>${sideArrow}</span></button>
+          <div class="big-panel keypad-panel ${startCounterAutoHelp?'keypad-with-help':''}">
           <div class="keypad-label">${lab}</div>
           <div class="keypad-display">${disp}</div>
           ${keypadMode==='counter' && keypadContext.field==='end'
@@ -6259,8 +6387,23 @@
                 <img src="Photos/licznik.png" alt="Licznik" />
               </div>`
             : ''}
+          </div>
         </div>
       `);
+      overlay.classList.add('keypad-overlay', sideClass);
+      const sideSwitch = overlay.querySelector('[data-keypad-side-switch]');
+      if(sideSwitch){
+        sideSwitch.addEventListener('pointerdown',(e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          keypadSide = keypadSide === 'left' ? 'right' : 'left';
+          renderKeypad();
+        });
+        sideSwitch.addEventListener('click',(e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+        });
+      }
       overlay.querySelectorAll('[data-k]').forEach(b=>{
         b.addEventListener('pointerdown',(e)=>{
           e.preventDefault();
@@ -7180,7 +7323,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.3.3';
+      return el ? el.textContent.trim() : 'vGPT_6.4.0';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
