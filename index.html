@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-  <!-- vGPT_6.3.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- vGPT_6.3.3: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -300,6 +300,13 @@
         0 0 16px rgba(255,255,255,.6),
         0 0 24px rgba(180,255,200,.4);
     }
+    .number.preview{
+      color:rgba(255,255,255,.58);
+      text-shadow:
+        0 0 4px rgba(255,255,255,.42),
+        0 0 9px rgba(255,255,255,.26),
+        0 0 14px rgba(180,255,200,.16);
+    }
 
     .controls{
       width:min(96vw, 620px);
@@ -330,7 +337,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-      /* vGPT_6.3.1: matches the size and baseline of the other top-row buttons. */
+    /* vGPT_6.3.3: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1712,12 +1719,13 @@
 
     /* === Data w środku tarczy - na czarnym kole pod nią === */
     .date-center{
+      --date-main-size:clamp(20px,5.4vw,32px);
       position:absolute;
       top:50%; left:50%;
       transform:translate(-50%,-50%);
       z-index:20;
       text-align:center; pointer-events:none;
-      font-size:clamp(20px,5.4vw,32px);
+      font-size:var(--date-main-size);
       font-weight:800;
       color:var(--dial-number);
       line-height:1.05;
@@ -1740,6 +1748,7 @@
     }
     .date-day,
     .date-value{
+      font-size:var(--date-main-size);
       line-height:1.05;
     }
     .date-work-time{
@@ -1751,7 +1760,8 @@
       text-shadow:0 1px 0 rgba(0,0,0,.55);
     }
     .date-center.has-work-end{
-      font-size:clamp(18px,4.8vw,29px);
+      --date-main-size:clamp(18px,4.8vw,29px);
+      font-size:var(--date-main-size);
     }
     .date-center.has-work-end .date-work-time{
       font-size:clamp(15px,3.9vw,21px);
@@ -3196,7 +3206,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-  <div class="version">vGPT_6.3.1</div>
+    <div class="version">vGPT_6.3.3</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3877,7 +3887,7 @@
       // Pozycja zależy od kierunku wskazówki godzinowej, a treść od aktualnej minuty.
       const mRad = (minDeg - 90) * Math.PI / 180;
       // Etykieta minut na zewnątrz
-      const lblR = radius + 10;
+      const lblR = radius + 18;
       const lblX = cx + Math.cos(mRad) * lblR, lblY = cy + Math.sin(mRad) * lblR;
       const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
       lbl.setAttribute('x', lblX.toFixed(2)); lbl.setAttribute('y', lblY.toFixed(2));
@@ -3897,18 +3907,19 @@
       const labelCurrent = hourLabel24(h);
       const labelNext = hourLabel24(hNext24);
       let activeHours = [];
-      if(m < 30)       activeHours = [{pos:hh12, label:labelCurrent}];
-      else if(m < 55)  activeHours = [{pos:hh12, label:labelCurrent},{pos:nextHh, label:labelNext}];
-      else             activeHours = [{pos:nextHh, label:labelNext}];
+      if(m < 30)       activeHours = [{pos:hh12, label:labelCurrent, type:'active'}];
+      else if(m < 55)  activeHours = [{pos:hh12, label:labelCurrent, type:'active'},{pos:nextHh, label:labelNext, type:'preview'}];
+      else             activeHours = [{pos:nextHh, label:labelNext, type:'active'}];
       const activePosMap = {};
-      for(const a of activeHours) activePosMap[a.pos] = a.label;
+      for(const a of activeHours) activePosMap[a.pos] = a;
       document.querySelectorAll('.number').forEach(el => {
         const hourVal = parseInt(el.dataset.hour, 10);
-        if(activePosMap[hourVal] !== undefined){
-          el.classList.add('active');
-          el.textContent = activePosMap[hourVal];
+        const state = activePosMap[hourVal];
+        el.classList.remove('active','preview');
+        if(state !== undefined){
+          el.classList.add(state.type);
+          el.textContent = state.label;
         } else {
-          el.classList.remove('active');
           el.textContent = String(hourVal);
         }
       });
@@ -5478,6 +5489,47 @@
     }
 
     // === Data pod zegarem ===
+    let dateCenterFitSignature = '';
+    function fitDateCenterText(el){
+      if(!el || !el.isConnected) return;
+      const mainLines = Array.from(el.querySelectorAll('.date-day, .date-value'));
+      if(!mainLines.length) return;
+      const boxW = el.clientWidth;
+      const boxH = el.clientHeight;
+      if(!boxW || !boxH) return;
+      const signature = [
+        boxW,
+        boxH,
+        el.className,
+        mainLines.map(line => line.textContent).join('|'),
+        Array.from(el.querySelectorAll('.date-work-time')).map(line => line.textContent).join('|')
+      ].join('::');
+      if(signature === dateCenterFitSignature) return;
+      dateCenterFitSignature = signature;
+
+      el.style.removeProperty('--date-main-size');
+      const computedSize = parseFloat(getComputedStyle(mainLines[0]).fontSize) || 32;
+      const maxSize = Math.min(computedSize, el.classList.contains('has-work-end') ? 29 : 32);
+      const minSize = 13;
+      function fits(size){
+        el.style.setProperty('--date-main-size', `${size}px`);
+        const widthOk = mainLines.every(line => line.scrollWidth <= line.clientWidth + 0.5);
+        const heightOk = el.scrollHeight <= el.clientHeight + 0.5;
+        return widthOk && heightOk;
+      }
+      let lo = minSize;
+      let hi = maxSize;
+      for(let i=0; i<10; i++){
+        const mid = (lo + hi) / 2;
+        if(fits(mid)) lo = mid;
+        else hi = mid;
+      }
+      el.style.setProperty('--date-main-size', `${Math.max(minSize, Math.floor(lo * 10) / 10)}px`);
+    }
+    function scheduleDateCenterFit(el){
+      requestAnimationFrame(() => fitDateCenterText(el));
+    }
+
     function renderDate(){
       const el = document.getElementById('dateCenterEl');
       if(!el) return;
@@ -5497,6 +5549,7 @@
         `<div class="date-line date-day">${days[d.getDay()]}</div>` +
         `<div class="date-line date-value">${d.getDate()} ${months[d.getMonth()]}</div>` +
         `${endLine}`;
+      scheduleDateCenterFit(el);
     }
 
     // === Bateria w prawym górnym rogu ===
@@ -6983,7 +7036,7 @@
       const ok=await doExport(url, payload);
       if(ok){
         showToast('Eksport OK. Dane pozostaja na ekranie.','ok');
-        saveStateAndScheduleAutoSync('work_end_export');
+        scheduleAutoSyncUpload('end_work_final_sync');
         renderAll();
       } else {
         saveState();
@@ -7127,7 +7180,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.3.1';
+      return el ? el.textContent.trim() : 'vGPT_6.3.3';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
