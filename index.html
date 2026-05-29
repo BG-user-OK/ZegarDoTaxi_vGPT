@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- vGPT_6.4.5: based on a previously developed v:1.28 version created by another AI. -->
+<!-- vGPT_6.4.6: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -341,7 +341,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-    /* vGPT_6.4.5: matches the size and baseline of the other top-row buttons. */
+    /* vGPT_6.4.6: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1562,13 +1562,16 @@
       --pot-glow:rgba(255,32,32,.92);
     }
     .pot-btn.pot-waiting .pot-split-part{
+      display:inline-flex;
+      align-items:baseline;
+    }
+    .pot-btn.pot-waiting .pot-char{
+      display:inline-block;
+      color:#121212;
+      opacity:.34;
+      text-shadow:0 0 2px rgba(255,255,255,.025),0 1px 0 rgba(0,0,0,.9);
       animation:potRadarTextReveal 2s linear infinite;
-    }
-    .pot-btn.pot-waiting .pot-sep{
-      animation-delay:0s;
-    }
-    .pot-btn.pot-waiting .pot-wait-time{
-      animation-delay:0s;
+      animation-delay:var(--pot-char-delay,0s);
     }
     .pot-btn.pot-final .pot-counter-box{
       font-size:clamp(13px,3.8vw,26px);
@@ -3322,7 +3325,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">vGPT_6.4.5</div>
+    <div class="version">vGPT_6.4.6</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -5160,12 +5163,39 @@
       }
       return {heat, sep, wait};
     }
+    function setPotSplitText(part, text, charOffset=0, animate=false){
+      const value = String(text ?? '');
+      if(!animate){
+        part.textContent = value;
+        return;
+      }
+      const chars = Array.from(value);
+      let spans = Array.from(part.querySelectorAll('.pot-char'));
+      if(spans.length !== chars.length){
+        part.textContent = '';
+        spans = chars.map(() => {
+          const span = document.createElement('span');
+          span.className = 'pot-char';
+          part.appendChild(span);
+          return span;
+        });
+      }
+      spans.forEach((span, i) => {
+        const delay = ((charOffset + i) * 0.07).toFixed(3) + 's';
+        if(span.textContent !== chars[i]) span.textContent = chars[i];
+        if(span.style.getPropertyValue('--pot-char-delay') !== delay){
+          span.style.setProperty('--pot-char-delay', delay);
+        }
+      });
+    }
     function updatePotSplitTime(ctr, final=false){
       const waitText = final ? formatPotWaitingFinalTime(potWaitingElapsedSeconds()) : formatPotWaitingTime(potWaitingElapsedSeconds());
       const parts = ensurePotSplitParts(ctr);
-      parts.heat.textContent = formatPotHeatingTime(potHeatingElapsedSeconds());
-      parts.sep.textContent = '/';
-      parts.wait.textContent = waitText;
+      const heatText = formatPotHeatingTime(potHeatingElapsedSeconds());
+      const animate = !final && getPotPhase() === 'waiting';
+      setPotSplitText(parts.heat, heatText, 0, animate);
+      setPotSplitText(parts.sep, '/', heatText.length, animate);
+      setPotSplitText(parts.wait, waitText, heatText.length + 1, animate);
     }
     function startPotHeating(){
       potPhase = 'heating';
@@ -7436,7 +7466,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.4.5';
+      return el ? el.textContent.trim() : 'vGPT_6.4.6';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
