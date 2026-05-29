@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- vGPT_6.4.4: based on a previously developed v:1.28 version created by another AI. -->
+<!-- vGPT_6.4.5: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -341,7 +341,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-    /* vGPT_6.4.4: matches the size and baseline of the other top-row buttons. */
+    /* vGPT_6.4.5: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -3322,7 +3322,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">vGPT_6.4.4</div>
+    <div class="version">vGPT_6.4.5</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3919,12 +3919,12 @@
       const led=document.createElementNS('http://www.w3.org/2000/svg','line');
       led.setAttribute('x1',x1); led.setAttribute('y1',y1); led.setAttribute('x2',x2); led.setAttribute('y2',y2);
       led.setAttribute('stroke','#ffd21f');
-      led.setAttribute('stroke-width', urgent ? '2.4' : '1.6');
+      led.setAttribute('stroke-width', urgent ? '1.15' : '0.75');
       led.setAttribute('stroke-linecap','butt');
       led.style.filter = urgent
-        ? 'drop-shadow(0 0 4px rgba(255,224,46,.98)) drop-shadow(0 0 11px rgba(255,190,0,.82))'
-        : 'drop-shadow(0 0 3px rgba(255,224,46,.72)) drop-shadow(0 0 7px rgba(255,190,0,.45))';
-      applyBarrierBlink(led, urgent ? 1 : .78, urgent ? .12 : .04);
+        ? 'drop-shadow(0 0 2px rgba(255,224,46,.88)) drop-shadow(0 0 5px rgba(255,190,0,.42))'
+        : 'drop-shadow(0 0 1.6px rgba(255,224,46,.58)) drop-shadow(0 0 3.5px rgba(255,190,0,.24))';
+      applyBarrierBlink(led, urgent ? .92 : .56, urgent ? .08 : .02);
       g.appendChild(led);
 
       const len=Math.hypot(x2-x1,y2-y1);
@@ -7436,7 +7436,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.4.4';
+      return el ? el.textContent.trim() : 'vGPT_6.4.5';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
