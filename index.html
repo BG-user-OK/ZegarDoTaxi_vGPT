@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- vGPT_6.4.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- vGPT_6.4.4: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -307,6 +307,10 @@
         0 0 9px rgba(255,255,255,.26),
         0 0 14px rgba(180,255,200,.16);
     }
+    @keyframes barrierLightBlink{
+      0%,49.99%{ opacity:var(--barrier-light-on, .95); }
+      50%,100%{ opacity:var(--barrier-light-off, .1); }
+    }
 
     .controls{
       width:min(96vw, 620px);
@@ -337,7 +341,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-    /* vGPT_6.4.0: matches the size and baseline of the other top-row buttons. */
+    /* vGPT_6.4.4: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -1445,6 +1449,10 @@
     .break-bot-zone{ bottom:0; }
     /* Tło miga między szarym a żółtym - tylko gdy klasa .blink-bg jest aktywna */
     .break-btn.on{ background:transparent; }
+    .break-btn.on.dimmed-during-break{
+      opacity:1;
+      filter:none;
+    }
     .break-btn.on.blink-bg{
       background:#ffe84d;
       box-shadow:none;
@@ -2065,6 +2073,9 @@
       max-width:calc(100vw - 20px);
       max-height:calc(100vh - 20px);
     }
+    .keypad-dock.amount-keypad-dock{
+      align-items:flex-start;
+    }
     .keypad-dock-right{ flex-direction:row; }
     .keypad-dock-left{ flex-direction:row-reverse; }
     .big-panel.keypad-panel{
@@ -2076,6 +2087,9 @@
       gap:4px;
       border-radius:14px;
       overflow:hidden;
+    }
+    .big-panel.keypad-panel.amount-keypad-panel{
+      min-height:min(54vh, 440px);
     }
     .big-panel.keypad-panel.keypad-with-help{
       width:min(70vw, 320px);
@@ -2096,6 +2110,10 @@
       line-height:1;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.09),0 0 16px rgba(0,0,0,.65);
       touch-action:none;
+    }
+    .amount-keypad-dock .keypad-side-switch{
+      margin-top:30px;
+      margin-bottom:0;
     }
     .keypad-side-switch:active{
       transform:scale(.96);
@@ -2589,6 +2607,9 @@
     .keypad-panel .keypad{
       gap:4px;
     }
+    .amount-keypad-panel .keypad{
+      min-height:min(38vh, 320px);
+    }
     .keypad button{
       --key-bg:#1a1a1a;
       position:relative;
@@ -2605,6 +2626,11 @@
       font-size:20px;
       padding:8px 0;
       min-height:42px;
+    }
+    .amount-keypad-panel .keypad button{
+      font-size:22px;
+      padding:12px 0;
+      min-height:clamp(52px, 7.4vh, 70px);
     }
     .keypad button > span{
       position:relative;
@@ -2647,6 +2673,7 @@
         0 0 6px rgba(255,255,255,.7) !important;
     }
     .keypad .key-back{ --key-bg:#2a1e0e; background:var(--key-bg); color:#ffc48a; }
+    .keypad .key-minus{ --key-bg:#171717; background:var(--key-bg); color:#ff6d6d; }
     .keypad .key-ok{ --key-bg:linear-gradient(180deg,var(--ok),var(--ok-dark)); background:var(--key-bg); }
     .keypad .key-cancel{ --key-bg:linear-gradient(180deg,var(--red),var(--red-dark)); background:var(--key-bg); }
 
@@ -3295,7 +3322,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">vGPT_6.4.0</div>
+    <div class="version">vGPT_6.4.4</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3368,6 +3395,7 @@
     let keypadMode = null;
     let keypadContext = null;
     let keypadRaw = '';
+    let keypadAmountNegative = false;
     let keypadCounterDigits = [];
     let keypadCursorFromRight = 0;
     let keypadSide = 'right';
@@ -3863,8 +3891,16 @@
       if(dash) l.setAttribute('stroke-dasharray',dash);
       return l;
     }
-    function svgBarrierLine(x1,y1,x2,y2){
+    function svgBarrierLine(x1,y1,x2,y2, urgent=false){
       const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+      const cycleMs = urgent ? 1000 : 2000;
+      const delaySec = -((Date.now() % cycleMs) / 1000);
+      function applyBarrierBlink(el, onOpacity, offOpacity){
+        el.style.animation = `barrierLightBlink ${urgent ? 1 : 2}s steps(1,end) infinite`;
+        el.style.animationDelay = `${delaySec.toFixed(3)}s`;
+        el.style.setProperty('--barrier-light-on', String(onOpacity));
+        el.style.setProperty('--barrier-light-off', String(offOpacity));
+      }
       const base=document.createElementNS('http://www.w3.org/2000/svg','line');
       base.setAttribute('x1',x1); base.setAttribute('y1',y1); base.setAttribute('x2',x2); base.setAttribute('y2',y2);
       base.setAttribute('stroke','#f5f1e8');
@@ -3880,6 +3916,51 @@
       stripe.setAttribute('opacity','0.98');
       g.appendChild(base);
       g.appendChild(stripe);
+      const led=document.createElementNS('http://www.w3.org/2000/svg','line');
+      led.setAttribute('x1',x1); led.setAttribute('y1',y1); led.setAttribute('x2',x2); led.setAttribute('y2',y2);
+      led.setAttribute('stroke','#ffd21f');
+      led.setAttribute('stroke-width', urgent ? '2.4' : '1.6');
+      led.setAttribute('stroke-linecap','butt');
+      led.style.filter = urgent
+        ? 'drop-shadow(0 0 4px rgba(255,224,46,.98)) drop-shadow(0 0 11px rgba(255,190,0,.82))'
+        : 'drop-shadow(0 0 3px rgba(255,224,46,.72)) drop-shadow(0 0 7px rgba(255,190,0,.45))';
+      applyBarrierBlink(led, urgent ? 1 : .78, urgent ? .12 : .04);
+      g.appendChild(led);
+
+      const len=Math.hypot(x2-x1,y2-y1);
+      const ux=len ? (x2-x1)/len : 0;
+      const uy=len ? (y2-y1)/len : 0;
+      function addBarrierLamp(dist, fill, glow, onOpacity){
+        if(dist<4 || dist>len-4) return;
+        const lamp=document.createElementNS('http://www.w3.org/2000/svg','circle');
+        lamp.setAttribute('cx',(x1+ux*dist).toFixed(2));
+        lamp.setAttribute('cy',(y1+uy*dist).toFixed(2));
+        lamp.setAttribute('r', urgent ? '2.45' : '1.85');
+        lamp.setAttribute('fill',fill);
+        lamp.style.filter = glow;
+        applyBarrierBlink(lamp, onOpacity, urgent ? .12 : .05);
+        g.appendChild(lamp);
+      }
+      for(let d=7; d<len; d+=24){
+        addBarrierLamp(
+          d,
+          '#ffffff',
+          urgent
+            ? 'drop-shadow(0 0 4px rgba(255,255,255,1)) drop-shadow(0 0 10px rgba(255,255,255,.82))'
+            : 'drop-shadow(0 0 3px rgba(255,255,255,.75)) drop-shadow(0 0 7px rgba(255,255,255,.42))',
+          urgent ? 1 : .88
+        );
+      }
+      for(let d=19; d<len; d+=24){
+        addBarrierLamp(
+          d,
+          '#ff2424',
+          urgent
+            ? 'drop-shadow(0 0 4px rgba(255,38,38,1)) drop-shadow(0 0 10px rgba(255,0,0,.85))'
+            : 'drop-shadow(0 0 3px rgba(255,38,38,.78)) drop-shadow(0 0 7px rgba(255,0,0,.45))',
+          urgent ? 1 : .9
+        );
+      }
       const angle=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
       const midX=(x1+x2)/2, midY=(y1+y2)/2;
       const sign=document.createElementNS('http://www.w3.org/2000/svg','g');
@@ -4375,7 +4456,11 @@
       const r1 = radius, r2 = 75;
       const fx1 = cx + Math.cos(fRad)*r1, fy1 = cy + Math.sin(fRad)*r1;
       const fx2 = cx + Math.cos(fRad)*r2, fy2 = cy + Math.sin(fRad)*r2;
-      g.appendChild(svgBarrierLine(fx1,fy1,fx2,fy2));
+      const now=effectiveNow();
+      const nowAbs=startWorkMinutes + diffMinutes(startWorkMinutes, now);
+      const minutesToTarget=end-nowAbs;
+      const urgent = minutesToTarget >= 0 && minutesToTarget < 60;
+      g.appendChild(svgBarrierLine(fx1,fy1,fx2,fy2, urgent));
     }
 
     // ===== przyciski =====
@@ -4422,7 +4507,7 @@
       const breakBtn=document.getElementById('breakBtn');
       // Punkt 10: obrazek "on/off" sterowany TYLKO przez breakActive (nie przez blinkState).
       // Klasa .on pokazuje obrazek przerwa.png; .blink-bg miga tłem żółto-szarym.
-      breakBtn.classList.remove('on','blink-bg');
+      breakBtn.classList.remove('on','blink-bg','dimmed-during-break');
       if(endWorkMinutes===null && breakActive){
         breakBtn.classList.add('on');                  // obrazek przerwa.png stale
         if(blinkState) breakBtn.classList.add('blink-bg');  // tło miga
@@ -6200,18 +6285,28 @@
 
     // ===== obroty =====
     function formatAmountDisplay(g){
-      const z=Math.floor(g/100), gg=g%100;
-      return `${z},${pad(gg)}`;
+      const sign = g < 0 ? '-' : '';
+      const abs = Math.abs(Math.trunc(g || 0));
+      const z=Math.floor(abs/100), gg=abs%100;
+      return `${sign}${z},${pad(gg)}`;
     }
     function formatProviderSumDisplay(g){
-      const z=Math.floor(g/100);
+      const z=Math.trunc((g || 0)/100);
       return String(z).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+    function keypadAmountValue(){
+      const raw = parseInt(keypadRaw || '0', 10);
+      return keypadAmountNegative ? -raw : raw;
+    }
+    function keypadAmountDisplay(){
+      const value = parseInt(keypadRaw || '0', 10);
+      return keypadAmountNegative ? '-' + formatAmountDisplay(value) : formatAmountDisplay(value);
     }
     function openMoneyPanel(){
       let rows='';
       const finalCounterMissing = counterEnd === null;
       const workHasStarted = startWorkMinutes !== null;
-      const filledProviderCount = PROVIDERS.reduce((count,p)=>count + ((revenues[p.key]||0)>0 ? 1 : 0), 0);
+      const filledProviderCount = PROVIDERS.reduce((count,p)=>count + ((revenues[p.key]||0)!==0 ? 1 : 0), 0);
       const providerTotal = getTotalRevenueGroszy();
       if(filledProviderCount > 1){
         rows += `
@@ -6228,8 +6323,8 @@
       }
       for(const p of PROVIDERS){
         const v=revenues[p.key]||0;
-        const filled = v > 0;
-        const disp=v>0?formatAmountDisplay(v):'—';
+        const filled = v !== 0;
+        const disp=filled?formatAmountDisplay(v):'—';
         const imgSrc = `Photos/${p.key}.png`;
         rows += `
           <div class="provider-row ${filled?'provider-filled':'provider-empty'}">
@@ -6286,7 +6381,7 @@
     }
     function handleProviderClick(key){
       const cur=revenues[key]||0;
-      if(cur>0){
+      if(cur!==0){
         const lab = PROVIDERS.find(p=>p.key===key).label;
         showOverlay(`
           <div class="big-panel" style="height:auto;max-width:440px;">
@@ -6328,6 +6423,7 @@
       keypadMode=mode;
       keypadContext=ctx;
       keypadRaw='';
+      keypadAmountNegative=false;
       keypadSide='right';
       if(mode==='counter'){
         let hint=ctx.hint;
@@ -6354,19 +6450,19 @@
       if(keypadMode==='amount'){
         const p=PROVIDERS.find(x=>x.key===keypadContext.provider);
         lab=`Kwota: ${p.label}${keypadContext.addMode?' (dodaj)':''}`;
-        disp=formatAmountDisplay(parseInt(keypadRaw||'0',10));
+        disp=keypadAmountDisplay();
       } else if(keypadMode==='counter'){
         lab=keypadContext.label||'Licznik';
         // Kursor zawsze na ostatniej pozycji (idx=5)
         disp=keypadCounterDigits.map((d,i)=> i===5?`<span class="underline">${d}</span>`:String(d)).join('');
       }
       const sideClass = keypadSide === 'left' ? 'keypad-left' : 'keypad-right';
-      const dockClass = keypadSide === 'left' ? 'keypad-dock-left' : 'keypad-dock-right';
+      const dockClass = (keypadSide === 'left' ? 'keypad-dock-left' : 'keypad-dock-right') + (keypadMode==='amount' ? ' amount-keypad-dock' : '');
       const sideArrow = keypadSide === 'left' ? '›' : '‹';
       showOverlay(`
         <div class="keypad-dock ${dockClass}">
           <button class="keypad-side-switch" type="button" data-keypad-side-switch aria-label="Przełącz stronę klawiatury"><span>${sideArrow}</span></button>
-          <div class="big-panel keypad-panel ${startCounterAutoHelp?'keypad-with-help':''}">
+          <div class="big-panel keypad-panel ${keypadMode==='amount'?'amount-keypad-panel':''} ${startCounterAutoHelp?'keypad-with-help':''}">
           <div class="keypad-label">${lab}</div>
           <div class="keypad-display">${disp}</div>
           ${keypadMode==='counter' && keypadContext.field==='end'
@@ -6391,6 +6487,17 @@
         </div>
       `);
       overlay.classList.add('keypad-overlay', sideClass);
+      if(keypadMode==='amount'){
+        const keyBack = overlay.querySelector('[data-k="back"]');
+        if(keyBack && keyBack.parentElement){
+          keyBack.style.gridColumn = 'span 2';
+          const minus = document.createElement('button');
+          minus.className = 'key-minus';
+          minus.dataset.k = 'minus';
+          minus.innerHTML = '<span>-</span>';
+          keyBack.parentElement.insertBefore(minus, keyBack);
+        }
+      }
       const sideSwitch = overlay.querySelector('[data-keypad-side-switch]');
       if(sideSwitch){
         sideSwitch.addEventListener('pointerdown',(e)=>{
@@ -6428,7 +6535,7 @@
       const display = overlay.querySelector('.keypad-display');
       if(!display) return;
       if(keypadMode==='amount'){
-        display.innerHTML = formatAmountDisplay(parseInt(keypadRaw||'0',10));
+        display.innerHTML = keypadAmountDisplay();
       } else if(keypadMode==='counter'){
         display.innerHTML = keypadCounterDigits.map((d,i)=> i===5?`<span class="underline">${d}</span>`:String(d)).join('');
         const live = overlay.querySelector('.keypad-live-preview');
@@ -6450,7 +6557,8 @@
       if(k==='ok'){ commitKeypad(); return; }
       if(k==='back'){
         if(keypadMode==='amount'){
-          keypadRaw=keypadRaw.slice(0,-1);
+          if(keypadRaw.length>0) keypadRaw=keypadRaw.slice(0,-1);
+          else keypadAmountNegative=false;
         } else if(keypadMode==='counter'){
           // cofnij ostatnio wpisaną cyfrę: usuń z entered, odbuduj displej z hint + entered
           if(keypadContext.entered.length > 0){
@@ -6459,6 +6567,11 @@
           }
         }
         updateKeypadDisplay(); return;
+      }
+      if(k==='minus' && keypadMode==='amount'){
+        keypadAmountNegative=!keypadAmountNegative;
+        updateKeypadDisplay();
+        return;
       }
       if(/^[0-9]$/.test(k)){
         if(keypadMode==='amount'){
@@ -6493,11 +6606,11 @@
     }
     function commitKeypad(){
       if(keypadMode==='amount'){
-        const g=parseInt(keypadRaw||'0',10);
+        const g=keypadAmountValue();
         const k=keypadContext.provider;
         if(k){
           if(keypadContext.addMode){
-            if(g>0) revenues[k]=(revenues[k]||0)+g;
+            if(g!==0) revenues[k]=(revenues[k]||0)+g;
           } else {
             revenues[k]=g;
           }
@@ -7107,7 +7220,7 @@
       syncWorkWakeLock();
     }
     function providerIncomeEntered(){
-      return PROVIDERS.some(p => (revenues[p.key] || 0) > 0);
+      return PROVIDERS.some(p => (revenues[p.key] || 0) !== 0);
     }
     function abortPendingEndWorkReview(){
       saveState();
@@ -7323,7 +7436,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.4.0';
+      return el ? el.textContent.trim() : 'vGPT_6.4.4';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
