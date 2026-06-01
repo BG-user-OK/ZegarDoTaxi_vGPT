@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- vGPT_6.4.6: based on a previously developed v:1.28 version created by another AI. -->
+<!-- vGPT_6.4.7: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -341,7 +341,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-    /* vGPT_6.4.6: matches the size and baseline of the other top-row buttons. */
+    /* vGPT_6.4.7: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2076,7 +2076,8 @@
       max-width:calc(100vw - 20px);
       max-height:calc(100vh - 20px);
     }
-    .keypad-dock.amount-keypad-dock{
+    .keypad-dock.amount-keypad-dock,
+    .keypad-dock.counter-keypad-dock{
       align-items:flex-start;
     }
     .keypad-dock-right{ flex-direction:row; }
@@ -2114,7 +2115,8 @@
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.09),0 0 16px rgba(0,0,0,.65);
       touch-action:none;
     }
-    .amount-keypad-dock .keypad-side-switch{
+    .amount-keypad-dock .keypad-side-switch,
+    .counter-keypad-dock .keypad-side-switch{
       margin-top:30px;
       margin-bottom:0;
     }
@@ -3325,7 +3327,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">vGPT_6.4.6</div>
+    <div class="version">vGPT_6.4.7</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3341,6 +3343,7 @@
     const LS_LAST_SEEN_CLOUD_CHANGE_AT = 'tarcza_last_seen_cloud_change_at';
     const LS_SYNC_STATE_HASH = 'tarcza_sync_state_hash';
     const LS_POST_WORK_VERIFY = 'tarcza_post_work_verify_v1';
+    const FINAL_BREAK_NO_WORK_THRESHOLD_MIN = 2;
 
     const PROVIDERS = [
       { key:'uber',    label:'UBER',    bg:'#000000', fg:'#ffffff' },
@@ -3508,6 +3511,8 @@
           recentNoteSymbols = Array.isArray(p.recentNoteSymbols) ? p.recentNoteSymbols.slice(0,50) : [];
           recentNoteTextBySymbol = (p.recentNoteTextBySymbol && typeof p.recentNoteTextBySymbol === 'object' && !Array.isArray(p.recentNoteTextBySymbol)) ? p.recentNoteTextBySymbol : {};
         }
+        const correction = applyFinalBreakCorrectionIfNoWorkAfterBreak({ notify:true });
+        if(correction) saveState();
       }catch(e){}
     }
 
@@ -3559,9 +3564,11 @@
       notes = Array.isArray(p.notes) ? p.notes : [];
       recentNoteSymbols = Array.isArray(p.recentNoteSymbols) ? p.recentNoteSymbols.slice(0,50) : [];
       recentNoteTextBySymbol = (p.recentNoteTextBySymbol && typeof p.recentNoteTextBySymbol === 'object' && !Array.isArray(p.recentNoteTextBySymbol)) ? p.recentNoteTextBySymbol : {};
+      const correction = applyFinalBreakCorrectionIfNoWorkAfterBreak({ notify:true });
       syncApplyInProgress = true;
       try{ saveState(); }
       finally{ syncApplyInProgress = false; }
+      return correction;
     }
     function initializeSyncTracking(){
       const comparable = stableStringify(getCurrentComparableState());
@@ -3832,6 +3839,36 @@
     function formatCompactSigned(m){ const s=m<0?'-':''; const a=Math.abs(m); const h=Math.floor(a/60), mm=a%60; return h<=0?s+String(mm):`${s}${h}:${pad(mm)}`; }
     function minutesToHHMM(m){ m=Math.max(0,m); return pad(Math.floor(m/60))+':'+pad(m%60); }
     function diffMinutes(f,t){ let d=t-f; if(d<0) d+=1440; return d; }
+    function applyFinalBreakCorrectionIfNoWorkAfterBreak(options={}){
+      if(startWorkMinutes===null || endWorkMinutes===null || !Array.isArray(breakSegments) || breakSegments.length===0) return null;
+      const lastIndex = breakSegments.length - 1;
+      const last = breakSegments[lastIndex];
+      if(!last || last.start===null || last.end===null || typeof last.start === 'undefined' || typeof last.end === 'undefined') return null;
+      const breakStart = Number(last.start);
+      const breakEnd = Number(last.end);
+      const workEnd = Number(endWorkMinutes);
+      if(!Number.isFinite(breakStart) || !Number.isFinite(breakEnd) || !Number.isFinite(workEnd)) return null;
+      const breakLength = diffMinutes(breakStart, breakEnd);
+      const workAfterBreak = diffMinutes(breakEnd, workEnd);
+      if(breakLength<=0 || workAfterBreak>FINAL_BREAK_NO_WORK_THRESHOLD_MIN) return null;
+      breakSegments = breakSegments.slice(0, lastIndex);
+      endWorkMinutes = breakStart;
+      breakActive = false;
+      currentBreakStart = null;
+      if(!pendingEndWorkExport && hasEndedWorkdayForExport()){
+        setDailyExportPendingPayload(buildDailyExportPayload(), 'final_break_auto_corrected');
+      }
+      if(options.notify){
+        showToast('Ostatnia przerwa potraktowana jako koniec pracy.', 'ok');
+      }
+      return {
+        removedBreak:{ start:breakStart, end:breakEnd },
+        previousEnd:workEnd,
+        newEnd:breakStart,
+        workAfterBreak,
+        threshold:FINAL_BREAK_NO_WORK_THRESHOLD_MIN
+      };
+    }
     function clock720(m){ return m%720; }
     function angleFromMinutes(m){ return (clock720(m)/720)*360 - 90; }
     function polarToCartesian(cX,cY,r,a){ const rad=a*Math.PI/180; return {x:cX+Math.cos(rad)*r, y:cY+Math.sin(rad)*r}; }
@@ -6487,7 +6524,8 @@
         disp=keypadCounterDigits.map((d,i)=> i===5?`<span class="underline">${d}</span>`:String(d)).join('');
       }
       const sideClass = keypadSide === 'left' ? 'keypad-left' : 'keypad-right';
-      const dockClass = (keypadSide === 'left' ? 'keypad-dock-left' : 'keypad-dock-right') + (keypadMode==='amount' ? ' amount-keypad-dock' : '');
+      const modeDockClass = keypadMode==='amount' ? ' amount-keypad-dock' : (keypadMode==='counter' ? ' counter-keypad-dock' : '');
+      const dockClass = (keypadSide === 'left' ? 'keypad-dock-left' : 'keypad-dock-right') + modeDockClass;
       const sideArrow = keypadSide === 'left' ? '›' : '‹';
       showOverlay(`
         <div class="keypad-dock ${dockClass}">
@@ -7297,6 +7335,8 @@
         closeOverlayToMain('money_panel');
         return;
       }
+      const correction = applyFinalBreakCorrectionIfNoWorkAfterBreak({ notify:true });
+      if(correction) saveState();
       if(counterEnd === null && providerIncomeEntered() && !allowMissingCounter){
         saveState();
         clearOverlayAutoSyncDirty();
@@ -7338,6 +7378,7 @@
       }
       breakActive=false; currentBreakStart=null;
       pendingEndWorkExport = true;
+      applyFinalBreakCorrectionIfNoWorkAfterBreak({ notify:true });
       document.getElementById('workBtn').classList.remove('on');
       // zapamiętaj końcowy licznik na jutro
       clearAutoSyncSchedule(false);
@@ -7466,7 +7507,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.4.6';
+      return el ? el.textContent.trim() : 'vGPT_6.4.7';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
