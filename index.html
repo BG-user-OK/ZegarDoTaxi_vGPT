@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- vGPT_6.5.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- vGPT_6.5.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -341,7 +341,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-    /* vGPT_6.5.0: matches the size and baseline of the other top-row buttons. */
+    /* vGPT_6.5.1: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -3330,7 +3330,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">vGPT_6.5.0</div>
+    <div class="version">vGPT_6.5.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -5172,16 +5172,12 @@
       return String(Math.max(0, Math.floor((seconds || 0) / 60)));
     }
     function formatPotWaitingTime(seconds){
-      const sec = Math.max(0, Math.floor(seconds || 0));
-      if(sec < 3600){
-        return Math.floor(sec / 60) + ':' + pad(sec % 60);
-      }
-      return Math.floor(sec / 3600) + ':' + pad(Math.floor((sec % 3600) / 60));
+      const totalMinutes = Math.max(0, Math.floor((seconds || 0) / 60));
+      if(totalMinutes < 60) return ':' + pad(totalMinutes);
+      return Math.floor(totalMinutes / 60) + ':' + pad(totalMinutes % 60);
     }
     function formatPotWaitingFinalTime(seconds){
-      const totalMinutes = Math.max(0, Math.floor((seconds || 0) / 60));
-      if(totalMinutes < 60) return String(totalMinutes);
-      return Math.floor(totalMinutes / 60) + ':' + pad(totalMinutes % 60);
+      return formatPotWaitingTime(seconds);
     }
     function formatPotSplitTime(final=false){
       const waitText = final ? formatPotWaitingFinalTime(potWaitingElapsedSeconds()) : formatPotWaitingTime(potWaitingElapsedSeconds());
@@ -7510,7 +7506,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.5.0';
+      return el ? el.textContent.trim() : 'vGPT_6.5.1';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
