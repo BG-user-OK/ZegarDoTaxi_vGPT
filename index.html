@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- vGPT_6.5.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- vGPT_6.5.2: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -341,7 +341,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-    /* vGPT_6.5.1: matches the size and baseline of the other top-row buttons. */
+    /* vGPT_6.5.2: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -2093,7 +2093,7 @@
       overflow:hidden;
     }
     .big-panel.keypad-panel.amount-keypad-panel{
-      min-height:min(54vh, 440px);
+      min-height:min(60vh, 520px);
     }
     .big-panel.keypad-panel.keypad-with-help{
       width:min(70vw, 320px);
@@ -2616,7 +2616,7 @@
       gap:4px;
     }
     .amount-keypad-panel .keypad{
-      min-height:min(38vh, 320px);
+      min-height:min(46vh, 410px);
     }
     .keypad button{
       --key-bg:#1a1a1a;
@@ -2637,8 +2637,8 @@
     }
     .amount-keypad-panel .keypad button{
       font-size:22px;
-      padding:12px 0;
-      min-height:clamp(52px, 7.4vh, 70px);
+      padding:14px 0;
+      min-height:clamp(62px, 9.2vh, 88px);
     }
     .keypad button > span{
       position:relative;
@@ -3330,7 +3330,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">vGPT_6.5.1</div>
+    <div class="version">vGPT_6.5.2</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -7506,7 +7506,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.5.1';
+      return el ? el.textContent.trim() : 'vGPT_6.5.2';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
