@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- vGPT_6.5.2: based on a previously developed v:1.28 version created by another AI. -->
+<!-- vGPT_6.5.3: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -341,7 +341,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-    /* vGPT_6.5.2: matches the size and baseline of the other top-row buttons. */
+    /* vGPT_6.5.3: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -3330,7 +3330,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">vGPT_6.5.2</div>
+    <div class="version">vGPT_6.5.3</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -5881,7 +5881,7 @@
       else closeOverlayToMain('overlay_close');
     });
 
-    const DRIVING_FOCUS_VISIBLE_MS = 5 * 60 * 1000;
+    const DRIVING_FOCUS_VISIBLE_MS = 2 * 60 * 1000;
     const DRIVING_FOCUS_RESTORE_TOUCH_LOCK_MS = 1000;
     let drivingFocusTimer = null;
     let drivingFocusFaded = false;
@@ -7361,7 +7361,7 @@
       const ok=await doExport(url, payload);
       if(ok){
         showToast('Eksport OK. Dane pozostaja na ekranie.','ok');
-        scheduleAutoSyncUpload('end_work_final_sync');
+        scheduleAutoSyncUpload('end_work_final_sync', { immediate:true });
         renderAll();
       } else {
         saveState();
@@ -7506,7 +7506,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.5.2';
+      return el ? el.textContent.trim() : 'vGPT_6.5.3';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -7819,7 +7819,8 @@
     let autoSyncBusy = false;
     let autoSyncHiddenUploaded = false;
     let autoSyncFrozenReason = '';
-    const AUTO_SYNC_DEBOUNCE_MS = 15000;
+    const AUTO_SYNC_DEFAULT_DEBOUNCE_MS = 15000;
+    const AUTO_SYNC_ACTIVE_WORK_DEBOUNCE_MS = 60000;
     const AUTO_SYNC_GREEN_VISIBLE_MS = 60000;
     let autoSyncGreenFadeTimer = null;
     let autoSyncGreenFadeArmed = false;
@@ -7864,7 +7865,7 @@
         setAutoSyncIndicatorState('on');
       }
     }
-    function scheduleAutoSyncUpload(reason){
+    function scheduleAutoSyncUpload(reason, options={}){
       if(!isAutoSyncEnabled()) return;
       if(pendingEndWorkExport) return;
       if(syncApplyInProgress) return;
@@ -7872,13 +7873,18 @@
       if(!hasPendingDailyExport() && !hasUnuploadedLocalChanges()) return;
       const cfg = getAutoSyncConfig();
       if(!cfg) return;
+      const immediate = options.immediate === true;
+      const activeWorkday = startWorkMinutes !== null && endWorkMinutes === null;
+      const delayMs = immediate
+        ? 0
+        : (activeWorkday ? AUTO_SYNC_ACTIVE_WORK_DEBOUNCE_MS : AUTO_SYNC_DEFAULT_DEBOUNCE_MS);
       clearTimeout(autoSyncUploadTimer);
       autoSyncScheduledReason = reason || 'state_change';
       autoSyncScheduledAt = Date.now();
       setAutoSyncIndicatorState('scheduled');
       autoSyncUploadTimer = setTimeout(()=>{
         performScheduledAutoSyncUpload(autoSyncScheduledReason || 'debounced', false);
-      }, AUTO_SYNC_DEBOUNCE_MS);
+      }, delayMs);
     }
     function markAutoSyncOverlayDirty(reason){
       if(!isAutoSyncEnabled()) return;
