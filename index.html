@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- vGPT_6.6.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- vGPT_6.7.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -2095,11 +2095,6 @@
     .big-panel.keypad-panel.comfortable-keypad-panel{
       min-height:min(60vh, 520px);
     }
-    .big-panel.keypad-panel.keypad-with-help{
-      width:min(70vw, 320px);
-      max-width:320px;
-      overflow-y:auto;
-    }
     .keypad-side-switch{
       width:42px;
       height:58px;
@@ -2720,49 +2715,6 @@
       font-size:12px !important;
       padding:1px 0 2px !important;
     }
-    .keypad-start-counter-help{
-      flex:1;
-      min-height:180px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      gap:12px;
-      padding:12px 8px 6px;
-      text-align:center;
-    }
-    .keypad-panel .keypad-start-counter-help{
-      min-height:96px;
-      gap:6px;
-      padding:6px 4px 0;
-    }
-    .keypad-start-counter-help-text{
-      max-width:360px;
-      color:#f2f2f2;
-      font-size:clamp(18px, 4.8vw, 26px);
-      font-weight:900;
-      line-height:1.12;
-      text-transform:none;
-      letter-spacing:0;
-      text-shadow:0 0 14px rgba(255,255,255,.24);
-    }
-    .keypad-panel .keypad-start-counter-help-text{
-      max-width:100%;
-      font-size:clamp(13px, 3.2vw, 18px);
-      line-height:1.08;
-    }
-    .keypad-start-counter-help img{
-      width:min(50vw, 200px);
-      height:auto;
-      max-height:22vh;
-      object-fit:contain;
-      filter:drop-shadow(0 0 18px rgba(255,255,255,.18));
-    }
-    .keypad-panel .keypad-start-counter-help img{
-      width:min(34vw, 140px);
-      max-height:15vh;
-    }
-
     .counter-fields{ display:flex; flex-direction:column; gap:8px; }
     .counter-row{
       display:grid; grid-template-columns:1fr auto;
@@ -2786,6 +2738,67 @@
     }
     .counter-value.empty{ color:#555; }
     .counter-row.service-row .counter-label{ font-size:20px; }
+    .counter-inline-panel{
+      height:min(99dvh, 860px);
+      max-height:99vh;
+      padding:4px 8px 6px;
+      overflow:hidden;
+    }
+    .counter-inline-panel .counter-fields{
+      gap:5px;
+    }
+    .counter-inline-panel .counter-row{
+      min-height:48px;
+      padding:7px 12px;
+      transition:background .18s ease, box-shadow .18s ease, opacity .18s ease;
+    }
+    .counter-inline-panel .counter-row.active{
+      background:#1b241d;
+      box-shadow:
+        inset 0 0 0 2px rgba(83,230,111,.55),
+        0 0 14px rgba(60,220,90,.16);
+    }
+    .counter-inline-panel .counter-value{
+      min-width:128px;
+      font-size:23px;
+      white-space:nowrap;
+    }
+    .counter-inline-panel .counter-value.suggested{
+      color:#777;
+      text-shadow:none;
+    }
+    .counter-inline-caret{
+      display:inline-block;
+      width:2px;
+      height:1.05em;
+      margin-left:4px;
+      vertical-align:-.12em;
+      background:#7dff92;
+      box-shadow:0 0 7px rgba(90,255,120,.72);
+      animation:counterInlineCaretBlink .8s steps(1,end) infinite;
+    }
+    @keyframes counterInlineCaretBlink{
+      0%,48%{ opacity:1; }
+      49%,100%{ opacity:0; }
+    }
+    .counter-inline-keypad{
+      flex:1 1 auto;
+      min-height:min(46vh, 410px);
+      max-height:410px;
+      margin-top:5px;
+      grid-template-rows:repeat(4, minmax(0, 1fr));
+      gap:4px;
+    }
+    .counter-inline-keypad button{
+      min-height:clamp(62px, 9.2vh, 88px);
+      padding:10px 0;
+      border-radius:9px;
+      font-size:22px;
+    }
+    .counter-inline-panel .panel-actions{
+      flex:0 0 auto;
+      padding-top:5px;
+    }
 
     .note-panel{
       height:min(98.5vh, 850px);
@@ -2968,15 +2981,24 @@
     }
     .note-symbol-row .icon-input{
       flex:0 0 120px;
+      height:42px;
+      min-height:42px;
+      padding:4px 8px;
+      font-size:26px;
+      box-sizing:border-box;
     }
     .emoji-search-btn{
       flex:1;
+      height:42px;
+      min-height:42px;
       border:none;
       border-radius:10px;
+      padding:0 10px;
       background:linear-gradient(180deg,#25332f,#121b18);
       color:#dfffee;
-      font-size:20px;
+      font-size:17px;
       font-weight:900;
+      line-height:1.1;
       letter-spacing:.4px;
       box-shadow:
         inset 0 0 0 1px rgba(190,255,220,.16),
@@ -3330,7 +3352,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">vGPT_6.6.1</div>
+    <div class="version">vGPT_6.7.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3408,6 +3430,7 @@
     let keypadCounterDigits = [];
     let keypadCursorFromRight = 0;
     let keypadSide = 'right';
+    let counterPanelDraft = null;
 
     const cx=200, cy=200, radius=200;
     let blinkState = false;
@@ -6512,7 +6535,6 @@
 
     function renderKeypad(){
       let disp='', lab='';
-      const startCounterAutoHelp = keypadMode==='counter' && keypadContext.startWorkAuto;
       if(keypadMode==='amount'){
         const p=PROVIDERS.find(x=>x.key===keypadContext.provider);
         lab=`Kwota: ${p.label}${keypadContext.addMode?' (dodaj)':''}`;
@@ -6529,13 +6551,13 @@
       showOverlay(`
         <div class="keypad-dock ${dockClass}">
           <button class="keypad-side-switch" type="button" data-keypad-side-switch aria-label="Przełącz stronę klawiatury"><span>${sideArrow}</span></button>
-          <div class="big-panel keypad-panel comfortable-keypad-panel ${keypadMode==='amount'?'amount-keypad-panel':'counter-keypad-panel'} ${startCounterAutoHelp?'keypad-with-help':''}">
+          <div class="big-panel keypad-panel comfortable-keypad-panel ${keypadMode==='amount'?'amount-keypad-panel':'counter-keypad-panel'}">
           <div class="keypad-label">${lab}</div>
           <div class="keypad-display">${disp}</div>
           ${keypadMode==='counter' && keypadContext.field==='end'
             ? `<div class="keypad-live-preview" style="text-align:center;font-size:17px;font-weight:700;color:#aaa;padding:2px 0 4px;">${liveKmPreview()}</div>`
             : ''}
-          <div class="keypad" style="${startCounterAutoHelp?'flex:0 0 auto;':'flex:1;'}">
+          <div class="keypad" style="flex:1;">
             <button data-k="1"><span>1</span></button><button data-k="2"><span>2</span></button><button data-k="3"><span>3</span></button>
             <button data-k="4"><span>4</span></button><button data-k="5"><span>5</span></button><button data-k="6"><span>6</span></button>
             <button data-k="7"><span>7</span></button><button data-k="8"><span>8</span></button><button data-k="9"><span>9</span></button>
@@ -6544,12 +6566,6 @@
             <button class="key-ok" data-k="ok"><span>✓</span></button>
             <button class="key-back" data-k="back" style="grid-column:span 3;"><span>← Cofnij</span></button>
           </div>
-          ${startCounterAutoHelp
-            ? `<div class="keypad-start-counter-help">
-                <div class="keypad-start-counter-help-text">zerknij na licznik w aucie i skoryguj stan powyżej w apce jeśli trzeba 😀</div>
-                <img src="Photos/licznik.png" alt="Licznik" />
-              </div>`
-            : ''}
           </div>
         </div>
       `);
@@ -6698,86 +6714,225 @@
       }
     }
 
-    function openCounterPanel(){
-      // Licznik początkowy: jeśli pusty to pokaż lastCounterEnd (z wczoraj) jako podpowiedź
-      const sDisplay = counterStart!==null ? counterStart : (lastCounterEnd!==null ? lastCounterEnd : null);
-      const sIsHint = counterStart===null && lastCounterEnd!==null;
-      const sT=sDisplay!==null?sDisplay:'—';
-      const eT=counterEnd!==null?counterEnd:'—';
-      const pT=privKmTotal>0?privKmTotal:'—';
-      // Punkt 9: przebieg służbowy = końcowy - początkowy - prywatne
-      let kmZaw = null;
-      if(counterEnd !== null && sDisplay !== null){
-        kmZaw = counterEnd - sDisplay - privKmTotal;
+    function highestKnownCounterValue(){
+      return Math.max(
+        0,
+        Number.isFinite(Number(lastCounterEnd)) ? Number(lastCounterEnd) : 0,
+        Number.isFinite(Number(counterStart)) ? Number(counterStart) : 0,
+        Number.isFinite(Number(counterEnd)) ? Number(counterEnd) : 0
+      );
+    }
+    function createCounterPanelDraft(options={}){
+      const startValue = counterStart!==null ? counterStart : (lastCounterEnd!==null ? lastCounterEnd : 0);
+      const endValue = counterEnd!==null ? counterEnd : Math.max(startValue, highestKnownCounterValue());
+      let activeField = options.activeField;
+      if(!['start','end','priv'].includes(activeField)){
+        if(pendingEndWorkExport) activeField='end';
+        else if(startWorkMinutes!==null && endWorkMinutes===null) activeField='priv';
+        else activeField=counterStart===null?'start':'end';
       }
-      const kmZawT = kmZaw !== null ? kmZaw : '—';
-      // Końcowy nie jest disabled jeśli mamy podpowiedź sDisplay (czyli też z lastCounterEnd)
-      const endDis=sDisplay===null?' disabled':'';
+      return {
+        activeField,
+        returnTarget:options.returnTarget || 'money',
+        originalStart:counterStart,
+        originalEnd:counterEnd,
+        originalPriv:privKmTotal,
+        saveSuggestedStart:!!options.saveSuggestedStart,
+        startBase:startValue,
+        endBase:endValue,
+        privBase:privKmTotal,
+        startDigits:'',
+        endDigits:'',
+        privDigits:'',
+        startCleared:false,
+        endCleared:false
+      };
+    }
+    function counterDraftFieldValue(field){
+      const draft=counterPanelDraft;
+      if(!draft) return 0;
+      if(field==='priv'){
+        const added=parseInt(draft.privDigits||'0',10)||0;
+        return draft.privBase + added;
+      }
+      const digits=field==='start'?draft.startDigits:draft.endDigits;
+      const cleared=field==='start'?draft.startCleared:draft.endCleared;
+      const base=field==='start'?draft.startBase:draft.endBase;
+      if(cleared) return parseInt(digits||'0',10)||0;
+      if(!digits) return base;
+      const baseDigits=String(Math.max(0,Math.trunc(base||0))).padStart(6,'0').slice(-6).split('');
+      const typed=digits.slice(-6);
+      for(let i=0;i<typed.length;i++) baseDigits[6-typed.length+i]=typed[i];
+      return parseInt(baseDigits.join(''),10)||0;
+    }
+    function counterDraftWasEdited(field){
+      const draft=counterPanelDraft;
+      if(!draft) return false;
+      if(field==='priv') return draft.privDigits.length>0;
+      return (field==='start'?draft.startCleared:draft.endCleared) ||
+             (field==='start'?draft.startDigits:draft.endDigits).length>0;
+    }
+    function counterDraftPrivDisplay(){
+      const draft=counterPanelDraft;
+      if(!draft) return '0';
+      if(!draft.privDigits) return String(draft.privBase);
+      const added=parseInt(draft.privDigits,10)||0;
+      return draft.privBase>0 ? `${draft.privBase} + ${added}` : String(added);
+    }
+    function counterDraftValueHtml(field){
+      const draft=counterPanelDraft;
+      const active=draft && draft.activeField===field;
+      const value=field==='priv' ? counterDraftPrivDisplay() : String(counterDraftFieldValue(field));
+      return `${value}${active?'<span class="counter-inline-caret"></span>':''}`;
+    }
+    function counterInlinePress(key){
+      const draft=counterPanelDraft;
+      if(!draft) return;
+      const field=draft.activeField;
+      if(key==='clear'){
+        if(field==='priv'){
+          draft.privDigits='';
+        } else {
+          draft[`${field}Digits`]='';
+          draft[`${field}Cleared`]=false;
+        }
+        renderCounterPanel();
+        return;
+      }
+      if(key==='back'){
+        if(field==='priv'){
+          draft.privDigits=draft.privDigits.slice(0,-1);
+        } else {
+          const prop=`${field}Digits`;
+          draft[prop]=draft[prop].slice(0,-1);
+          if(!draft[prop]) draft[`${field}Cleared`]=false;
+        }
+        renderCounterPanel();
+        return;
+      }
+      if(!/^[0-9]$/.test(key)) return;
+      if(field==='priv'){
+        if(draft.privDigits.length<6) draft.privDigits+=key;
+      } else {
+        const prop=`${field}Digits`;
+        if(draft[prop].length<6) draft[prop]+=key;
+      }
+      renderCounterPanel();
+    }
+    function cancelCounterPanel(){
+      const returnTarget=counterPanelDraft ? counterPanelDraft.returnTarget : 'money';
+      counterPanelDraft=null;
+      if(returnTarget==='main') closeOverlayToMain('counter_panel_cancel');
+      else openMoneyPanel();
+    }
+    function saveCounterPanel(){
+      const draft=counterPanelDraft;
+      if(!draft) return;
+      const previousStart=counterStart;
+      const previousEnd=counterEnd;
+      const previousPriv=privKmTotal;
+      if(draft.originalStart!==null || counterDraftWasEdited('start') || draft.saveSuggestedStart){
+        counterStart=counterDraftFieldValue('start');
+      }
+      if(draft.originalEnd!==null || counterDraftWasEdited('end')){
+        counterEnd=counterDraftFieldValue('end');
+      }
+      privKmTotal=counterDraftFieldValue('priv');
+      const changed=previousStart!==counterStart || previousEnd!==counterEnd || previousPriv!==privKmTotal;
+      const returnTarget=draft.returnTarget;
+      counterPanelDraft=null;
+      if(changed) saveStateAndMarkOverlayDirty('counter_panel');
+      if(returnTarget==='main') closeOverlayToMain('counter_panel');
+      else openMoneyPanel();
+    }
+    function renderCounterPanel(){
+      const draft=counterPanelDraft;
+      if(!draft) return;
+      const startValue=counterDraftFieldValue('start');
+      const endValue=counterDraftFieldValue('end');
+      const privValue=counterDraftFieldValue('priv');
+      const businessKm=endValue-startValue-privValue;
+      const startSuggested=draft.originalStart===null && !counterDraftWasEdited('start');
+      const endSuggested=draft.originalEnd===null && !counterDraftWasEdited('end');
+      const existingPanel=overlay.querySelector('.counter-inline-panel');
+      if(existingPanel){
+        ['start','end','priv'].forEach(field=>{
+          const row=existingPanel.querySelector(`[data-cnt="${field}"]`);
+          if(!row) return;
+          row.classList.toggle('active', draft.activeField===field);
+          const value=row.querySelector('.counter-value');
+          if(!value) return;
+          const suggested=field==='start'?startSuggested:(field==='end'?endSuggested:false);
+          value.classList.toggle('suggested', suggested);
+          value.innerHTML=counterDraftValueHtml(field);
+        });
+        const businessValue=existingPanel.querySelector('[data-counter-business]');
+        if(businessValue) businessValue.textContent=String(businessKm);
+        return;
+      }
       showOverlay(`
-        <div class="big-panel">
+        <div class="big-panel counter-inline-panel">
           <h3>Licznik kilometrów</h3>
           <div class="counter-fields">
-            <div class="counter-row" data-cnt="start" role="button" tabindex="0">
-              <div class="counter-label">Początkowy${sIsHint?' <span style="color:#888;font-weight:400;">(z wczoraj)</span>':''}</div>
-              <div class="counter-value ${sDisplay!==null?'':'empty'}" style="${sIsHint?'color:#aaa;':''}">${sT}</div>
+            <div class="counter-row ${draft.activeField==='start'?'active':''}" data-cnt="start" role="button" tabindex="0">
+              <div class="counter-label">Początkowy${startSuggested && lastCounterEnd!==null?' <span style="color:#888;font-weight:400;">(z wczoraj)</span>':''}</div>
+              <div class="counter-value ${startSuggested?'suggested':''}">${counterDraftValueHtml('start')}</div>
             </div>
-            <div class="counter-row${endDis}" data-cnt="end" role="button" tabindex="0">
+            <div class="counter-row ${draft.activeField==='end'?'active':''}" data-cnt="end" role="button" tabindex="0">
               <div class="counter-label">Końcowy</div>
-              <div class="counter-value ${counterEnd!==null?'':'empty'}">${eT}</div>
+              <div class="counter-value ${endSuggested?'suggested':''}">${counterDraftValueHtml('end')}</div>
             </div>
-            <div class="counter-row" data-cnt="priv" role="button" tabindex="0">
+            <div class="counter-row ${draft.activeField==='priv'?'active':''}" data-cnt="priv" role="button" tabindex="0">
               <div class="counter-label">km PRIV (dodaj)</div>
-              <div class="counter-value ${privKmTotal>0?'':'empty'}">${pT}</div>
+              <div class="counter-value">${counterDraftValueHtml('priv')}</div>
             </div>
             <div class="counter-row service-row" style="background:#0a1f0d;">
               <div class="counter-label" style="color:#7adf8a;">Przebieg służbowy</div>
-              <div class="counter-value ${kmZaw!==null?'':'empty'}" style="${kmZaw!==null?'color:#7adf8a;':''}">${kmZawT}</div>
+              <div class="counter-value" data-counter-business style="color:#7adf8a;">${businessKm}</div>
             </div>
           </div>
-          <div style="flex:1;"></div>
+          <div class="keypad counter-inline-keypad">
+            <button data-counter-key="1"><span>1</span></button><button data-counter-key="2"><span>2</span></button><button data-counter-key="3"><span>3</span></button>
+            <button data-counter-key="4"><span>4</span></button><button data-counter-key="5"><span>5</span></button><button data-counter-key="6"><span>6</span></button>
+            <button data-counter-key="7"><span>7</span></button><button data-counter-key="8"><span>8</span></button><button data-counter-key="9"><span>9</span></button>
+            <button class="key-cancel" data-counter-key="clear"><span>C</span></button>
+            <button data-counter-key="0"><span>0</span></button>
+            <button class="key-back" data-counter-key="back"><span>←</span></button>
+          </div>
           <div class="panel-actions">
-            <button class="cancel-btn" data-act="back">←</button>
+            <button class="cancel-btn" data-act="back">✕</button>
             <button class="ok-btn" data-act="ok">✓</button>
           </div>
         </div>
       `);
-      overlay.querySelector('[data-act="back"]').addEventListener('click',(e)=>{ e.stopPropagation(); openMoneyPanel(); });
-      overlay.querySelector('[data-act="ok"]').addEventListener('click',(e)=>{
-        e.stopPropagation();
-        // Jeśli counterStart jeszcze pusty ale mamy lastCounterEnd - akceptuj jako start (potwierdzenie)
-        if(counterStart===null && lastCounterEnd!==null){
-          counterStart = lastCounterEnd;
-        }
-        saveStateAndMarkOverlayDirty('counter_panel');
-        if(pendingEndWorkExport) openMoneyPanel();
-        else closeOverlayToMain('counter_panel');
-      });
-      overlay.querySelectorAll('[data-cnt]').forEach(b=>{
-        b.addEventListener('click',(e)=>{
+      overlay.querySelector('[data-act="back"]').addEventListener('click',(e)=>{ e.stopPropagation(); cancelCounterPanel(); });
+      overlay.querySelector('[data-act="ok"]').addEventListener('click',(e)=>{ e.stopPropagation(); saveCounterPanel(); });
+      overlay.querySelectorAll('[data-cnt]').forEach(row=>{
+        row.addEventListener('click',(e)=>{
           e.stopPropagation();
-          const f=b.dataset.cnt;
-          let hint=0, label='Licznik';
-          if(f==='start'){
-            hint=counterStart!==null?counterStart:(lastCounterEnd!==null?lastCounterEnd:0);
-            label='Stan licznika początkowy';
-          } else if(f==='end'){
-            hint=counterEnd!==null?counterEnd:(counterStart!==null?counterStart:(lastCounterEnd!==null?lastCounterEnd:0));
-            label='Stan licznika końcowy';
-          } else if(f==='priv'){
-            hint=0; label='Dodaj km prywatne';
-          }
-          openKeypad('counter',{ field:f, hint, label });
+          counterPanelDraft.activeField=row.dataset.cnt;
+          renderCounterPanel();
         });
       });
+      overlay.querySelectorAll('[data-counter-key]').forEach(btn=>{
+        btn.addEventListener('pointerdown',(e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          flashKeypadKey(btn);
+          counterInlinePress(btn.dataset.counterKey);
+        });
+        btn.addEventListener('click',(e)=>{ e.preventDefault(); e.stopPropagation(); });
+      });
+    }
+    function openCounterPanel(options={}){
+      counterPanelDraft=createCounterPanelDraft(options);
+      renderCounterPanel();
     }
     function openStartCounterEditor(options={}){
-      const hint=counterStart!==null?counterStart:(lastCounterEnd!==null?lastCounterEnd:0);
-      openKeypad('counter',{
-        field:'start',
-        hint,
-        label:'Stan licznika poczatkowy',
-        returnToMain:!!options.returnToMain,
-        startWorkAuto:!!options.startWorkAuto
+      openCounterPanel({
+        activeField:'start',
+        returnTarget:'main',
+        saveSuggestedStart:true
       });
     }
 
@@ -7032,7 +7187,7 @@
           </div>
           <div style="height:6px;flex:0 0 auto;"></div>
           <div class="note-fields">
-            <label>Symbol widoczny na karteczce (1-4 znaki)</label>
+            <label>Symbol widoczny na karteczce</label>
             <div class="note-symbol-row">
               <input id="noteIcon" class="icon-input" maxlength="4" value="${escapeHtml(icon)}" placeholder="💧" />
               <button type="button" class="emoji-search-btn" id="emojiSearchBtn">Szukaj emoji</button>
@@ -7248,7 +7403,7 @@
       renderAll();
       syncWorkWakeLock();
       if(!fromEdit){
-        setTimeout(()=>openStartCounterEditor({ returnToMain:true, startWorkAuto:true }), 0);
+        setTimeout(()=>openStartCounterEditor(), 0);
       }
     }
     function askEndedWorkdayStartChoice(){
@@ -7324,8 +7479,10 @@
       });
     }
     function openFinalCounterEditor(){
-      const hint = counterEnd!==null ? counterEnd : (counterStart!==null ? counterStart : (lastCounterEnd!==null ? lastCounterEnd : 0));
-      openKeypad('counter',{ field:'end', hint, label:'Stan licznika koncowy' });
+      openCounterPanel({
+        activeField:'end',
+        returnTarget:'money'
+      });
     }
     async function finishPendingEndWorkExport(options={}){
       const allowMissingCounter = !!options.allowMissingCounter;
@@ -7506,7 +7663,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.6.0';
+      return el ? el.textContent.trim() : 'vGPT_6.7.0';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
