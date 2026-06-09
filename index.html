@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- vGPT_6.6.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- vGPT_6.6.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -2092,7 +2092,7 @@
       border-radius:14px;
       overflow:hidden;
     }
-    .big-panel.keypad-panel.amount-keypad-panel{
+    .big-panel.keypad-panel.comfortable-keypad-panel{
       min-height:min(60vh, 520px);
     }
     .big-panel.keypad-panel.keypad-with-help{
@@ -2615,7 +2615,7 @@
     .keypad-panel .keypad{
       gap:4px;
     }
-    .amount-keypad-panel .keypad{
+    .comfortable-keypad-panel .keypad{
       min-height:min(46vh, 410px);
     }
     .keypad button{
@@ -2635,7 +2635,7 @@
       padding:8px 0;
       min-height:42px;
     }
-    .amount-keypad-panel .keypad button{
+    .comfortable-keypad-panel .keypad button{
       font-size:22px;
       padding:14px 0;
       min-height:clamp(62px, 9.2vh, 88px);
@@ -3330,7 +3330,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">vGPT_6.6.0</div>
+    <div class="version">vGPT_6.6.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -6529,7 +6529,7 @@
       showOverlay(`
         <div class="keypad-dock ${dockClass}">
           <button class="keypad-side-switch" type="button" data-keypad-side-switch aria-label="Przełącz stronę klawiatury"><span>${sideArrow}</span></button>
-          <div class="big-panel keypad-panel ${keypadMode==='amount'?'amount-keypad-panel':''} ${startCounterAutoHelp?'keypad-with-help':''}">
+          <div class="big-panel keypad-panel comfortable-keypad-panel ${keypadMode==='amount'?'amount-keypad-panel':'counter-keypad-panel'} ${startCounterAutoHelp?'keypad-with-help':''}">
           <div class="keypad-label">${lab}</div>
           <div class="keypad-display">${disp}</div>
           ${keypadMode==='counter' && keypadContext.field==='end'
