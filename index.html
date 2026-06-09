@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- vGPT_6.8.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- vGPT_6.8.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -2141,14 +2141,14 @@
     .money-panel{
       height:min(99dvh, 860px);
       max-height:99vh;
-      padding:4px 8px 6px;
+      padding:0 8px 6px;
       overflow:hidden;
     }
     .money-panel .providers-list{
       flex:0 1 auto;
       gap:3px;
       padding:6px 12px;
-      max-height:53%;
+      max-height:57%;
       min-height:0;
       overflow-y:auto;
       border-radius:14px;
@@ -2229,10 +2229,31 @@
     .money-panel-actions{
       flex:0 0 auto;
       display:grid;
-      grid-template-columns:74px minmax(0, 1fr) 74px;
+      grid-template-columns:74px minmax(0, 1fr) 64px 74px;
       align-items:center;
-      gap:8px;
+      gap:5px;
       padding:5px 2px 2px;
+    }
+    .money-bottom-back{
+      width:64px;
+      height:64px;
+      border:none;
+      border-radius:14px;
+      background:#2a1e0e;
+      color:#ffc48a;
+      font-size:31px;
+      font-weight:900;
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.08),
+        0 0 14px rgba(0,0,0,.48);
+      touch-action:none;
+    }
+    .money-bottom-back:active{
+      transform:scale(.97);
+      color:#fff;
+      box-shadow:
+        inset 0 0 0 2px rgba(255,255,255,.38),
+        0 0 15px rgba(255,196,138,.34);
     }
     .money-inline-sum{
       min-width:0;
@@ -2266,11 +2287,18 @@
       font-size:clamp(13px, 3.6vw, 18px);
       text-shadow:0 0 10px rgba(40,255,78,.6);
     }
+    @media (max-height:780px){
+      .money-panel .providers-list{ gap:1.5px; }
+      .money-panel .provider-row{ min-height:28px; }
+      .money-panel .prov-btn{ min-height:26px; font-size:14px; }
+      .money-panel .prov-amount{ font-size:17px; }
+    }
     @media (max-height:700px){
-      .money-panel .providers-list{ max-height:47%; }
+      .money-panel .providers-list{ max-height:52%; }
       .money-inline-keypad{ min-height:190px; }
       .money-inline-keypad button{ min-height:41px; }
-      .money-panel-actions{ grid-template-columns:66px minmax(0,1fr) 66px; }
+      .money-panel-actions{ grid-template-columns:66px minmax(0,1fr) 56px 66px; }
+      .money-bottom-back{ width:56px; height:56px; font-size:28px; }
       .money-panel .panel-actions .cancel-btn,
       .money-panel .panel-actions .ok-btn{
         width:66px !important;
@@ -3475,7 +3503,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">vGPT_6.8.0</div>
+    <div class="version">vGPT_6.8.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -6591,7 +6619,6 @@
         </div>`;
       showOverlay(`
         <div class="big-panel money-panel">
-          <h3>Obroty dnia</h3>
           <div class="providers-list">
             <div class="board-bg board-silver"><span class="screw-bl"></span><span class="screw-br"></span></div>
             <div class="board-bg board-gold"><span class="screw-bl"></span><span class="screw-br"></span></div>
@@ -6660,18 +6687,23 @@
       }
     }
 
-    function createMoneyPanelDraft(){
+    function createMoneyPanelDraft(options={}){
       const values={};
       PROVIDERS.forEach(p=>values[p.key]=revenues[p.key]||0);
       const firstProvider=PROVIDERS[0].key;
+      const counterBase=counterEnd!==null ? counterEnd : highestKnownCounterValue();
       return {
+        entryMode:options.entryMode==='endWork'?'endWork':'normal',
         values,
         activeProvider:firstProvider,
         editBase:values[firstProvider],
         inputRaw:'',
         negative:false,
         explicitClear:false,
-        mode:'replace'
+        mode:'replace',
+        counterOriginal:counterEnd,
+        counterBase,
+        counterDigits:''
       };
     }
     function moneyDraftTotal(){
@@ -6685,7 +6717,7 @@
     }
     function applyMoneyDraftInput(){
       const draft=moneyPanelDraft;
-      if(!draft) return;
+      if(!draft || draft.activeProvider==='__counter') return;
       const key=draft.activeProvider;
       if(draft.mode==='add'){
         draft.values[key]=draft.editBase+(draft.inputRaw?moneyDraftInputValue():0);
@@ -6716,20 +6748,42 @@
       if(active) return inlineCursorHtml(formatAmountDisplay(value),true);
       return value!==0 ? formatAmountDisplay(value) : '&mdash;';
     }
+    function moneyDraftCounterValue(){
+      const draft=moneyPanelDraft;
+      if(!draft) return counterEnd!==null?counterEnd:highestKnownCounterValue();
+      if(!draft.counterDigits) return draft.counterBase;
+      const baseDigits=String(Math.max(0,Math.trunc(draft.counterBase||0))).padStart(6,'0').slice(-6).split('');
+      const typed=draft.counterDigits.slice(-6);
+      for(let i=0;i<typed.length;i++) baseDigits[6-typed.length+i]=typed[i];
+      return parseInt(baseDigits.join(''),10)||0;
+    }
+    function moneyCounterDisplay(){
+      const draft=moneyPanelDraft;
+      if(!draft) return '';
+      if(draft.counterOriginal===null && !draft.counterDigits && draft.activeProvider!=='__counter') return '&mdash;';
+      return inlineCursorHtml(String(moneyDraftCounterValue()),draft.activeProvider==='__counter');
+    }
     function selectMoneyProvider(key){
       const draft=moneyPanelDraft;
-      if(!draft || !PROVIDERS.some(p=>p.key===key)) return;
+      if(!draft || (key!=='__counter' && !PROVIDERS.some(p=>p.key===key))) return;
       draft.activeProvider=key;
-      draft.editBase=draft.values[key]||0;
+      draft.editBase=key==='__counter'?moneyDraftCounterValue():(draft.values[key]||0);
       draft.inputRaw='';
       draft.negative=false;
       draft.explicitClear=false;
       draft.mode='replace';
       updateMoneyPanelView();
     }
+    function moveMoneyPanelToNextItem(){
+      const draft=moneyPanelDraft;
+      if(!draft) return;
+      const order=[...PROVIDERS.map(p=>p.key),'__counter'];
+      const index=Math.max(0,order.indexOf(draft.activeProvider));
+      selectMoneyProvider(order[(index+1)%order.length]);
+    }
     function setMoneyPanelMode(mode){
       const draft=moneyPanelDraft;
-      if(!draft || !['replace','add'].includes(mode)) return;
+      if(!draft || draft.activeProvider==='__counter' || !['replace','add'].includes(mode)) return;
       draft.values[draft.activeProvider]=draft.editBase;
       draft.mode=mode;
       draft.inputRaw='';
@@ -6740,6 +6794,21 @@
     function moneyInlinePress(key){
       const draft=moneyPanelDraft;
       if(!draft) return;
+      if(key==='enter'){
+        moveMoneyPanelToNextItem();
+        return;
+      }
+      if(draft.activeProvider==='__counter'){
+        if(key==='back'){
+          draft.counterDigits=draft.counterDigits.slice(0,-1);
+        } else if(/^[0-9]$/.test(key) && draft.counterDigits.length<6){
+          draft.counterDigits+=key;
+        } else {
+          return;
+        }
+        updateMoneyPanelView();
+        return;
+      }
       if(key==='back'){
         if(draft.inputRaw) draft.inputRaw=draft.inputRaw.slice(0,-1);
         else draft.negative=false;
@@ -6777,8 +6846,22 @@
         amount.classList.toggle('empty',!filled);
         amount.innerHTML=moneyProviderDisplay(p.key);
       });
+      const counterRow=panel.querySelector('[data-provider-counter-row]');
+      const counterButton=counterRow && counterRow.querySelector('.prov-btn');
+      const counterAmount=counterRow && counterRow.querySelector('.prov-amount');
+      if(counterRow && counterButton && counterAmount){
+        const active=draft.activeProvider==='__counter';
+        const known=draft.counterOriginal!==null || draft.counterDigits.length>0;
+        const warning=draft.entryMode==='endWork' && !known;
+        counterRow.classList.toggle('active',active);
+        counterButton.classList.toggle('counter-warning',warning);
+        counterAmount.classList.toggle('counter-warning',warning);
+        counterAmount.classList.toggle('filled',known);
+        counterAmount.classList.toggle('empty',!known);
+        counterAmount.innerHTML=moneyCounterDisplay();
+      }
       const modeBox=panel.querySelector('.money-inline-mode');
-      if(modeBox) modeBox.hidden=draft.editBase===0;
+      if(modeBox) modeBox.hidden=draft.activeProvider==='__counter' || draft.editBase===0;
       panel.querySelectorAll('[data-money-mode]').forEach(btn=>{
         btn.classList.toggle('active',btn.dataset.moneyMode===draft.mode);
       });
@@ -6797,15 +6880,18 @@
         if((revenues[p.key]||0)!==next) changed=true;
         revenues[p.key]=next;
       });
+      if(draft.counterDigits){
+        const nextCounter=moneyDraftCounterValue();
+        if(counterEnd!==nextCounter) changed=true;
+        counterEnd=nextCounter;
+      }
       moneyPanelDraft=null;
       if(changed) saveStateAndMarkOverlayDirty('money_panel');
       return changed;
     }
-    function openMoneyPanel(){
-      if(!moneyPanelDraft) moneyPanelDraft=createMoneyPanelDraft();
+    function openMoneyPanel(options={}){
+      if(!moneyPanelDraft) moneyPanelDraft=createMoneyPanelDraft(options);
       let rows='';
-      const finalCounterMissing=counterEnd===null;
-      const workHasStarted=startWorkMinutes!==null;
       for(const p of PROVIDERS){
         const value=moneyPanelDraft.values[p.key]||0;
         const filled=value!==0;
@@ -6822,17 +6908,15 @@
             <div class="prov-amount ${filled?'filled':'empty'}" data-provider-select="${p.key}">${moneyProviderDisplay(p.key)}</div>
           </div>`;
       }
-      const counterDisplay=counterEnd!==null?counterEnd:'';
-      const counterKnown=counterEnd!==null;
-      const counterWarning=workHasStarted && finalCounterMissing;
+      const counterKnown=moneyPanelDraft.counterOriginal!==null || moneyPanelDraft.counterDigits.length>0;
+      const counterWarning=moneyPanelDraft.entryMode==='endWork' && !counterKnown;
       rows+=`
-        <div class="provider-row" style="margin-top:3px;">
+        <div class="provider-row ${moneyPanelDraft.activeProvider==='__counter'?'active':''}" data-provider-counter-row>
           <button class="prov-btn ${counterWarning?'counter-warning':''}" data-provider-counter style="background:#2a2a2a;color:#f0f0f0;"><span class="prov-label">LICZNIK</span></button>
-          <div class="prov-amount ${counterKnown?'filled':'empty'} ${counterWarning?'counter-warning':''}" data-provider-counter>${counterDisplay}</div>
+          <div class="prov-amount ${counterKnown?'filled':'empty'} ${counterWarning?'counter-warning':''}" data-provider-counter>${moneyCounterDisplay()}</div>
         </div>`;
       showOverlay(`
         <div class="big-panel money-panel">
-          <h3>Obroty dnia</h3>
           <div class="providers-list">
             <div class="board-bg board-silver"><span class="screw-bl"></span><span class="screw-br"></span></div>
             <div class="board-bg board-gold"><span class="screw-bl"></span><span class="screw-br"></span></div>
@@ -6848,19 +6932,21 @@
             <button data-money-key="7"><span>7</span></button><button data-money-key="8"><span>8</span></button><button data-money-key="9"><span>9</span></button>
             <button class="key-minus" data-money-key="minus"><span>-</span></button>
             <button data-money-key="0"><span>0</span></button>
-            <button class="key-back" data-money-key="back"><span>←</span></button>
+            <button class="key-ok" data-money-key="enter"><span>Enter</span></button>
           </div>
           <div class="panel-actions money-panel-actions">
             <button class="cancel-btn" data-act="cancel">✕</button>
             <div class="money-inline-sum" data-money-sum>${formatProviderSumDisplay(moneyDraftTotal())}</div>
+            <button class="money-bottom-back" data-money-key="back" type="button" aria-label="Cofnij ostatnią cyfrę">←</button>
             <button class="ok-btn" data-act="ok">✓</button>
           </div>
         </div>
       `);
       overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{
         e.stopPropagation();
+        const entryMode=moneyPanelDraft?moneyPanelDraft.entryMode:'normal';
         discardMoneyPanelDraft();
-        if(pendingEndWorkExport) abortPendingEndWorkReview();
+        if(entryMode==='endWork') abortPendingEndWorkReview();
         else closeOverlayToMain('money_panel');
       });
       overlay.querySelector('[data-act="ok"]').addEventListener('click',(e)=>{
@@ -6876,7 +6962,7 @@
       overlay.querySelectorAll('[data-provider-counter]').forEach(btn=>{
         btn.addEventListener('click',(e)=>{
           e.stopPropagation();
-          openCounterPanel({ returnTarget:'money' });
+          selectMoneyProvider('__counter');
         });
       });
       overlay.querySelectorAll('[data-money-mode]').forEach(btn=>{
@@ -7126,6 +7212,7 @@
       return {
         activeField,
         returnTarget:options.returnTarget || 'money',
+        providerEntryMode:options.providerEntryMode || 'normal',
         originalStart:counterStart,
         originalEnd:counterEnd,
         originalPriv:privKmTotal,
@@ -7213,9 +7300,10 @@
     }
     function cancelCounterPanel(){
       const returnTarget=counterPanelDraft ? counterPanelDraft.returnTarget : 'money';
+      const providerEntryMode=counterPanelDraft ? counterPanelDraft.providerEntryMode : 'normal';
       counterPanelDraft=null;
       if(returnTarget==='main') closeOverlayToMain('counter_panel_cancel');
-      else openMoneyPanel();
+      else openMoneyPanel({ entryMode:providerEntryMode });
     }
     function saveCounterPanel(){
       const draft=counterPanelDraft;
@@ -7232,10 +7320,11 @@
       privKmTotal=counterDraftFieldValue('priv');
       const changed=previousStart!==counterStart || previousEnd!==counterEnd || previousPriv!==privKmTotal;
       const returnTarget=draft.returnTarget;
+      const providerEntryMode=draft.providerEntryMode;
       counterPanelDraft=null;
       if(changed) saveStateAndMarkOverlayDirty('counter_panel');
       if(returnTarget==='main') closeOverlayToMain('counter_panel');
-      else openMoneyPanel();
+      else openMoneyPanel({ entryMode:providerEntryMode });
     }
     function renderCounterPanel(){
       const draft=counterPanelDraft;
@@ -7846,8 +7935,9 @@
       showToast('Eksport wstrzymany do zielonego zatwierdzenia obrotow.', 'err');
     }
     function handleMoneyPanelOk(){
+      const entryMode=moneyPanelDraft?moneyPanelDraft.entryMode:'normal';
       commitMoneyPanelDraft();
-      if(pendingEndWorkExport){
+      if(entryMode==='endWork'){
         clearOverlayAutoSyncDirty();
         finishPendingEndWorkExport();
         return;
@@ -7869,14 +7959,15 @@
         },
         choices:{
           reset:()=>finishPendingEndWorkExport({ allowMissingCounter:true }),
-          continue:()=>openFinalCounterEditor()
+          continue:()=>openFinalCounterEditor('endWork')
         }
       });
     }
-    function openFinalCounterEditor(){
+    function openFinalCounterEditor(providerEntryMode='endWork'){
       openCounterPanel({
         activeField:'end',
-        returnTarget:'money'
+        returnTarget:'money',
+        providerEntryMode
       });
     }
     async function finishPendingEndWorkExport(options={}){
@@ -7940,7 +8031,7 @@
       showToast('Uzupelnij obroty i licznik, potem zatwierdz zielonym.', 'ok');
       moneyPanelDraft=null;
       counterPanelDraft=null;
-      openFinalCounterEditor();
+      openFinalCounterEditor('endWork');
       return;
 
       // Eksport - dane zostają na ekranie po sukcesie. Reset nastąpi dopiero przy nowym START.
@@ -8060,7 +8151,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.8.0';
+      return el ? el.textContent.trim() : 'vGPT_6.8.1';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -9412,7 +9503,8 @@
         openStartCounterEditor();
         return;
       }
-      openMoneyPanel();
+      moneyPanelDraft=null;
+      openMoneyPanel({ entryMode:'normal' });
     });
     const postWorkVerifyEl = document.getElementById('postWorkVerify');
     if(postWorkVerifyEl){
@@ -9436,7 +9528,8 @@
       if(isEyeReminderFading()) return;
       const btn=document.getElementById('coinBtn');
       if(btn && btn.classList.contains('empty-slot')) return;
-      openMoneyPanel();
+      moneyPanelDraft=null;
+      openMoneyPanel({ entryMode:'normal' });
     });
 
     // trick: 3x puk w wersję = konfiguracja URL Apps Script
