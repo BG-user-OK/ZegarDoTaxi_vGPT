@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- vGPT_6.7.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- vGPT_6.8.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -2142,27 +2142,142 @@
       height:min(99dvh, 860px);
       max-height:99vh;
       padding:4px 8px 6px;
+      overflow:hidden;
     }
     .money-panel .providers-list{
-      gap:4px;
-      padding:16px 12px 12px;
+      flex:0 1 auto;
+      gap:3px;
+      padding:6px 12px;
+      max-height:53%;
+      min-height:0;
+      overflow-y:auto;
+      border-radius:14px;
     }
     .money-panel .provider-row{
-      min-height:46px;
+      min-height:clamp(32px, 4.25dvh, 39px);
     }
     .money-panel .prov-btn{
-      min-height:42px;
-      font-size:17px;
+      min-height:clamp(30px, 4.05dvh, 37px);
+      font-size:16px;
     }
     .money-panel .prov-amount{
-      font-size:22px;
+      font-size:clamp(18px, 5.2vw, 22px);
     }
     .money-panel .panel-actions .cancel-btn,
     .money-panel .panel-actions .ok-btn{
-      width:86px !important;
-      height:86px !important;
-      font-size:42px !important;
-      border-radius:18px !important;
+      width:74px !important;
+      height:74px !important;
+      font-size:38px !important;
+      border-radius:17px !important;
+    }
+    .money-panel .provider-row.active .prov-btn{
+      box-shadow:
+        inset 0 0 0 2px rgba(93,255,123,.62),
+        inset 0 4px 9px rgba(0,0,0,.66),
+        0 0 14px rgba(63,255,101,.25);
+    }
+    .money-panel .provider-row.active .prov-amount{
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(102,255,128,.25) 0%, transparent 66%),
+        linear-gradient(180deg, rgba(14,55,22,.92), rgba(2,17,6,.96));
+      color:#f2fff4;
+      box-shadow:
+        inset 0 0 0 2px rgba(93,255,123,.62),
+        inset 0 4px 10px rgba(0,0,0,.72),
+        0 0 14px rgba(63,255,101,.22);
+    }
+    .money-inline-mode{
+      flex:0 0 auto;
+      min-height:34px;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:5px;
+      margin:5px 4px 0;
+    }
+    .money-inline-mode[hidden]{ display:none; }
+    .money-mode-btn{
+      min-height:34px;
+      border:none;
+      border-radius:8px;
+      background:#151515;
+      color:#777;
+      font-size:13px;
+      font-weight:900;
+      letter-spacing:.5px;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);
+    }
+    .money-mode-btn.active{
+      color:#fff;
+      background:linear-gradient(180deg,#1f6730,#0b3517);
+      box-shadow:
+        inset 0 0 0 1px rgba(106,255,137,.38),
+        0 0 12px rgba(45,220,82,.2);
+    }
+    .money-inline-keypad{
+      flex:1 1 auto;
+      min-height:220px;
+      margin-top:5px;
+      grid-template-rows:repeat(4, minmax(0, 1fr));
+      gap:4px;
+    }
+    .money-inline-keypad button{
+      min-height:clamp(45px, 7.3dvh, 70px);
+      padding:8px 0;
+      border-radius:9px;
+      font-size:22px;
+    }
+    .money-panel-actions{
+      flex:0 0 auto;
+      display:grid;
+      grid-template-columns:74px minmax(0, 1fr) 74px;
+      align-items:center;
+      gap:8px;
+      padding:5px 2px 2px;
+    }
+    .money-inline-sum{
+      min-width:0;
+      height:68px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:0 10px;
+      border-radius:10px;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(255,245,176,.35) 0%, rgba(255,204,70,.15) 38%, transparent 72%),
+        linear-gradient(180deg, rgba(100,66,0,.65), rgba(19,13,0,.9));
+      color:#fff5be;
+      font-size:clamp(24px, 7vw, 38px);
+      font-weight:1000;
+      font-variant-numeric:tabular-nums;
+      white-space:nowrap;
+      overflow:hidden;
+      text-shadow:
+        0 0 5px rgba(255,255,255,.78),
+        0 0 15px rgba(255,211,61,.66);
+      box-shadow:
+        inset 0 5px 12px rgba(255,230,110,.18),
+        inset 0 -6px 12px rgba(0,0,0,.62),
+        0 0 14px rgba(255,197,55,.22);
+    }
+    .money-inline-sum::before{
+      content:'SUMA';
+      color:#5cff79;
+      font-size:clamp(13px, 3.6vw, 18px);
+      text-shadow:0 0 10px rgba(40,255,78,.6);
+    }
+    @media (max-height:700px){
+      .money-panel .providers-list{ max-height:47%; }
+      .money-inline-keypad{ min-height:190px; }
+      .money-inline-keypad button{ min-height:41px; }
+      .money-panel-actions{ grid-template-columns:66px minmax(0,1fr) 66px; }
+      .money-panel .panel-actions .cancel-btn,
+      .money-panel .panel-actions .ok-btn{
+        width:66px !important;
+        height:66px !important;
+        font-size:34px !important;
+      }
+      .money-inline-sum{ height:60px; }
     }
     /* Dwie tablice w tle - srebrna (lewa) i złota (prawa) */
     .sync-menu{
@@ -2767,14 +2882,22 @@
       color:#777;
       text-shadow:none;
     }
-    .counter-inline-caret{
+    .inline-caret-digit{
+      position:relative;
       display:inline-block;
-      width:2px;
-      height:1.05em;
-      margin-left:4px;
-      vertical-align:-.12em;
+      min-width:.52em;
+      text-align:center;
+    }
+    .inline-caret-digit::after{
+      content:'';
+      position:absolute;
+      left:5%;
+      right:5%;
+      bottom:-3px;
+      height:3px;
+      border-radius:3px;
       background:#7dff92;
-      box-shadow:0 0 7px rgba(90,255,120,.72);
+      box-shadow:0 0 7px rgba(90,255,120,.78);
       animation:counterInlineCaretBlink .8s steps(1,end) infinite;
     }
     @keyframes counterInlineCaretBlink{
@@ -3352,7 +3475,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">vGPT_6.7.0</div>
+    <div class="version">vGPT_6.8.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3431,6 +3554,7 @@
     let keypadCursorFromRight = 0;
     let keypadSide = 'right';
     let counterPanelDraft = null;
+    let moneyPanelDraft = null;
 
     const cx=200, cy=200, radius=200;
     let blinkState = false;
@@ -5871,19 +5995,46 @@
 
     // ===== overlay =====
     const overlay=document.getElementById('overlay');
-    const VIEW_TOUCH_LOCK_MS = 1000;
+    const activeViewPointers = new Set();
+    const blockedViewPointers = new Set();
     let viewTouchLockedUntil = 0;
-    function lockViewTouch(ms=VIEW_TOUCH_LOCK_MS){
-      viewTouchLockedUntil = Math.max(viewTouchLockedUntil, Date.now() + ms);
-    }
-    function blockLockedViewTouch(e){
-      if(!viewTouchLockedUntil || Date.now() >= viewTouchLockedUntil) return;
+    let viewTransitionClickLockedUntil = 0;
+    function stopViewTouchEvent(e){
       e.preventDefault();
       e.stopImmediatePropagation();
     }
-    ['pointerdown','pointerup','click','touchstart','touchend','mousedown','mouseup'].forEach(type=>{
-      document.addEventListener(type, blockLockedViewTouch, true);
-    });
+    function lockViewTouch(ms=0){
+      activeViewPointers.forEach(pointerId=>blockedViewPointers.add(pointerId));
+      if(ms>0) viewTouchLockedUntil = Math.max(viewTouchLockedUntil, Date.now() + ms);
+    }
+    document.addEventListener('pointerdown',(e)=>{
+      if(viewTouchLockedUntil && Date.now() < viewTouchLockedUntil){
+        stopViewTouchEvent(e);
+        return;
+      }
+      viewTransitionClickLockedUntil=0;
+      activeViewPointers.add(e.pointerId);
+    }, true);
+    document.addEventListener('pointerup',(e)=>{
+      const blocked = blockedViewPointers.has(e.pointerId) ||
+                      (viewTouchLockedUntil && Date.now() < viewTouchLockedUntil);
+      activeViewPointers.delete(e.pointerId);
+      blockedViewPointers.delete(e.pointerId);
+      if(blocked){
+        viewTransitionClickLockedUntil = Date.now() + 350;
+        stopViewTouchEvent(e);
+      }
+    }, true);
+    document.addEventListener('pointercancel',(e)=>{
+      activeViewPointers.delete(e.pointerId);
+      blockedViewPointers.delete(e.pointerId);
+    }, true);
+    document.addEventListener('click',(e)=>{
+      if((viewTouchLockedUntil && Date.now() < viewTouchLockedUntil) ||
+         Date.now() < viewTransitionClickLockedUntil){
+        stopViewTouchEvent(e);
+      }
+    }, true);
     function showOverlay(html){
       delete overlay.dataset.lockClose;
       overlay.classList.remove('keypad-overlay','keypad-left','keypad-right');
@@ -5900,6 +6051,8 @@
     overlay.addEventListener('click',(e)=>{
       if(e.target!==overlay) return;
       if(overlay.dataset.lockClose === 'tomorrowPreview') return;
+      moneyPanelDraft=null;
+      counterPanelDraft=null;
       if(pendingEndWorkExport) abortPendingEndWorkReview();
       else closeOverlayToMain('overlay_close');
     });
@@ -6391,7 +6544,7 @@
       const value = parseInt(keypadRaw || '0', 10);
       return keypadAmountNegative ? '-' + formatAmountDisplay(value) : formatAmountDisplay(value);
     }
-    function openMoneyPanel(){
+    function openMoneyPanelLegacy(){
       let rows='';
       const finalCounterMissing = counterEnd === null;
       const workHasStarted = startWorkMinutes !== null;
@@ -6464,11 +6617,11 @@
           e.stopPropagation();
           const k=btn.dataset.prov;
           if(k==='__counter') openCounterPanel();
-          else handleProviderClick(k);
+          else handleProviderClickLegacy(k);
         });
       });
     }
-    function handleProviderClick(key){
+    function handleProviderClickLegacy(key){
       const cur=revenues[key]||0;
       if(cur!==0){
         const lab = PROVIDERS.find(p=>p.key===key).label;
@@ -6505,6 +6658,245 @@
       } else {
         openKeypad('amount',{ provider:key, addMode:false });
       }
+    }
+
+    function createMoneyPanelDraft(){
+      const values={};
+      PROVIDERS.forEach(p=>values[p.key]=revenues[p.key]||0);
+      const firstProvider=PROVIDERS[0].key;
+      return {
+        values,
+        activeProvider:firstProvider,
+        editBase:values[firstProvider],
+        inputRaw:'',
+        negative:false,
+        explicitClear:false,
+        mode:'replace'
+      };
+    }
+    function moneyDraftTotal(){
+      if(!moneyPanelDraft) return getTotalRevenueGroszy();
+      return PROVIDERS.reduce((sum,p)=>sum+(moneyPanelDraft.values[p.key]||0),0);
+    }
+    function moneyDraftInputValue(){
+      if(!moneyPanelDraft) return 0;
+      const value=parseInt(moneyPanelDraft.inputRaw||'0',10)||0;
+      return moneyPanelDraft.negative ? -value : value;
+    }
+    function applyMoneyDraftInput(){
+      const draft=moneyPanelDraft;
+      if(!draft) return;
+      const key=draft.activeProvider;
+      if(draft.mode==='add'){
+        draft.values[key]=draft.editBase+(draft.inputRaw?moneyDraftInputValue():0);
+      } else if(draft.inputRaw || draft.negative || draft.explicitClear){
+        draft.values[key]=moneyDraftInputValue();
+      } else {
+        draft.values[key]=draft.editBase;
+      }
+    }
+    function inlineCursorHtml(text,active){
+      const chars=Array.from(String(text??''));
+      if(!active) return escapeHtml(chars.join(''));
+      if(!chars.length) chars.push('0');
+      const last=chars.pop();
+      return `${escapeHtml(chars.join(''))}<span class="inline-caret-digit">${escapeHtml(last)}</span>`;
+    }
+    function moneyProviderDisplay(key){
+      const draft=moneyPanelDraft;
+      if(!draft) return '&mdash;';
+      const active=draft.activeProvider===key;
+      const value=draft.values[key]||0;
+      if(active && draft.mode==='add' && draft.editBase!==0 && (draft.inputRaw || draft.negative)){
+        return inlineCursorHtml(
+          `${formatAmountDisplay(draft.editBase)} + ${formatAmountDisplay(moneyDraftInputValue())}`,
+          true
+        );
+      }
+      if(active) return inlineCursorHtml(formatAmountDisplay(value),true);
+      return value!==0 ? formatAmountDisplay(value) : '&mdash;';
+    }
+    function selectMoneyProvider(key){
+      const draft=moneyPanelDraft;
+      if(!draft || !PROVIDERS.some(p=>p.key===key)) return;
+      draft.activeProvider=key;
+      draft.editBase=draft.values[key]||0;
+      draft.inputRaw='';
+      draft.negative=false;
+      draft.explicitClear=false;
+      draft.mode='replace';
+      updateMoneyPanelView();
+    }
+    function setMoneyPanelMode(mode){
+      const draft=moneyPanelDraft;
+      if(!draft || !['replace','add'].includes(mode)) return;
+      draft.values[draft.activeProvider]=draft.editBase;
+      draft.mode=mode;
+      draft.inputRaw='';
+      draft.negative=false;
+      draft.explicitClear=false;
+      updateMoneyPanelView();
+    }
+    function moneyInlinePress(key){
+      const draft=moneyPanelDraft;
+      if(!draft) return;
+      if(key==='back'){
+        if(draft.inputRaw) draft.inputRaw=draft.inputRaw.slice(0,-1);
+        else draft.negative=false;
+        draft.explicitClear=false;
+      } else if(key==='minus'){
+        draft.negative=!draft.negative;
+        draft.explicitClear=false;
+      } else if(/^[0-9]$/.test(key) && draft.inputRaw.length<10){
+        draft.inputRaw+=key;
+        draft.explicitClear=false;
+      } else {
+        return;
+      }
+      applyMoneyDraftInput();
+      updateMoneyPanelView();
+    }
+    function updateMoneyPanelView(){
+      const draft=moneyPanelDraft;
+      const panel=overlay.querySelector('.money-panel');
+      if(!draft || !panel) return;
+      PROVIDERS.forEach(p=>{
+        const row=panel.querySelector(`[data-provider-row="${p.key}"]`);
+        const button=row && row.querySelector('.prov-btn');
+        const amount=row && row.querySelector('.prov-amount');
+        if(!row || !button || !amount) return;
+        const value=draft.values[p.key]||0;
+        const filled=value!==0;
+        const active=draft.activeProvider===p.key;
+        row.classList.toggle('active',active);
+        row.classList.toggle('provider-filled',filled);
+        row.classList.toggle('provider-empty',!filled);
+        button.classList.toggle('filled',filled);
+        button.classList.toggle('empty',!filled);
+        amount.classList.toggle('filled',filled);
+        amount.classList.toggle('empty',!filled);
+        amount.innerHTML=moneyProviderDisplay(p.key);
+      });
+      const modeBox=panel.querySelector('.money-inline-mode');
+      if(modeBox) modeBox.hidden=draft.editBase===0;
+      panel.querySelectorAll('[data-money-mode]').forEach(btn=>{
+        btn.classList.toggle('active',btn.dataset.moneyMode===draft.mode);
+      });
+      const sum=panel.querySelector('[data-money-sum]');
+      if(sum) sum.textContent=formatProviderSumDisplay(moneyDraftTotal());
+    }
+    function discardMoneyPanelDraft(){
+      moneyPanelDraft=null;
+    }
+    function commitMoneyPanelDraft(){
+      const draft=moneyPanelDraft;
+      if(!draft) return false;
+      let changed=false;
+      PROVIDERS.forEach(p=>{
+        const next=draft.values[p.key]||0;
+        if((revenues[p.key]||0)!==next) changed=true;
+        revenues[p.key]=next;
+      });
+      moneyPanelDraft=null;
+      if(changed) saveStateAndMarkOverlayDirty('money_panel');
+      return changed;
+    }
+    function openMoneyPanel(){
+      if(!moneyPanelDraft) moneyPanelDraft=createMoneyPanelDraft();
+      let rows='';
+      const finalCounterMissing=counterEnd===null;
+      const workHasStarted=startWorkMinutes!==null;
+      for(const p of PROVIDERS){
+        const value=moneyPanelDraft.values[p.key]||0;
+        const filled=value!==0;
+        const active=moneyPanelDraft.activeProvider===p.key;
+        const imgSrc=`Photos/${p.key}.png`;
+        rows+=`
+          <div class="provider-row ${filled?'provider-filled':'provider-empty'} ${active?'active':''}" data-provider-row="${p.key}">
+            <button class="prov-btn ${filled?'filled':'empty'}" data-provider-select="${p.key}" style="background:${p.bg};color:${p.fg};">
+              <img src="${imgSrc}" alt="${p.label}" class="prov-img"
+                   onload="this.parentElement.classList.add('has-img')"
+                   onerror="this.remove()" />
+              <span class="prov-label">${p.label}</span>
+            </button>
+            <div class="prov-amount ${filled?'filled':'empty'}" data-provider-select="${p.key}">${moneyProviderDisplay(p.key)}</div>
+          </div>`;
+      }
+      const counterDisplay=counterEnd!==null?counterEnd:'';
+      const counterKnown=counterEnd!==null;
+      const counterWarning=workHasStarted && finalCounterMissing;
+      rows+=`
+        <div class="provider-row" style="margin-top:3px;">
+          <button class="prov-btn ${counterWarning?'counter-warning':''}" data-provider-counter style="background:#2a2a2a;color:#f0f0f0;"><span class="prov-label">LICZNIK</span></button>
+          <div class="prov-amount ${counterKnown?'filled':'empty'} ${counterWarning?'counter-warning':''}" data-provider-counter>${counterDisplay}</div>
+        </div>`;
+      showOverlay(`
+        <div class="big-panel money-panel">
+          <h3>Obroty dnia</h3>
+          <div class="providers-list">
+            <div class="board-bg board-silver"><span class="screw-bl"></span><span class="screw-br"></span></div>
+            <div class="board-bg board-gold"><span class="screw-bl"></span><span class="screw-br"></span></div>
+            ${rows}
+          </div>
+          <div class="money-inline-mode" ${moneyPanelDraft.editBase===0?'hidden':''}>
+            <button type="button" class="money-mode-btn ${moneyPanelDraft.mode==='replace'?'active':''}" data-money-mode="replace">ZASTĄP</button>
+            <button type="button" class="money-mode-btn ${moneyPanelDraft.mode==='add'?'active':''}" data-money-mode="add">DODAJ</button>
+          </div>
+          <div class="keypad money-inline-keypad">
+            <button data-money-key="1"><span>1</span></button><button data-money-key="2"><span>2</span></button><button data-money-key="3"><span>3</span></button>
+            <button data-money-key="4"><span>4</span></button><button data-money-key="5"><span>5</span></button><button data-money-key="6"><span>6</span></button>
+            <button data-money-key="7"><span>7</span></button><button data-money-key="8"><span>8</span></button><button data-money-key="9"><span>9</span></button>
+            <button class="key-minus" data-money-key="minus"><span>-</span></button>
+            <button data-money-key="0"><span>0</span></button>
+            <button class="key-back" data-money-key="back"><span>←</span></button>
+          </div>
+          <div class="panel-actions money-panel-actions">
+            <button class="cancel-btn" data-act="cancel">✕</button>
+            <div class="money-inline-sum" data-money-sum>${formatProviderSumDisplay(moneyDraftTotal())}</div>
+            <button class="ok-btn" data-act="ok">✓</button>
+          </div>
+        </div>
+      `);
+      overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{
+        e.stopPropagation();
+        discardMoneyPanelDraft();
+        if(pendingEndWorkExport) abortPendingEndWorkReview();
+        else closeOverlayToMain('money_panel');
+      });
+      overlay.querySelector('[data-act="ok"]').addEventListener('click',(e)=>{
+        e.stopPropagation();
+        handleMoneyPanelOk();
+      });
+      overlay.querySelectorAll('[data-provider-select]').forEach(btn=>{
+        btn.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          selectMoneyProvider(btn.dataset.providerSelect);
+        });
+      });
+      overlay.querySelectorAll('[data-provider-counter]').forEach(btn=>{
+        btn.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          openCounterPanel({ returnTarget:'money' });
+        });
+      });
+      overlay.querySelectorAll('[data-money-mode]').forEach(btn=>{
+        btn.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          setMoneyPanelMode(btn.dataset.moneyMode);
+        });
+      });
+      overlay.querySelectorAll('[data-money-key]').forEach(btn=>{
+        btn.addEventListener('pointerdown',(e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          flashKeypadKey(btn);
+          moneyInlinePress(btn.dataset.moneyKey);
+        });
+        btn.addEventListener('click',(e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+        });
+      });
     }
 
     // ===== keypad =====
@@ -6783,7 +7175,7 @@
       const draft=counterPanelDraft;
       const active=draft && draft.activeField===field;
       const value=field==='priv' ? counterDraftPrivDisplay() : String(counterDraftFieldValue(field));
-      return `${value}${active?'<span class="counter-inline-caret"></span>':''}`;
+      return inlineCursorHtml(value,active);
     }
     function counterInlinePress(key){
       const draft=counterPanelDraft;
@@ -7445,6 +7837,8 @@
       return PROVIDERS.some(p => (revenues[p.key] || 0) !== 0);
     }
     function abortPendingEndWorkReview(){
+      moneyPanelDraft=null;
+      counterPanelDraft=null;
       saveState();
       clearOverlayAutoSyncDirty();
       hideOverlay();
@@ -7452,6 +7846,7 @@
       showToast('Eksport wstrzymany do zielonego zatwierdzenia obrotow.', 'err');
     }
     function handleMoneyPanelOk(){
+      commitMoneyPanelDraft();
       if(pendingEndWorkExport){
         clearOverlayAutoSyncDirty();
         finishPendingEndWorkExport();
@@ -7543,7 +7938,9 @@
       renderAll();
       syncWorkWakeLock();
       showToast('Uzupelnij obroty i licznik, potem zatwierdz zielonym.', 'ok');
-      openMoneyPanel();
+      moneyPanelDraft=null;
+      counterPanelDraft=null;
+      openFinalCounterEditor();
       return;
 
       // Eksport - dane zostają na ekranie po sukcesie. Reset nastąpi dopiero przy nowym START.
@@ -7663,7 +8060,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.7.0';
+      return el ? el.textContent.trim() : 'vGPT_6.8.0';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
