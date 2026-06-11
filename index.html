@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- vGPT_6.8.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- vGPT_6.9.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -1097,6 +1097,89 @@
       from{ opacity:.48; filter:brightness(.9); }
       to{ opacity:1; filter:brightness(1.24); }
     }
+    .export-overwrite-guard{
+      display:none;
+      position:fixed;
+      z-index:210;
+      top:max(8px, env(safe-area-inset-top));
+      left:50%;
+      transform:translateX(-50%);
+      width:min(92vw, 520px);
+      padding:10px;
+      border:1px solid rgba(255,216,61,.72);
+      border-radius:7px;
+      background:rgba(0,0,0,.96);
+      box-shadow:0 0 20px rgba(255,216,61,.22);
+      color:#fff;
+      text-align:center;
+      pointer-events:auto;
+    }
+    .export-overwrite-guard.visible{ display:block; }
+    .export-overwrite-title{
+      color:#ffd83d;
+      font-size:clamp(15px, 4.3vw, 20px);
+      line-height:1.12;
+      font-weight:900;
+    }
+    .export-overwrite-amount{
+      margin-top:5px;
+      color:#fff;
+      font-size:clamp(16px, 4.8vw, 23px);
+      line-height:1.08;
+      font-weight:900;
+    }
+    .export-overwrite-question{
+      margin-top:5px;
+      color:#d8d8d8;
+      font-size:clamp(13px, 3.7vw, 17px);
+      line-height:1.15;
+      font-weight:700;
+    }
+    .export-overwrite-actions{
+      display:grid;
+      grid-template-columns:1fr 1.35fr;
+      gap:7px;
+      margin-top:9px;
+    }
+    .export-overwrite-btn{
+      min-height:45px;
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:6px;
+      color:#fff;
+      font-size:clamp(14px, 4vw, 18px);
+      line-height:1;
+      font-weight:900;
+    }
+    .export-overwrite-btn.no{ background:#333; }
+    .export-overwrite-btn.confirm{
+      background:#826d0a;
+      color:#fff7c8;
+    }
+    .export-overwrite-btn.confirm.armed{
+      background:#c82020;
+      color:#fff;
+      border-color:#ff6262;
+      box-shadow:0 0 14px rgba(255,42,42,.45);
+    }
+    .export-overwrite-btn:disabled{ opacity:.55; }
+    @media (orientation:landscape) and (max-height:620px) and (pointer:coarse){
+      .export-overwrite-guard{
+        top:6px;
+        right:6px;
+        left:auto;
+        transform:none;
+        width:min(34vw, 360px);
+        padding:7px;
+      }
+      .export-overwrite-title{ font-size:clamp(12px, 1.75vw, 17px); }
+      .export-overwrite-amount{ font-size:clamp(13px, 2vw, 19px); }
+      .export-overwrite-question{ font-size:clamp(11px, 1.45vw, 14px); }
+      .export-overwrite-actions{ margin-top:6px; gap:5px; }
+      .export-overwrite-btn{
+        min-height:36px;
+        font-size:clamp(12px, 1.5vw, 15px);
+      }
+    }
 
     /* moneta (przycisk dolny prawy) */
     .coin-btn{
@@ -1591,7 +1674,13 @@
       0%,25%{
         color:var(--pot-lit);
         opacity:1;
-        text-shadow:0 0 13px var(--pot-glow),0 0 24px var(--pot-glow),0 2px 0 rgba(0,0,0,.9);
+        text-shadow:
+          0 0 2px rgba(255,255,255,.98),
+          0 0 8px var(--pot-glow),
+          0 0 17px var(--pot-glow),
+          0 0 31px var(--pot-glow),
+          0 0 44px var(--pot-glow),
+          0 2px 0 rgba(0,0,0,.9);
       }
       75%,100%{
         color:#121212;
@@ -2163,6 +2252,47 @@
     .money-panel .prov-amount{
       font-size:clamp(18px, 5.2vw, 22px);
     }
+    .money-panel .counter-provider-control{
+      display:flex;
+      align-items:stretch;
+      justify-content:space-between;
+      gap:5px;
+      padding:0 0 0 8px;
+      overflow:hidden;
+    }
+    .money-panel .counter-provider-control .prov-label{
+      display:flex;
+      align-items:center;
+      min-width:0;
+      text-align:left;
+      font-size:14px;
+      letter-spacing:0;
+    }
+    .money-panel .counter-target-toggle{
+      align-self:stretch;
+      min-width:52px;
+      border:0;
+      border-left:1px solid rgba(255,255,255,.1);
+      border-radius:0 8px 8px 0;
+      padding:0 7px;
+      font-size:12px;
+      font-weight:1000;
+      letter-spacing:.35px;
+      color:#e8efe9;
+      box-shadow:inset 1px 0 0 rgba(255,255,255,.08);
+      touch-action:manipulation;
+    }
+    .money-panel .counter-target-toggle.target-start{
+      background:linear-gradient(180deg,#235a31,#12331d);
+      color:#bde8c6;
+    }
+    .money-panel .counter-target-toggle.target-end{
+      background:linear-gradient(180deg,#6a3030,#3b1818);
+      color:#f0c1c1;
+    }
+    .money-panel .counter-target-toggle:active{
+      filter:brightness(1.2);
+    }
     .money-panel .panel-actions .cancel-btn,
     .money-panel .panel-actions .ok-btn{
       width:74px !important;
@@ -2292,6 +2422,9 @@
       .money-panel .provider-row{ min-height:28px; }
       .money-panel .prov-btn{ min-height:26px; font-size:14px; }
       .money-panel .prov-amount{ font-size:17px; }
+      .money-panel .counter-provider-control{ padding-left:6px; }
+      .money-panel .counter-provider-control .prov-label{ font-size:12px; }
+      .money-panel .counter-target-toggle{ min-width:45px; padding:0 4px; font-size:10px; }
     }
     @media (max-height:700px){
       .money-panel .providers-list{ max-height:52%; }
@@ -2873,6 +3006,14 @@
     }
     .counter-row.disabled{ opacity:.4; pointer-events:none; }
     .counter-label{ color:#ccc; font-size:20px; font-weight:900; line-height:1.08; }
+    .counter-previous-note{
+      display:block;
+      color:#888;
+      font-size:.72em;
+      font-weight:400;
+      line-height:1.05;
+      white-space:nowrap;
+    }
     .counter-value{
       color:#fff;
       font-size:25px; font-weight:900;
@@ -3498,12 +3639,21 @@
       </button>
       <button class="driving-focus-restore-area" id="drivingFocusRestoreArea" type="button" aria-label="Pokaż ukryte moduły"></button>
     </div>
+    <div class="export-overwrite-guard" id="exportOverwriteGuard" aria-hidden="true" role="alertdialog" aria-labelledby="exportOverwriteTitle">
+      <div class="export-overwrite-title" id="exportOverwriteTitle">Dane tej dniówki już istnieją w Arkuszu!</div>
+      <div class="export-overwrite-amount">Kwota dniówki w Arkuszu wynosi: <span id="exportOverwriteAmount">-</span></div>
+      <div class="export-overwrite-question">Czy chcesz nadpisać dane aktualnym eksportem?</div>
+      <div class="export-overwrite-actions">
+        <button class="export-overwrite-btn no" id="exportOverwriteNo" type="button">NIE</button>
+        <button class="export-overwrite-btn confirm" id="exportOverwriteConfirm" type="button">TAK-eksportuj</button>
+      </div>
+    </div>
   </div>
 
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">vGPT_6.8.1</div>
+    <div class="version">vGPT_6.9.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3545,6 +3695,8 @@
     let workDate = null;
     let pendingEndWorkExport = false;
     let dailyExportStatus = null;
+    let exportOverwriteGuardArmed = false;
+    let exportOverwriteGuardBusy = false;
     // Punkt 7: planowany cel pracy w minutach (domyślnie 8h = 480min)
     let workTargetMinutes = 480;
 
@@ -3760,7 +3912,7 @@
     }
     function normalizeDailyExportStatus(value){
       const s = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
-      const status = s.status === 'pending' ? 'pending' : 'confirmed';
+      const status = ['pending','blocked','confirmed'].includes(s.status) ? s.status : 'confirmed';
       return {
         status,
         date:String(s.date || ''),
@@ -3773,7 +3925,13 @@
         row:Number(s.row || 0),
         reason:String(s.reason || ''),
         verified:s.verified === true,
-        verification:(s.verification && typeof s.verification === 'object' && !Array.isArray(s.verification)) ? s.verification : null
+        verification:(s.verification && typeof s.verification === 'object' && !Array.isArray(s.verification)) ? s.verification : null,
+        overwriteRequired:s.overwriteRequired === true,
+        overwritePromptDismissed:s.overwritePromptDismissed === true,
+        existingAmount:s.existingAmount,
+        existingAmountDisplay:String(s.existingAmountDisplay || ''),
+        overwriteToken:String(s.overwriteToken || ''),
+        blockedAt:Number(s.blockedAt || 0)
       };
     }
     function hasEndedWorkdayForExport(){
@@ -3804,7 +3962,7 @@
       if(!payload) return false;
       const signature = dailyExportSignature(payload);
       const current = normalizeDailyExportStatus(dailyExportStatus);
-      const samePending = current.status === 'pending' && current.signature === signature;
+      const samePending = (current.status === 'pending' || current.status === 'blocked') && current.signature === signature;
       dailyExportStatus = normalizeDailyExportStatus({
         status:'pending',
         date:String(payload.date || ''),
@@ -3823,6 +3981,10 @@
       const payload = buildDailyExportPayload();
       const signature = dailyExportSignature(payload);
       const current = normalizeDailyExportStatus(dailyExportStatus);
+      if((current.status === 'pending' || current.status === 'blocked') &&
+          current.date === payload.date && current.signature === signature){
+        return false;
+      }
       if(current.status !== 'confirmed' || current.date !== payload.date || current.signature !== signature){
         setDailyExportPendingPayload(payload, 'ended_workday_changed');
         saveState();
@@ -3833,7 +3995,41 @@
     function hasPendingDailyExport(){
       refreshDailyExportPendingFromCurrentState();
       const current = normalizeDailyExportStatus(dailyExportStatus);
-      return current.status === 'pending' && !!current.payload;
+      return (current.status === 'pending' || current.status === 'blocked') && !!current.payload;
+    }
+    function isDailyExportOverwriteBlocked(){
+      const current = normalizeDailyExportStatus(dailyExportStatus);
+      return current.status === 'blocked' && current.overwriteRequired && !!current.payload;
+    }
+    function markDailyExportOverwriteBlocked(payload, response, promptDismissed=false){
+      const current = normalizeDailyExportStatus(dailyExportStatus);
+      dailyExportStatus = normalizeDailyExportStatus({
+        status:'blocked',
+        date:String(payload && payload.date ? payload.date : ''),
+        signature:dailyExportSignature(payload),
+        payload,
+        attempts:current.attempts,
+        lastAttemptAt:current.lastAttemptAt,
+        reason:'spreadsheet_row_exists',
+        overwriteRequired:true,
+        overwritePromptDismissed:!!promptDismissed,
+        existingAmount:response ? response.existingAmount : '',
+        existingAmountDisplay:response ? response.existingAmountDisplay : '',
+        overwriteToken:response ? response.overwriteToken : '',
+        sheet:response && response.sheet ? response.sheet : '',
+        row:response && response.row ? response.row : 0,
+        blockedAt:Date.now()
+      });
+      saveState();
+    }
+    function dismissDailyExportOverwritePrompt(){
+      const current = normalizeDailyExportStatus(dailyExportStatus);
+      if(current.status !== 'blocked' || !current.overwriteRequired) return;
+      current.overwritePromptDismissed = true;
+      dailyExportStatus = current;
+      exportOverwriteGuardArmed = false;
+      exportOverwriteGuardBusy = false;
+      saveState();
     }
     function markDailyExportAttempt(payload){
       setDailyExportPendingPayload(payload, 'attempt');
@@ -3948,6 +4144,13 @@
       if(status.date !== String(payload.date || '') || status.signature !== dailyExportSignature(payload)) return;
       if(status.status === 'confirmed' && status.verified === true && current.export !== 'ok'){
         setPostWorkVerificationState('export', 'ok', { payload, message:'Eksport potwierdzony w Arkuszu.' });
+      } else if(status.status === 'blocked' && current.export !== 'ok'){
+        setPostWorkVerificationState('export', 'error', {
+          payload,
+          message:status.overwritePromptDismissed
+            ? 'Nadpisanie eksportu anulowane. Eksport oczekuje na ręczną decyzję.'
+            : 'Dane dniówki istnieją w Arkuszu. Wymagana decyzja o nadpisaniu.'
+        });
       } else if((status.status === 'pending' || (status.status === 'confirmed' && status.verified !== true)) && current.export !== 'error' && current.export !== 'ok'){
         setPostWorkVerificationState('export', 'error', { payload, message:'Brak potwierdzenia danych w Arkuszu.' });
       }
@@ -3999,6 +4202,89 @@
         syncPostWorkVerificationWithExportStatus();
       }
       updatePostWorkVerificationDom();
+    }
+    function isOverwriteRequiredExportResult(result){
+      return !!(result && result.requiresOverwriteConfirmation === true);
+    }
+    function shouldShowExportOverwriteGuard(){
+      const current = normalizeDailyExportStatus(dailyExportStatus);
+      const controls = document.querySelector('.controls');
+      return current.status === 'blocked' &&
+        current.overwriteRequired &&
+        !current.overwritePromptDismissed &&
+        !!controls &&
+        controls.classList.contains('results-ended');
+    }
+    function renderExportOverwriteGuard(){
+      const guard = document.getElementById('exportOverwriteGuard');
+      if(!guard) return;
+      const current = normalizeDailyExportStatus(dailyExportStatus);
+      const visible = shouldShowExportOverwriteGuard();
+      guard.classList.toggle('visible', visible);
+      guard.setAttribute('aria-hidden', visible ? 'false' : 'true');
+      const amount = document.getElementById('exportOverwriteAmount');
+      if(amount){
+        amount.textContent = current.existingAmountDisplay ||
+          (current.existingAmount === 0 ? '0' : String(current.existingAmount || '-'));
+      }
+      const noBtn = document.getElementById('exportOverwriteNo');
+      const confirmBtn = document.getElementById('exportOverwriteConfirm');
+      if(noBtn) noBtn.disabled = exportOverwriteGuardBusy;
+      if(confirmBtn){
+        confirmBtn.disabled = exportOverwriteGuardBusy;
+        confirmBtn.classList.toggle('armed', exportOverwriteGuardArmed);
+        confirmBtn.textContent = exportOverwriteGuardBusy
+          ? 'EKSPORT...'
+          : (exportOverwriteGuardArmed ? 'POTWIERDŹ' : 'TAK-eksportuj');
+      }
+      if(!visible){
+        exportOverwriteGuardArmed = false;
+        exportOverwriteGuardBusy = false;
+      }
+    }
+    function cancelDailyExportOverwrite(){
+      if(!isDailyExportOverwriteBlocked()) return;
+      dismissDailyExportOverwritePrompt();
+      const payload = normalizeDailyExportStatus(dailyExportStatus).payload;
+      setPostWorkVerificationState('export', 'error', {
+        payload,
+        message:'Nadpisanie eksportu anulowane przez użytkownika.'
+      });
+      setAutoSyncIndicatorState('frozen', 'Eksport dniówki czeka na ręczną decyzję o nadpisaniu danych w Arkuszu.');
+      renderAll();
+      showToast('Nadpisanie danych anulowane.', 'ok');
+    }
+    async function confirmDailyExportOverwrite(){
+      if(exportOverwriteGuardBusy) return;
+      const current = normalizeDailyExportStatus(dailyExportStatus);
+      if(current.status !== 'blocked' || !current.overwriteRequired ||
+          !current.payload || !current.overwriteToken) return;
+      const url = localStorage.getItem(LS_APPSCRIPT);
+      if(!url){
+        showToast('URL eksportu nie jest skonfigurowany.', 'err');
+        return;
+      }
+      exportOverwriteGuardBusy = true;
+      renderExportOverwriteGuard();
+      const result = await doExport(url, current.payload, {
+        overwriteConfirmed:true,
+        overwriteToken:current.overwriteToken
+      });
+      exportOverwriteGuardBusy = false;
+      exportOverwriteGuardArmed = false;
+      if(isOverwriteRequiredExportResult(result)){
+        renderAll();
+        showToast('Dane w Arkuszu zmieniły się. Sprawdź kwotę ponownie.', 'err');
+        return;
+      }
+      if(result){
+        showToast('Eksport z nadpisaniem potwierdzony.', 'ok');
+        if(isAutoSyncEnabled()) setAutoSyncIndicatorState('on');
+        scheduleAutoSyncUpload('end_work_overwrite_confirmed', { immediate:true });
+      } else {
+        showToast('Eksport z nadpisaniem nie powiódł się.', 'err');
+      }
+      renderAll();
     }
 
     // ===== pomocnicze =====
@@ -5920,6 +6206,7 @@
       renderExerciseMarks();
       renderForecastHand();
       renderButtons();
+      renderExportOverwriteGuard();
       renderDate();
       updateDrivingFocusFade();
       renderBattery();
@@ -6691,9 +6978,17 @@
       const values={};
       PROVIDERS.forEach(p=>values[p.key]=revenues[p.key]||0);
       const firstProvider=PROVIDERS[0].key;
-      const counterBase=counterEnd!==null ? counterEnd : highestKnownCounterValue();
+      const entryMode=options.entryMode==='endWork'?'endWork':'normal';
+      const suggestedStart=counterStart!==null ? counterStart : (lastCounterEnd!==null ? lastCounterEnd : 0);
+      const suggestedEnd=counterEnd!==null ? counterEnd : Math.max(suggestedStart,highestKnownCounterValue());
+      let counterTarget=options.counterTarget;
+      if(!['start','end'].includes(counterTarget)){
+        if(entryMode==='endWork') counterTarget='end';
+        else if(startWorkMinutes===null || counterStart===null) counterTarget='start';
+        else counterTarget='end';
+      }
       return {
-        entryMode:options.entryMode==='endWork'?'endWork':'normal',
+        entryMode,
         values,
         activeProvider:firstProvider,
         editBase:values[firstProvider],
@@ -6701,9 +6996,13 @@
         negative:false,
         explicitClear:false,
         mode:'replace',
-        counterOriginal:counterEnd,
-        counterBase,
-        counterDigits:''
+        counterTarget,
+        counterStartOriginal:counterStart,
+        counterEndOriginal:counterEnd,
+        counterStartBase:suggestedStart,
+        counterEndBase:suggestedEnd,
+        counterStartDigits:'',
+        counterEndDigits:''
       };
     }
     function moneyDraftTotal(){
@@ -6748,26 +7047,39 @@
       if(active) return inlineCursorHtml(formatAmountDisplay(value),true);
       return value!==0 ? formatAmountDisplay(value) : '&mdash;';
     }
-    function moneyDraftCounterValue(){
+    function moneyCounterDraftProp(target,suffix){
+      const prefix=target==='start'?'counterStart':'counterEnd';
+      return `${prefix}${suffix}`;
+    }
+    function moneyDraftCounterValue(target){
       const draft=moneyPanelDraft;
       if(!draft) return counterEnd!==null?counterEnd:highestKnownCounterValue();
-      if(!draft.counterDigits) return draft.counterBase;
-      const baseDigits=String(Math.max(0,Math.trunc(draft.counterBase||0))).padStart(6,'0').slice(-6).split('');
-      const typed=draft.counterDigits.slice(-6);
+      const selected=['start','end'].includes(target)?target:draft.counterTarget;
+      const digits=draft[moneyCounterDraftProp(selected,'Digits')];
+      const base=draft[moneyCounterDraftProp(selected,'Base')];
+      if(!digits) return base;
+      const baseDigits=String(Math.max(0,Math.trunc(base||0))).padStart(6,'0').slice(-6).split('');
+      const typed=digits.slice(-6);
       for(let i=0;i<typed.length;i++) baseDigits[6-typed.length+i]=typed[i];
       return parseInt(baseDigits.join(''),10)||0;
+    }
+    function moneyCounterKnown(target){
+      const draft=moneyPanelDraft;
+      if(!draft) return target==='start'?counterStart!==null:counterEnd!==null;
+      return draft[moneyCounterDraftProp(target,'Original')]!==null ||
+             draft[moneyCounterDraftProp(target,'Digits')].length>0;
     }
     function moneyCounterDisplay(){
       const draft=moneyPanelDraft;
       if(!draft) return '';
-      if(draft.counterOriginal===null && !draft.counterDigits && draft.activeProvider!=='__counter') return '&mdash;';
+      if(!moneyCounterKnown(draft.counterTarget) && draft.activeProvider!=='__counter') return '&mdash;';
       return inlineCursorHtml(String(moneyDraftCounterValue()),draft.activeProvider==='__counter');
     }
     function selectMoneyProvider(key){
       const draft=moneyPanelDraft;
       if(!draft || (key!=='__counter' && !PROVIDERS.some(p=>p.key===key))) return;
       draft.activeProvider=key;
-      draft.editBase=key==='__counter'?moneyDraftCounterValue():(draft.values[key]||0);
+      draft.editBase=key==='__counter'?moneyDraftCounterValue(draft.counterTarget):(draft.values[key]||0);
       draft.inputRaw='';
       draft.negative=false;
       draft.explicitClear=false;
@@ -6780,6 +7092,18 @@
       const order=[...PROVIDERS.map(p=>p.key),'__counter'];
       const index=Math.max(0,order.indexOf(draft.activeProvider));
       selectMoneyProvider(order[(index+1)%order.length]);
+    }
+    function toggleMoneyCounterTarget(){
+      const draft=moneyPanelDraft;
+      if(!draft) return;
+      draft.counterTarget=draft.counterTarget==='start'?'end':'start';
+      draft.activeProvider='__counter';
+      draft.editBase=moneyDraftCounterValue(draft.counterTarget);
+      draft.inputRaw='';
+      draft.negative=false;
+      draft.explicitClear=false;
+      draft.mode='replace';
+      updateMoneyPanelView();
     }
     function setMoneyPanelMode(mode){
       const draft=moneyPanelDraft;
@@ -6799,10 +7123,11 @@
         return;
       }
       if(draft.activeProvider==='__counter'){
+        const digitsProp=moneyCounterDraftProp(draft.counterTarget,'Digits');
         if(key==='back'){
-          draft.counterDigits=draft.counterDigits.slice(0,-1);
-        } else if(/^[0-9]$/.test(key) && draft.counterDigits.length<6){
-          draft.counterDigits+=key;
+          draft[digitsProp]=draft[digitsProp].slice(0,-1);
+        } else if(/^[0-9]$/.test(key) && draft[digitsProp].length<6){
+          draft[digitsProp]+=key;
         } else {
           return;
         }
@@ -6851,14 +7176,24 @@
       const counterAmount=counterRow && counterRow.querySelector('.prov-amount');
       if(counterRow && counterButton && counterAmount){
         const active=draft.activeProvider==='__counter';
-        const known=draft.counterOriginal!==null || draft.counterDigits.length>0;
-        const warning=draft.entryMode==='endWork' && !known;
+        const known=moneyCounterKnown(draft.counterTarget);
+        const endKnown=moneyCounterKnown('end');
+        const warning=draft.entryMode==='endWork' && !endKnown;
         counterRow.classList.toggle('active',active);
         counterButton.classList.toggle('counter-warning',warning);
         counterAmount.classList.toggle('counter-warning',warning);
         counterAmount.classList.toggle('filled',known);
         counterAmount.classList.toggle('empty',!known);
         counterAmount.innerHTML=moneyCounterDisplay();
+        const toggle=counterButton.querySelector('[data-counter-target-toggle]');
+        if(toggle){
+          toggle.textContent=draft.counterTarget==='start'?'START':'END';
+          toggle.classList.toggle('target-start',draft.counterTarget==='start');
+          toggle.classList.toggle('target-end',draft.counterTarget==='end');
+          toggle.setAttribute('aria-label',draft.counterTarget==='start'
+            ? 'Edytowany licznik początkowy. Przełącz na końcowy.'
+            : 'Edytowany licznik końcowy. Przełącz na początkowy.');
+        }
       }
       const modeBox=panel.querySelector('.money-inline-mode');
       if(modeBox) modeBox.hidden=draft.activeProvider==='__counter' || draft.editBase===0;
@@ -6880,10 +7215,15 @@
         if((revenues[p.key]||0)!==next) changed=true;
         revenues[p.key]=next;
       });
-      if(draft.counterDigits){
-        const nextCounter=moneyDraftCounterValue();
-        if(counterEnd!==nextCounter) changed=true;
-        counterEnd=nextCounter;
+      if(draft.counterStartDigits){
+        const nextStart=moneyDraftCounterValue('start');
+        if(counterStart!==nextStart) changed=true;
+        counterStart=nextStart;
+      }
+      if(draft.counterEndDigits){
+        const nextEnd=moneyDraftCounterValue('end');
+        if(counterEnd!==nextEnd) changed=true;
+        counterEnd=nextEnd;
       }
       moneyPanelDraft=null;
       if(changed) saveStateAndMarkOverlayDirty('money_panel');
@@ -6908,12 +7248,20 @@
             <div class="prov-amount ${filled?'filled':'empty'}" data-provider-select="${p.key}">${moneyProviderDisplay(p.key)}</div>
           </div>`;
       }
-      const counterKnown=moneyPanelDraft.counterOriginal!==null || moneyPanelDraft.counterDigits.length>0;
-      const counterWarning=moneyPanelDraft.entryMode==='endWork' && !counterKnown;
+      const counterKnown=moneyCounterKnown(moneyPanelDraft.counterTarget);
+      const counterWarning=moneyPanelDraft.entryMode==='endWork' && !moneyCounterKnown('end');
       rows+=`
         <div class="provider-row ${moneyPanelDraft.activeProvider==='__counter'?'active':''}" data-provider-counter-row>
-          <button class="prov-btn ${counterWarning?'counter-warning':''}" data-provider-counter style="background:#2a2a2a;color:#f0f0f0;"><span class="prov-label">LICZNIK</span></button>
-          <div class="prov-amount ${counterKnown?'filled':'empty'} ${counterWarning?'counter-warning':''}" data-provider-counter>${moneyCounterDisplay()}</div>
+          <div class="prov-btn counter-provider-control ${counterWarning?'counter-warning':''}" data-provider-counter-select role="button" tabindex="0" style="background:#2a2a2a;color:#f0f0f0;">
+            <span class="prov-label">LICZNIK</span>
+            <button type="button"
+                    class="counter-target-toggle ${moneyPanelDraft.counterTarget==='start'?'target-start':'target-end'}"
+                    data-counter-target-toggle
+                    aria-label="${moneyPanelDraft.counterTarget==='start'?'Edytowany licznik początkowy. Przełącz na końcowy.':'Edytowany licznik końcowy. Przełącz na początkowy.'}">
+              ${moneyPanelDraft.counterTarget==='start'?'START':'END'}
+            </button>
+          </div>
+          <div class="prov-amount ${counterKnown?'filled':'empty'} ${counterWarning?'counter-warning':''}" data-provider-counter-select>${moneyCounterDisplay()}</div>
         </div>`;
       showOverlay(`
         <div class="big-panel money-panel">
@@ -6959,12 +7307,20 @@
           selectMoneyProvider(btn.dataset.providerSelect);
         });
       });
-      overlay.querySelectorAll('[data-provider-counter]').forEach(btn=>{
+      overlay.querySelectorAll('[data-provider-counter-select]').forEach(btn=>{
         btn.addEventListener('click',(e)=>{
           e.stopPropagation();
           selectMoneyProvider('__counter');
         });
       });
+      const counterTargetToggle=overlay.querySelector('[data-counter-target-toggle]');
+      if(counterTargetToggle){
+        counterTargetToggle.addEventListener('click',(e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          toggleMoneyCounterTarget();
+        });
+      }
       overlay.querySelectorAll('[data-money-mode]').forEach(btn=>{
         btn.addEventListener('click',(e)=>{
           e.stopPropagation();
@@ -7213,6 +7569,7 @@
         activeField,
         returnTarget:options.returnTarget || 'money',
         providerEntryMode:options.providerEntryMode || 'normal',
+        mirrorStartToEnd:!!options.mirrorStartToEnd,
         originalStart:counterStart,
         originalEnd:counterEnd,
         originalPriv:privKmTotal,
@@ -7226,6 +7583,13 @@
         startCleared:false,
         endCleared:false
       };
+    }
+    function mirrorCounterStartDraftToEnd(){
+      const draft=counterPanelDraft;
+      if(!draft || !draft.mirrorStartToEnd || draft.activeField!=='start') return;
+      draft.endBase=counterDraftFieldValue('start');
+      draft.endDigits='';
+      draft.endCleared=false;
     }
     function counterDraftFieldValue(field){
       const draft=counterPanelDraft;
@@ -7275,6 +7639,7 @@
           draft[`${field}Digits`]='';
           draft[`${field}Cleared`]=false;
         }
+        mirrorCounterStartDraftToEnd();
         renderCounterPanel();
         return;
       }
@@ -7286,6 +7651,7 @@
           draft[prop]=draft[prop].slice(0,-1);
           if(!draft[prop]) draft[`${field}Cleared`]=false;
         }
+        mirrorCounterStartDraftToEnd();
         renderCounterPanel();
         return;
       }
@@ -7296,6 +7662,7 @@
         const prop=`${field}Digits`;
         if(draft[prop].length<6) draft[prop]+=key;
       }
+      mirrorCounterStartDraftToEnd();
       renderCounterPanel();
     }
     function cancelCounterPanel(){
@@ -7356,7 +7723,7 @@
           <h3>Licznik kilometrów</h3>
           <div class="counter-fields">
             <div class="counter-row ${draft.activeField==='start'?'active':''}" data-cnt="start" role="button" tabindex="0">
-              <div class="counter-label">Początkowy${startSuggested && lastCounterEnd!==null?' <span style="color:#888;font-weight:400;">(z wczoraj)</span>':''}</div>
+              <div class="counter-label">Początkowy${startSuggested && lastCounterEnd!==null?'<span class="counter-previous-note">(z wczoraj)</span>':''}</div>
               <div class="counter-value ${startSuggested?'suggested':''}">${counterDraftValueHtml('start')}</div>
             </div>
             <div class="counter-row ${draft.activeField==='end'?'active':''}" data-cnt="end" role="button" tabindex="0">
@@ -7413,7 +7780,8 @@
       openCounterPanel({
         activeField:'start',
         returnTarget:'main',
-        saveSuggestedStart:true
+        saveSuggestedStart:true,
+        mirrorStartToEnd:!!options.mirrorStartToEnd
       });
     }
 
@@ -7884,7 +8252,7 @@
       renderAll();
       syncWorkWakeLock();
       if(!fromEdit){
-        setTimeout(()=>openStartCounterEditor(), 0);
+        setTimeout(()=>openStartCounterEditor({ mirrorStartToEnd:true }), 0);
       }
     }
     function askEndedWorkdayStartChoice(){
@@ -8002,7 +8370,11 @@
       renderAll();
       showToast('Eksport...','ok');
       const ok=await doExport(url, payload);
-      if(ok){
+      if(isOverwriteRequiredExportResult(ok)){
+        clearOverlayAutoSyncDirty();
+        renderAll();
+        showToast('Dane tej dniówki już istnieją w Arkuszu.', 'err');
+      } else if(ok){
         showToast('Eksport OK. Dane pozostaja na ekranie.','ok');
         scheduleAutoSyncUpload('end_work_final_sync', { immediate:true });
         renderAll();
@@ -8102,14 +8474,31 @@
       });
       return payload;
     }
-    async function doExport(url, payloadOverride){
+    async function doExport(url, payloadOverride, options={}){
       const payload = payloadOverride || buildDailyExportPayload();
       markDailyExportAttempt(payload);
       if(isCurrentPostWorkPayload(payload)){
         setPostWorkVerificationState('export', 'busy', { payload, message:'Wysyłam i sprawdzam eksport dniówki.' });
       }
       try{
-        const response = await jsonpRequest(url, Object.assign({ action:'dailyExport' }, payload));
+        const requestPayload = Object.assign({ action:'dailyExport' }, payload);
+        if(options.overwriteConfirmed === true){
+          requestPayload.overwrite_confirmed = '1';
+          requestPayload.overwrite_token = String(options.overwriteToken || '');
+        }
+        const response = await jsonpRequest(url, requestPayload);
+        if(response && response.requiresOverwriteConfirmation === true){
+          markDailyExportOverwriteBlocked(payload, response, false);
+          if(isCurrentPostWorkPayload(payload)){
+            setPostWorkVerificationState('export', 'error', {
+              payload,
+              message:'Dane dniówki istnieją w Arkuszu. Wymagana decyzja o nadpisaniu.'
+            });
+          }
+          setAutoSyncIndicatorState('frozen', 'Eksport dniówki czeka na decyzję o nadpisaniu danych w Arkuszu.');
+          renderExportOverwriteGuard();
+          return response;
+        }
         if(!response || !response.ok) throw new Error(response && response.error ? response.error : 'dailyExport failed');
         if(response.verified !== true) throw new Error(response && response.error ? response.error : 'dailyExport not verified');
         markDailyExportConfirmed(payload, response);
@@ -8126,14 +8515,22 @@
     }
     async function retryPendingDailyExportIfNeeded(reason, options={}){
       if(!hasPendingDailyExport()) return true;
+      if(isDailyExportOverwriteBlocked() && options.userInitiated !== true) return 'blocked';
       const url = localStorage.getItem(LS_APPSCRIPT);
       if(!url) return false;
       if(options.notify) showToast('Wysylam zalegla dniowke...', 'ok');
       const payload = normalizeDailyExportStatus(dailyExportStatus).payload;
       const ok = await doExport(url, payload);
+      if(isOverwriteRequiredExportResult(ok)){
+        if(options.notify) showToast('Dane dniówki są już w Arkuszu. Potwierdź nadpisanie.', 'err');
+        return 'blocked';
+      }
       if(ok){
         if(options.notify) showToast('Eksport dniowki OK.', 'ok');
-        if(options.scheduleSyncAfterSuccess && isAutoSyncEnabled()) scheduleAutoSyncUpload(reason || 'daily_export_confirmed');
+        if(options.scheduleSyncAfterSuccess && isAutoSyncEnabled()){
+          setAutoSyncIndicatorState('on');
+          scheduleAutoSyncUpload(reason || 'daily_export_confirmed');
+        }
       } else if(options.notify){
         showToast('Eksport dniowki nieudany.', 'err');
       }
@@ -8151,7 +8548,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.8.1';
+      return el ? el.textContent.trim() : 'vGPT_6.9.0';
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -8514,6 +8911,10 @@
       if(!isAutoSyncEnabled()) return;
       if(pendingEndWorkExport) return;
       if(syncApplyInProgress) return;
+      if(isDailyExportOverwriteBlocked()){
+        setAutoSyncIndicatorState('frozen', 'Eksport dniówki czeka na ręczną decyzję o nadpisaniu danych w Arkuszu.');
+        return;
+      }
       if(autoSyncIndicatorState === 'frozen' && !autoSyncFrozenAcknowledged) return;
       if(!hasPendingDailyExport() && !hasUnuploadedLocalChanges()) return;
       const cfg = getAutoSyncConfig();
@@ -8656,8 +9057,14 @@
       showToast('Wysylam synchronizacje...', 'ok');
       playSyncStartedSound();
       try{
-        const exportOk = await retryPendingDailyExportIfNeeded('manual_sync', { notify:true });
-        if(!exportOk){
+        const exportOk = await retryPendingDailyExportIfNeeded('manual_sync', { notify:true, userInitiated:true });
+        if(exportOk === 'blocked'){
+          hideOverlay();
+          renderAll();
+          setAutoSyncIndicatorState('frozen', 'Eksport czeka na decyzję o nadpisaniu danych w Arkuszu.');
+          return;
+        }
+        if(exportOk !== true){
           setAutoSyncIndicatorState('frozen', 'Eksport zakonczonej dniowki nie powiodl sie. Synchronizacja zostala wstrzymana, zeby nie oznaczac dnia jako zamknietego bez eksportu.');
           showToast('Najpierw niech powiedzie sie eksport dniowki.', 'err');
           return;
@@ -8687,8 +9094,15 @@
       }
       setSyncMenuBusy('daily', 'Wysylam dniowke...');
       try{
-        const ok = await retryPendingDailyExportIfNeeded('manual_daily_export', { notify:false, scheduleSyncAfterSuccess:true });
-        if(ok){
+        const ok = await retryPendingDailyExportIfNeeded('manual_daily_export', {
+          notify:false,
+          scheduleSyncAfterSuccess:true,
+          userInitiated:true
+        });
+        if(ok === 'blocked'){
+          hideOverlay();
+          renderAll();
+        } else if(ok === true){
           showToast('Eksport dniowki OK.', 'ok');
           openWorkMenu();
         } else {
@@ -8952,6 +9366,10 @@
         playSyncOffNoticeSound();
         return;
       }
+      if(isDailyExportOverwriteBlocked()){
+        setAutoSyncIndicatorState('frozen', 'Eksport dniówki czeka na ręczną decyzję o nadpisaniu danych w Arkuszu.');
+        return;
+      }
       const cfg = getAutoSyncConfig();
       if(!cfg) return;
       autoSyncBusy = true;
@@ -8960,7 +9378,11 @@
       showToast('Sprawdzam synchronizacje...', 'ok');
       try{
         const exportOk = await retryPendingDailyExportIfNeeded('auto_sync_foreground', { notify:false, scheduleSyncAfterSuccess:true });
-        if(!exportOk){
+        if(exportOk === 'blocked'){
+          setAutoSyncIndicatorState('frozen', 'Eksport dniówki czeka na decyzję o nadpisaniu danych w Arkuszu.');
+          return;
+        }
+        if(exportOk !== true){
           setAutoSyncIndicatorState('frozen', 'Eksport zakonczonej dniowki nie powiodl sie. Auto Sync sprobuje ponownie przy nastepnej okazji.');
           showToast('Eksport dniowki nieudany.', 'err');
           return;
@@ -9052,7 +9474,11 @@
           throw new Error(list.error || 'syncList failed');
         }
         const exportOk = await retryPendingDailyExportIfNeeded('auto_sync_upload', { notify:false });
-        if(!exportOk){
+        if(exportOk === 'blocked'){
+          setAutoSyncIndicatorState('frozen', 'Eksport dniówki czeka na decyzję o nadpisaniu danych w Arkuszu.');
+          return;
+        }
+        if(exportOk !== true){
           setAutoSyncIndicatorState('frozen', 'Eksport zakonczonej dniowki nie powiodl sie. Automatyczna synchronizacja zostala wstrzymana.');
           showToast('Eksport dniowki nieudany.', 'err');
           return;
@@ -9104,7 +9530,11 @@
           }
         }
         const exportOk = await retryPendingDailyExportIfNeeded('auto_sync_hide', { notify:false });
-        if(!exportOk){
+        if(exportOk === 'blocked'){
+          setAutoSyncIndicatorState('frozen', 'Eksport dniówki czeka na decyzję o nadpisaniu danych w Arkuszu.');
+          return;
+        }
+        if(exportOk !== true){
           setAutoSyncIndicatorState('frozen');
           showToast('Eksport dniowki nieudany.', 'err');
           return;
@@ -9519,6 +9949,34 @@
         openWorkMenu();
       });
     }
+    const exportOverwriteNoEl = document.getElementById('exportOverwriteNo');
+    const exportOverwriteConfirmEl = document.getElementById('exportOverwriteConfirm');
+    if(exportOverwriteNoEl){
+      exportOverwriteNoEl.addEventListener('click', (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        cancelDailyExportOverwrite();
+      });
+    }
+    if(exportOverwriteConfirmEl){
+      exportOverwriteConfirmEl.addEventListener('click', async (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        if(!exportOverwriteGuardArmed){
+          exportOverwriteGuardArmed = true;
+          renderExportOverwriteGuard();
+          return;
+        }
+        await confirmDailyExportOverwrite();
+      });
+    }
+    document.addEventListener('pointerdown', (e)=>{
+      if(!exportOverwriteGuardArmed || exportOverwriteGuardBusy) return;
+      if(e.target && e.target.closest && e.target.closest('#exportOverwriteConfirm')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      cancelDailyExportOverwrite();
+    }, true);
     // === COIN === (też otwiera panel obrotów - to ten sam panel)
     document.getElementById('coinBtn').addEventListener('click', ()=>{
       if(shouldShowEyeReminder()){
