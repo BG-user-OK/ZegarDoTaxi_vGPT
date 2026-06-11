@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.10.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.11.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -3465,6 +3465,21 @@
       position:fixed; right:10px; bottom:6px;
       font-size:13px; color:var(--version);
       letter-spacing:.4px; z-index:5;
+      cursor:pointer;
+      transition:color .25s ease, text-shadow .25s ease, opacity .25s ease;
+    }
+    .version.version-status-checking{
+      color:#ffd84a;
+      text-shadow:0 0 7px rgba(255,216,74,.7);
+    }
+    .version.version-status-warning{
+      color:#ff3030;
+      text-shadow:0 0 5px rgba(255,0,0,.85), 0 0 12px rgba(255,0,0,.55);
+      animation:versionStatusWarningBlink 1.6s ease-in-out infinite;
+    }
+    @keyframes versionStatusWarningBlink{
+      0%,100%{ opacity:1; }
+      50%{ opacity:.28; }
     }
     .install-btn{
       position:fixed; left:10px; bottom:4px;
@@ -3653,7 +3668,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.10.0</div>
+    <div class="version">v6.11.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3670,6 +3685,7 @@
     const LS_SYNC_STATE_HASH = 'tarcza_sync_state_hash';
     const LS_LAST_VERIFIED_SYNC_HASH = 'tarcza_last_verified_sync_hash';
     const LS_APPSCRIPT_COMPAT_CACHE = 'tarcza_appscript_compat_cache_v1';
+    const LS_APP_VERSION_STATUS = 'tarcza_app_version_status_v1';
     const LS_POST_WORK_VERIFY = 'tarcza_post_work_verify_v1';
     const FINAL_BREAK_NO_WORK_THRESHOLD_MIN = 2;
 
@@ -8482,7 +8498,8 @@
     async function doExport(url, payloadOverride, options={}){
       const payload = payloadOverride || buildDailyExportPayload();
       const compatible = await ensureAppsScriptCompatibility(url, {
-        notify:options.compatibilityNotify !== false
+        notify:options.compatibilityNotify !== false,
+        promptForPin:options.compatibilityNotify !== false
       });
       if(!compatible) return false;
       markDailyExportAttempt(payload);
@@ -8490,7 +8507,10 @@
         setPostWorkVerificationState('export', 'busy', { payload, message:'Wysyłam i sprawdzam eksport dniówki.' });
       }
       try{
-        const requestPayload = Object.assign({ action:'dailyExport' }, payload);
+        const requestPayload = Object.assign({
+          action:'dailyExport',
+          pin:getAppsScriptVerificationPin()
+        }, payload);
         if(options.overwriteConfirmed === true){
           requestPayload.overwrite_confirmed = '1';
           requestPayload.overwrite_token = String(options.overwriteToken || '');
@@ -8559,10 +8579,13 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.10.0';
+      return el ? el.textContent.trim() : 'v6.11.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
+    let appsScriptCompatibilityPromise = null;
+    let appVersionFreshlyChanged = false;
+    let appVersionStatus = null;
     function normalizeVersionLabel(value){
       const match = String(value || '').trim().match(/^v(?:GPT_)?(\d+)\.(\d+)\.(\d+)$/i);
       return match ? `v${Number(match[1])}.${Number(match[2])}.${Number(match[3])}` : '';
@@ -8570,19 +8593,171 @@
     function normalizeAppsScriptUrl(value){
       return String(value || '').trim().replace(/\/+$/,'');
     }
+    function isValidAppsScriptUrl(value){
+      return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/i.test(normalizeAppsScriptUrl(value));
+    }
     function appsScriptCompatibilityKey(url){
       return normalizeAppsScriptUrl(url) + '|' + normalizeVersionLabel(appVersionLabel());
+    }
+    function normalizeAppVersionStatus(value){
+      const s = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+      return {
+        lastSeenAppVersion:normalizeVersionLabel(s.lastSeenAppVersion),
+        currentAppVersion:normalizeVersionLabel(s.currentAppVersion),
+        currentAppVersionFirstSeenAt:Number(s.currentAppVersionFirstSeenAt || 0),
+        lastKnownScriptUrl:normalizeAppsScriptUrl(s.lastKnownScriptUrl),
+        currentLocalScriptUrl:normalizeAppsScriptUrl(s.currentLocalScriptUrl),
+        scriptUrlFromSheet:normalizeAppsScriptUrl(s.scriptUrlFromSheet),
+        lastScriptUrlVerifiedForVersion:normalizeVersionLabel(s.lastScriptUrlVerifiedForVersion),
+        lastScriptUrlVerificationAt:Number(s.lastScriptUrlVerificationAt || 0),
+        scriptUrlStatus:['checking','verified','unverified','error','migration_pending'].includes(s.scriptUrlStatus)
+          ? s.scriptUrlStatus
+          : 'unverified',
+        installationId:String(s.installationId || ''),
+        message:String(s.message || '')
+      };
+    }
+    function loadAppVersionStatus(){
+      if(appVersionStatus) return appVersionStatus;
+      try{
+        appVersionStatus = normalizeAppVersionStatus(JSON.parse(localStorage.getItem(LS_APP_VERSION_STATUS) || '{}'));
+      }catch(e){
+        appVersionStatus = normalizeAppVersionStatus(null);
+      }
+      return appVersionStatus;
+    }
+    function saveAppVersionStatus(){
+      if(!appVersionStatus) return;
+      localStorage.setItem(LS_APP_VERSION_STATUS, JSON.stringify(normalizeAppVersionStatus(appVersionStatus)));
+    }
+    function updateAppVersionStatusIndicator(){
+      const el = document.querySelector('.version');
+      if(!el) return;
+      const status = loadAppVersionStatus();
+      el.classList.remove('version-status-checking','version-status-warning');
+      if(status.scriptUrlStatus === 'checking') el.classList.add('version-status-checking');
+      if(['unverified','error','migration_pending'].includes(status.scriptUrlStatus)){
+        el.classList.add('version-status-warning');
+      }
+      el.title = status.message || 'Status wersji i Apps Script';
+    }
+    function setAppVersionStatus(status, patch={}){
+      const current = loadAppVersionStatus();
+      appVersionStatus = normalizeAppVersionStatus(Object.assign({}, current, patch, {
+        scriptUrlStatus:status,
+        currentAppVersion:normalizeVersionLabel(appVersionLabel()),
+        currentLocalScriptUrl:normalizeAppsScriptUrl(localStorage.getItem(LS_APPSCRIPT) || '')
+      }));
+      saveAppVersionStatus();
+      updateAppVersionStatusIndicator();
+      return appVersionStatus;
+    }
+    function initializeAppVersionTracking(){
+      const currentVersion = normalizeVersionLabel(appVersionLabel());
+      const status = loadAppVersionStatus();
+      const cache = getAppsScriptCompatibilityCache();
+      const previousVersion = normalizeVersionLabel(
+        status.currentAppVersion || status.lastSeenAppVersion || cache.expectedAppVersion
+      );
+      appVersionFreshlyChanged = !previousVersion || previousVersion !== currentVersion;
+      if(appVersionFreshlyChanged){
+        appVersionStatus = normalizeAppVersionStatus(Object.assign({}, status, {
+          lastSeenAppVersion:previousVersion,
+          currentAppVersion:currentVersion,
+          currentAppVersionFirstSeenAt:Date.now(),
+          lastKnownScriptUrl:normalizeAppsScriptUrl(localStorage.getItem(LS_APPSCRIPT) || status.currentLocalScriptUrl),
+          currentLocalScriptUrl:normalizeAppsScriptUrl(localStorage.getItem(LS_APPSCRIPT) || ''),
+          scriptUrlFromSheet:'',
+          lastScriptUrlVerifiedForVersion:'',
+          lastScriptUrlVerificationAt:0,
+          scriptUrlStatus:'unverified',
+          message:'Wykryto nową wersję aplikacji. Trwa weryfikacja Apps Script.'
+        }));
+        saveAppVersionStatus();
+      } else {
+        appVersionStatus = normalizeAppVersionStatus(Object.assign({}, status, {
+          currentAppVersion:currentVersion,
+          currentLocalScriptUrl:normalizeAppsScriptUrl(localStorage.getItem(LS_APPSCRIPT) || '')
+        }));
+        saveAppVersionStatus();
+      }
+      updateAppVersionStatusIndicator();
+    }
+    function formatAppStatusTime(value){
+      const timestamp = Number(value || 0);
+      if(!timestamp) return '-';
+      try{ return new Date(timestamp).toLocaleString('pl-PL'); }
+      catch(e){ return '-'; }
+    }
+    function appVersionStatusLabel(status){
+      if(status === 'verified') return 'zweryfikowany';
+      if(status === 'checking') return 'sprawdzanie';
+      if(status === 'migration_pending') return 'nowy URL oczekuje na potwierdzenie';
+      if(status === 'error') return 'błąd zgodności';
+      return 'niezweryfikowany';
+    }
+    function openAppVersionStatus(){
+      const status = loadAppVersionStatus();
+      const canMigrate = status.scriptUrlStatus === 'migration_pending' &&
+        isValidAppsScriptUrl(status.scriptUrlFromSheet);
+      showOverlay(`
+        <div class="big-panel">
+          <h3>WERSJA I APPS SCRIPT</h3>
+          <div class="sync-warning" style="font-size:16px;line-height:1.35;text-align:left;word-break:break-word;">
+            <strong>Aplikacja:</strong> ${escapeHtml(status.currentAppVersion || appVersionLabel())}<br>
+            <strong>Poprzednia wersja:</strong> ${escapeHtml(status.lastSeenAppVersion || '-')}<br>
+            <strong>Wykryta:</strong> ${escapeHtml(formatAppStatusTime(status.currentAppVersionFirstSeenAt))}<br><br>
+            <strong>Status URL:</strong> ${escapeHtml(appVersionStatusLabel(status.scriptUrlStatus))}<br>
+            <strong>URL lokalny:</strong> ${escapeHtml(status.currentLocalScriptUrl || '-')}<br>
+            <strong>URL z Arkusza:</strong> ${escapeHtml(status.scriptUrlFromSheet || '-')}<br>
+            <strong>Zweryfikowano:</strong> ${escapeHtml(formatAppStatusTime(status.lastScriptUrlVerificationAt))}<br><br>
+            ${escapeHtml(status.message || 'Brak dodatkowych informacji.')}
+          </div>
+          <div style="flex:1;"></div>
+          <div class="panel-actions">
+            <button class="cancel-btn" data-act="close">X</button>
+            ${canMigrate ? '<button class="ok-btn" data-act="migrate">UŻYJ URL</button>' : ''}
+            <button class="ok-btn" data-act="verify">SPRAWDŹ</button>
+          </div>
+        </div>
+      `);
+      overlay.querySelector('[data-act="close"]').addEventListener('click',(e)=>{ e.stopPropagation(); hideOverlay(); });
+      const verifyBtn = overlay.querySelector('[data-act="verify"]');
+      if(verifyBtn) verifyBtn.addEventListener('click',async (e)=>{
+        e.stopPropagation();
+        hideOverlay();
+        await verifyAppsScriptAfterStartup({ force:true, notify:true, promptForPin:true });
+        openAppVersionStatus();
+      });
+      const migrateBtn = overlay.querySelector('[data-act="migrate"]');
+      if(migrateBtn) migrateBtn.addEventListener('click',async (e)=>{
+        e.stopPropagation();
+        hideOverlay();
+        await approveAppsScriptUrlMigration();
+        openAppVersionStatus();
+      });
     }
     function clearAppsScriptCompatibilityCache(){
       appsScriptCompatibilitySessionKey = '';
       localStorage.removeItem(LS_APPSCRIPT_COMPAT_CACHE);
     }
-    function storeAppsScriptUrl(url){
+    function storeAppsScriptUrl(url, options={}){
       const next = String(url || '').trim();
       const previous = localStorage.getItem(LS_APPSCRIPT) || '';
       localStorage.setItem(LS_APPSCRIPT, next);
       if(normalizeAppsScriptUrl(previous) !== normalizeAppsScriptUrl(next)){
         clearAppsScriptCompatibilityCache();
+        if(options.verified !== true){
+          setAppVersionStatus('unverified', {
+            lastKnownScriptUrl:normalizeAppsScriptUrl(previous),
+            scriptUrlFromSheet:'',
+            lastScriptUrlVerifiedForVersion:'',
+            lastScriptUrlVerificationAt:0,
+            message:next
+              ? 'URL Apps Script został zmieniony lokalnie i wymaga weryfikacji.'
+              : 'Brak lokalnego URL Apps Script.'
+          });
+        }
       }
     }
     function getAppsScriptCompatibilityCache(){
@@ -8599,7 +8774,8 @@
         checkedAt:Date.now(),
         runningAppsScriptVersion:String(response.runningAppsScriptVersion || ''),
         expectedAppVersion:String(response.expectedAppVersion || ''),
-        appsScriptUrl:String(response.appsScriptUrl || '')
+        appsScriptUrl:String(response.appsScriptUrl || ''),
+        installationId:String(response.installationId || '')
       };
       localStorage.setItem(LS_APPSCRIPT_COMPAT_CACHE, JSON.stringify(cache));
       appsScriptCompatibilitySessionKey = cache.key;
@@ -8610,50 +8786,192 @@
         Number(cache.checkedAt || 0) > 0 &&
         Date.now() - Number(cache.checkedAt) <= APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS;
     }
-    function appsScriptCompatibilityProblem(response, url){
-      if(!response || response.ok !== true) return 'Endpoint nie zwrócił konfiguracji zgodności.';
+    function getAppsScriptVerificationPin(options={}){
+      let pin = String(options.pin || localStorage.getItem(LS_SYNC_PIN) || '').trim();
+      if(!pin && options.promptForPin === true){
+        pin = (prompt('PIN synchronizacji i eksportu:', '') || '').trim();
+        if(pin) localStorage.setItem(LS_SYNC_PIN, pin);
+      }
+      return pin;
+    }
+    function appsScriptCompatibilityProblem(response, url, options={}){
+      if(!response || response.ok !== true){
+        return String(response && response.error || 'Endpoint nie zwrócił konfiguracji zgodności.');
+      }
       const currentAppVersion = normalizeVersionLabel(appVersionLabel());
       const expectedAppVersion = normalizeVersionLabel(response.expectedAppVersion);
       const runningScriptVersion = normalizeVersionLabel(response.runningAppsScriptVersion);
       const expectedScriptVersion = normalizeVersionLabel(response.expectedAppsScriptVersion);
       const configuredUrl = normalizeAppsScriptUrl(response.appsScriptUrl);
       const currentUrl = normalizeAppsScriptUrl(url);
+      if(!String(response.installationId || '').trim()) return 'Brak identyfikatora installationId w konfiguracji.';
       if(response.compatible !== true){
         const details = Array.isArray(response.problems) ? response.problems.filter(Boolean).join(' ') : '';
         return details || 'Wersje aplikacji i Apps Script nie są zgodne.';
       }
-      if(!configuredUrl || configuredUrl !== currentUrl) return 'Telefon korzysta z innego URL Apps Script niż zapisany w konfiguracji.';
+      if(!isValidAppsScriptUrl(configuredUrl)) return 'Konfiguracja zawiera niepoprawny URL Apps Script.';
+      if(options.allowConfiguredUrlMismatch !== true && configuredUrl !== currentUrl){
+        return 'Telefon korzysta z innego URL Apps Script niż zapisany w konfiguracji.';
+      }
       if(!expectedAppVersion || currentAppVersion !== expectedAppVersion) return 'Wersja aplikacji nie zgadza się z konfiguracją Apps Script.';
       if(!runningScriptVersion || runningScriptVersion !== expectedScriptVersion) return 'Uruchomiona wersja Apps Script nie zgadza się z konfiguracją.';
       return '';
     }
-    async function ensureAppsScriptCompatibility(url, options={}){
+    function requestAppsScriptConfig(url, pin){
+      return jsonpRequest(normalizeAppsScriptUrl(url), {
+        action:'appConfig',
+        appVersion:appVersionLabel(),
+        pin
+      });
+    }
+    function recordVerifiedAppsScript(url, response, message){
+      cacheAppsScriptCompatibility(url, response);
+      setAppVersionStatus('verified', {
+        currentLocalScriptUrl:normalizeAppsScriptUrl(url),
+        scriptUrlFromSheet:normalizeAppsScriptUrl(response.appsScriptUrl),
+        lastKnownScriptUrl:normalizeAppsScriptUrl(url),
+        lastScriptUrlVerifiedForVersion:normalizeVersionLabel(appVersionLabel()),
+        lastScriptUrlVerificationAt:Date.now(),
+        installationId:String(response.installationId || ''),
+        message:message || 'Apps Script i URL są zgodne z aktualną wersją aplikacji.'
+      });
+      appVersionFreshlyChanged = false;
+    }
+    async function stageAppsScriptUrlMigration(currentUrl, currentResponse, pin, options={}){
+      const candidateUrl = normalizeAppsScriptUrl(currentResponse.appsScriptUrl);
+      if(!isValidAppsScriptUrl(candidateUrl)){
+        throw new Error('Nowy URL Apps Script ma niepoprawny format.');
+      }
+      const candidateResponse = await requestAppsScriptConfig(candidateUrl, pin);
+      const candidateProblem = appsScriptCompatibilityProblem(candidateResponse, candidateUrl);
+      if(candidateProblem) throw new Error(candidateProblem);
+      if(String(candidateResponse.installationId || '') !== String(currentResponse.installationId || '')){
+        throw new Error('Nowy endpoint wskazuje inną instalację Arkusza.');
+      }
+      setAppVersionStatus('migration_pending', {
+        lastKnownScriptUrl:normalizeAppsScriptUrl(currentUrl),
+        scriptUrlFromSheet:candidateUrl,
+        installationId:String(currentResponse.installationId || ''),
+        message:'Nowy URL został sprawdzony. Kliknij wersję i potwierdź zmianę przyciskiem UŻYJ URL.'
+      });
+      if(options.notify !== false) showToast('Nowy URL Apps Script czeka na potwierdzenie.', 'err');
+      return false;
+    }
+    async function performAppsScriptCompatibilityCheck(url, options={}){
       const normalizedUrl = normalizeAppsScriptUrl(url);
-      if(!normalizedUrl) return false;
+      if(!normalizedUrl || !isValidAppsScriptUrl(normalizedUrl)){
+        setAppVersionStatus('error', { message:'Brak poprawnego lokalnego URL Apps Script.' });
+        return false;
+      }
+      const pin = getAppsScriptVerificationPin(options);
+      if(!pin){
+        const message = 'Brak PIN-u potrzebnego do weryfikacji Apps Script.';
+        setAppVersionStatus('unverified', { message });
+        if(options.notify !== false) showToast(message, 'err');
+        return false;
+      }
       const key = appsScriptCompatibilityKey(normalizedUrl);
-      if(appsScriptCompatibilitySessionKey === key) return true;
+      if(options.force !== true && appsScriptCompatibilitySessionKey === key) return true;
+      setAppVersionStatus('checking', { message:'Sprawdzam zgodność aplikacji i Apps Script.' });
       try{
-        const response = await jsonpRequest(normalizedUrl, {
-          action:'appConfig',
-          appVersion:appVersionLabel()
+        const response = await requestAppsScriptConfig(normalizedUrl, pin);
+        const problem = appsScriptCompatibilityProblem(response, normalizedUrl, {
+          allowConfiguredUrlMismatch:true
         });
-        const problem = appsScriptCompatibilityProblem(response, normalizedUrl);
         if(problem){
+          const wrongPin = /wrong sync pin/i.test(problem);
+          if(wrongPin) localStorage.removeItem(LS_SYNC_PIN);
+          const visibleProblem = wrongPin
+            ? 'Nieprawidłowy PIN. Wpisz PIN ponownie podczas następnego sprawdzenia.'
+            : problem;
           clearAppsScriptCompatibilityCache();
-          if(isAutoSyncEnabled()) setAutoSyncIndicatorState('frozen', problem);
-          if(options.notify !== false) showToast(problem, 'err');
+          setAppVersionStatus('error', {
+            scriptUrlFromSheet:normalizeAppsScriptUrl(response && response.appsScriptUrl),
+            installationId:String(response && response.installationId || ''),
+            message:visibleProblem
+          });
+          if(options.freezeAutoSync !== false && isAutoSyncEnabled()) setAutoSyncIndicatorState('frozen', visibleProblem);
+          if(options.notify !== false) showToast(visibleProblem, 'err');
           return false;
         }
-        cacheAppsScriptCompatibility(normalizedUrl, response);
+        const configuredUrl = normalizeAppsScriptUrl(response.appsScriptUrl);
+        if(configuredUrl !== normalizedUrl){
+          return await stageAppsScriptUrlMigration(normalizedUrl, response, pin, options);
+        }
+        recordVerifiedAppsScript(normalizedUrl, response);
         return true;
       }catch(e){
-        if(hasRecentAppsScriptCompatibilityCache(normalizedUrl)){
+        const status = loadAppVersionStatus();
+        if(options.force !== true &&
+            status.lastScriptUrlVerifiedForVersion === normalizeVersionLabel(appVersionLabel()) &&
+            status.currentLocalScriptUrl === normalizedUrl &&
+            hasRecentAppsScriptCompatibilityCache(normalizedUrl)){
           appsScriptCompatibilitySessionKey = key;
+          setAppVersionStatus('verified', {
+            message:'Brak połączenia. Używam niedawno potwierdzonej konfiguracji dla tej wersji.'
+          });
           return true;
         }
-        const message = 'Nie udało się potwierdzić wersji Apps Script. Operacja została wstrzymana.';
-        if(isAutoSyncEnabled()) setAutoSyncIndicatorState('frozen', message);
+        const detail = String(e && e.message || '');
+        const message = detail && detail !== 'network' && detail !== 'timeout'
+          ? detail
+          : 'Nie udało się potwierdzić Apps Script. Sprawdź internet, PIN i konfigurację.';
+        setAppVersionStatus('unverified', { message });
+        if(options.freezeAutoSync !== false && isAutoSyncEnabled()) setAutoSyncIndicatorState('frozen', message);
         if(options.notify !== false) showToast(message, 'err');
+        return false;
+      }
+    }
+    async function ensureAppsScriptCompatibility(url, options={}){
+      if(appsScriptCompatibilityPromise){
+        const currentResult = await appsScriptCompatibilityPromise;
+        if(options.force !== true) return currentResult;
+      }
+      const task = performAppsScriptCompatibilityCheck(url, options);
+      appsScriptCompatibilityPromise = task;
+      try{ return await task; }
+      finally{
+        if(appsScriptCompatibilityPromise === task) appsScriptCompatibilityPromise = null;
+      }
+    }
+    async function verifyAppsScriptAfterStartup(options={}){
+      const url = normalizeAppsScriptUrl(localStorage.getItem(LS_APPSCRIPT) || '');
+      if(!url){
+        setAppVersionStatus('unverified', { message:'Brak lokalnego URL Apps Script. Ustaw go potrójnym kliknięciem wersji.' });
+        return false;
+      }
+      return ensureAppsScriptCompatibility(url, {
+        notify:options.notify === true,
+        force:options.force === true || appVersionFreshlyChanged,
+        promptForPin:options.promptForPin === true,
+        freezeAutoSync:false
+      });
+    }
+    async function approveAppsScriptUrlMigration(){
+      const status = loadAppVersionStatus();
+      const candidateUrl = normalizeAppsScriptUrl(status.scriptUrlFromSheet);
+      if(status.scriptUrlStatus !== 'migration_pending' || !isValidAppsScriptUrl(candidateUrl)){
+        showToast('Brak sprawdzonego nowego URL.', 'err');
+        return false;
+      }
+      const pin = getAppsScriptVerificationPin({ promptForPin:true });
+      if(!pin) return false;
+      setAppVersionStatus('checking', { message:'Ponownie sprawdzam nowy URL przed zapisaniem.' });
+      try{
+        const response = await requestAppsScriptConfig(candidateUrl, pin);
+        const problem = appsScriptCompatibilityProblem(response, candidateUrl);
+        if(problem) throw new Error(problem);
+        if(String(response.installationId || '') !== String(status.installationId || '')){
+          throw new Error('Nowy endpoint wskazuje inną instalację Arkusza.');
+        }
+        storeAppsScriptUrl(candidateUrl, { verified:true });
+        recordVerifiedAppsScript(candidateUrl, response, 'Nowy URL Apps Script został potwierdzony i zapisany lokalnie.');
+        showToast('Nowy URL Apps Script zapisany.', 'ok');
+        return true;
+      }catch(e){
+        const message = String(e && e.message || 'Nie udało się potwierdzić nowego URL.');
+        setAppVersionStatus('error', { message });
+        showToast(message, 'err');
         return false;
       }
     }
@@ -9283,6 +9601,10 @@
         e.stopPropagation();
         localStorage.removeItem(LS_SYNC_PIN);
         localStorage.removeItem(LS_SYNC_DEVICE);
+        clearAppsScriptCompatibilityCache();
+        setAppVersionStatus('unverified', {
+          message:'Ustawienia synchronizacji wyczyszczone. Weryfikacja Apps Script wymaga ponownego wpisania PIN-u.'
+        });
         showToast('Lokalne ustawienia synchronizacji skasowane.', 'ok');
         openWorkMenu();
       });
@@ -10156,10 +10478,9 @@
       restoreDrivingFocusFade(true);
     });
     let vt=0, vtT=null;
-    document.querySelector('.version').addEventListener('click', ()=>{
+    document.querySelector('.version').addEventListener('click', async ()=>{
       vt++;
       clearTimeout(vtT);
-      vtT=setTimeout(()=>vt=0, 800);
       if(vt>=3){
         vt=0;
         const cur=localStorage.getItem(LS_APPSCRIPT)||'';
@@ -10167,8 +10488,16 @@
         if(v!==null){
           storeAppsScriptUrl(v.trim());
           showToast(v.trim()?'URL zapisany':'URL wyczyszczony', 'ok');
+          if(v.trim()){
+            await verifyAppsScriptAfterStartup({ force:true, notify:true, promptForPin:true });
+          }
         }
+        return;
       }
+      vtT=setTimeout(()=>{
+        vt=0;
+        openAppVersionStatus();
+      }, 650);
     });
 
     // ===== PWA =====
@@ -10231,6 +10560,7 @@
     });
 
     // ===== init =====
+    initializeAppVersionTracking();
     loadState();
     loadPostWorkVerification();
     initializeDailyExportStatus();
@@ -10243,7 +10573,11 @@
     renderAll();
     syncWorkWakeLock();
     updateAutoSyncIndicator();
-    setTimeout(()=>autoSyncCheckOnForeground('startup'), 900);
+    setTimeout(()=>verifyAppsScriptAfterStartup({ force:appVersionFreshlyChanged }), 500);
+    setTimeout(()=>autoSyncCheckOnForeground('startup'), 1400);
+    window.addEventListener('online', ()=>{
+      verifyAppsScriptAfterStartup({ force:true, notify:false });
+    });
     // Pierwszy render rolki może paść jeśli clientHeight=0 przed layoutem.
     // Po pierwszej klatce wymuszamy ponowny render dla pewności.
     requestAnimationFrame(()=>{ renderAll(); });
