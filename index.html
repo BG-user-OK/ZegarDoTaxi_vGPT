@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- vGPT_6.9.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.10.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -341,7 +341,7 @@
     }
     /* Moduł 2 (ćwiczenia) wystaje w górę o połowę swojej wysokości - mieści 4 rzędy kół */
     .exercise-btn{
-    /* vGPT_6.6.0: matches the size and baseline of the other top-row buttons. */
+    /* v6.6.0: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
     }
@@ -3653,7 +3653,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">vGPT_6.9.0</div>
+    <div class="version">v6.10.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3668,6 +3668,8 @@
     const LS_LAST_SEEN_SYNC_ID = 'tarcza_last_seen_sync_id';
     const LS_LAST_SEEN_CLOUD_CHANGE_AT = 'tarcza_last_seen_cloud_change_at';
     const LS_SYNC_STATE_HASH = 'tarcza_sync_state_hash';
+    const LS_LAST_VERIFIED_SYNC_HASH = 'tarcza_last_verified_sync_hash';
+    const LS_APPSCRIPT_COMPAT_CACHE = 'tarcza_appscript_compat_cache_v1';
     const LS_POST_WORK_VERIFY = 'tarcza_post_work_verify_v1';
     const FINAL_BREAK_NO_WORK_THRESHOLD_MIN = 2;
 
@@ -3904,6 +3906,9 @@
       const comparable = stableStringify(getCurrentComparableState());
       if(!localStorage.getItem(LS_SYNC_STATE_HASH)) localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
       if(!localStorage.getItem(LS_LAST_LOCAL_CHANGE_AT)) localStorage.setItem(LS_LAST_LOCAL_CHANGE_AT, '0');
+      if(!localStorage.getItem(LS_LAST_VERIFIED_SYNC_HASH) && canSeedVerifiedSyncHashFromCurrentState()){
+        localStorage.setItem(LS_LAST_VERIFIED_SYNC_HASH, comparable);
+      }
     }
     function saveStateSilently(){
       syncApplyInProgress = true;
@@ -8476,6 +8481,10 @@
     }
     async function doExport(url, payloadOverride, options={}){
       const payload = payloadOverride || buildDailyExportPayload();
+      const compatible = await ensureAppsScriptCompatibility(url, {
+        notify:options.compatibilityNotify !== false
+      });
+      if(!compatible) return false;
       markDailyExportAttempt(payload);
       if(isCurrentPostWorkPayload(payload)){
         setPostWorkVerificationState('export', 'busy', { payload, message:'Wysyłam i sprawdzam eksport dniówki.' });
@@ -8520,7 +8529,9 @@
       if(!url) return false;
       if(options.notify) showToast('Wysylam zalegla dniowke...', 'ok');
       const payload = normalizeDailyExportStatus(dailyExportStatus).payload;
-      const ok = await doExport(url, payload);
+      const ok = await doExport(url, payload, {
+        compatibilityNotify:options.notify || options.userInitiated === true
+      });
       if(isOverwriteRequiredExportResult(ok)){
         if(options.notify) showToast('Dane dniówki są już w Arkuszu. Potwierdź nadpisanie.', 'err');
         return 'blocked';
@@ -8548,7 +8559,103 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'vGPT_6.9.0';
+      return el ? el.textContent.trim() : 'v6.10.0';
+    }
+    const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+    let appsScriptCompatibilitySessionKey = '';
+    function normalizeVersionLabel(value){
+      const match = String(value || '').trim().match(/^v(?:GPT_)?(\d+)\.(\d+)\.(\d+)$/i);
+      return match ? `v${Number(match[1])}.${Number(match[2])}.${Number(match[3])}` : '';
+    }
+    function normalizeAppsScriptUrl(value){
+      return String(value || '').trim().replace(/\/+$/,'');
+    }
+    function appsScriptCompatibilityKey(url){
+      return normalizeAppsScriptUrl(url) + '|' + normalizeVersionLabel(appVersionLabel());
+    }
+    function clearAppsScriptCompatibilityCache(){
+      appsScriptCompatibilitySessionKey = '';
+      localStorage.removeItem(LS_APPSCRIPT_COMPAT_CACHE);
+    }
+    function storeAppsScriptUrl(url){
+      const next = String(url || '').trim();
+      const previous = localStorage.getItem(LS_APPSCRIPT) || '';
+      localStorage.setItem(LS_APPSCRIPT, next);
+      if(normalizeAppsScriptUrl(previous) !== normalizeAppsScriptUrl(next)){
+        clearAppsScriptCompatibilityCache();
+      }
+    }
+    function getAppsScriptCompatibilityCache(){
+      try{
+        const value = JSON.parse(localStorage.getItem(LS_APPSCRIPT_COMPAT_CACHE) || '{}');
+        return value && typeof value === 'object' ? value : {};
+      }catch(e){
+        return {};
+      }
+    }
+    function cacheAppsScriptCompatibility(url, response){
+      const cache = {
+        key:appsScriptCompatibilityKey(url),
+        checkedAt:Date.now(),
+        runningAppsScriptVersion:String(response.runningAppsScriptVersion || ''),
+        expectedAppVersion:String(response.expectedAppVersion || ''),
+        appsScriptUrl:String(response.appsScriptUrl || '')
+      };
+      localStorage.setItem(LS_APPSCRIPT_COMPAT_CACHE, JSON.stringify(cache));
+      appsScriptCompatibilitySessionKey = cache.key;
+    }
+    function hasRecentAppsScriptCompatibilityCache(url){
+      const cache = getAppsScriptCompatibilityCache();
+      return cache.key === appsScriptCompatibilityKey(url) &&
+        Number(cache.checkedAt || 0) > 0 &&
+        Date.now() - Number(cache.checkedAt) <= APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS;
+    }
+    function appsScriptCompatibilityProblem(response, url){
+      if(!response || response.ok !== true) return 'Endpoint nie zwrócił konfiguracji zgodności.';
+      const currentAppVersion = normalizeVersionLabel(appVersionLabel());
+      const expectedAppVersion = normalizeVersionLabel(response.expectedAppVersion);
+      const runningScriptVersion = normalizeVersionLabel(response.runningAppsScriptVersion);
+      const expectedScriptVersion = normalizeVersionLabel(response.expectedAppsScriptVersion);
+      const configuredUrl = normalizeAppsScriptUrl(response.appsScriptUrl);
+      const currentUrl = normalizeAppsScriptUrl(url);
+      if(response.compatible !== true){
+        const details = Array.isArray(response.problems) ? response.problems.filter(Boolean).join(' ') : '';
+        return details || 'Wersje aplikacji i Apps Script nie są zgodne.';
+      }
+      if(!configuredUrl || configuredUrl !== currentUrl) return 'Telefon korzysta z innego URL Apps Script niż zapisany w konfiguracji.';
+      if(!expectedAppVersion || currentAppVersion !== expectedAppVersion) return 'Wersja aplikacji nie zgadza się z konfiguracją Apps Script.';
+      if(!runningScriptVersion || runningScriptVersion !== expectedScriptVersion) return 'Uruchomiona wersja Apps Script nie zgadza się z konfiguracją.';
+      return '';
+    }
+    async function ensureAppsScriptCompatibility(url, options={}){
+      const normalizedUrl = normalizeAppsScriptUrl(url);
+      if(!normalizedUrl) return false;
+      const key = appsScriptCompatibilityKey(normalizedUrl);
+      if(appsScriptCompatibilitySessionKey === key) return true;
+      try{
+        const response = await jsonpRequest(normalizedUrl, {
+          action:'appConfig',
+          appVersion:appVersionLabel()
+        });
+        const problem = appsScriptCompatibilityProblem(response, normalizedUrl);
+        if(problem){
+          clearAppsScriptCompatibilityCache();
+          if(isAutoSyncEnabled()) setAutoSyncIndicatorState('frozen', problem);
+          if(options.notify !== false) showToast(problem, 'err');
+          return false;
+        }
+        cacheAppsScriptCompatibility(normalizedUrl, response);
+        return true;
+      }catch(e){
+        if(hasRecentAppsScriptCompatibilityCache(normalizedUrl)){
+          appsScriptCompatibilitySessionKey = key;
+          return true;
+        }
+        const message = 'Nie udało się potwierdzić wersji Apps Script. Operacja została wstrzymana.';
+        if(isAutoSyncEnabled()) setAutoSyncIndicatorState('frozen', message);
+        if(options.notify !== false) showToast(message, 'err');
+        return false;
+      }
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
     function setAutoSyncEnabled(on){
@@ -8576,7 +8683,7 @@
       let url = localStorage.getItem(LS_APPSCRIPT) || '';
       if(!url){
         url = (prompt('URL Google Apps Script:', '') || '').trim();
-        if(url) localStorage.setItem(LS_APPSCRIPT, url);
+        if(url) storeAppsScriptUrl(url);
       }
       if(!url){ showToast('Brak URL Apps Script.', 'err'); return null; }
 
@@ -8872,6 +8979,7 @@
     let autoSyncScheduledAt = 0;
     let autoSyncOverlayDirty = false;
     let autoSyncOverlayDirtyReason = '';
+    let lastAutoSyncForegroundCheckAt = 0;
     function acknowledgeAutoSyncFrozen(){
       autoSyncFrozenAcknowledged = true;
       autoSyncIndicatorState = isAutoSyncEnabled() ? 'on' : 'off';
@@ -8897,6 +9005,45 @@
     }
     function hasUnuploadedLocalChanges(){
       return getLastLocalChangeAt() > getLastAutoUploadChangeAt();
+    }
+    function isCurrentDailyExportVerified(){
+      if(!hasEndedWorkdayForExport() || pendingEndWorkExport) return false;
+      const payload = buildDailyExportPayload();
+      const status = normalizeDailyExportStatus(dailyExportStatus);
+      return status.status === 'confirmed' &&
+        status.verified === true &&
+        status.date === String(payload.date || '') &&
+        status.signature === dailyExportSignature(payload);
+    }
+    function isCurrentFinalSyncVerified(){
+      if(!hasEndedWorkdayForExport()) return false;
+      const identity = currentPostWorkIdentity();
+      const verification = normalizePostWorkVerification(postWorkVerification);
+      return !!identity &&
+        verification.workDate === identity.workDate &&
+        verification.exportSignature === identity.exportSignature &&
+        verification.export === 'ok' &&
+        verification.sync === 'ok' &&
+        !!verification.syncId;
+    }
+    function canSeedVerifiedSyncHashFromCurrentState(){
+      return isCurrentDailyExportVerified() &&
+        isCurrentFinalSyncVerified() &&
+        !hasUnuploadedLocalChanges();
+    }
+    function isCurrentEndedWorkdayFullySettled(){
+      const verifiedHash = localStorage.getItem(LS_LAST_VERIFIED_SYNC_HASH) || '';
+      return canSeedVerifiedSyncHashFromCurrentState() &&
+        !!verifiedHash &&
+        verifiedHash === currentComparableStateString();
+    }
+    function markVerifiedSyncUpload(snapshot){
+      const changeAt = Number(snapshot && (snapshot.lastLocalChangeAt || snapshot.savedAtMs) || Date.now());
+      const verifiedHash = comparableSnapshotState(snapshot);
+      localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(changeAt));
+      localStorage.setItem(LS_LAST_VERIFIED_SYNC_HASH, verifiedHash);
+      localStorage.setItem(LS_SYNC_STATE_HASH, currentComparableStateString());
+      markCloudSeen(snapshot);
     }
     function clearAutoSyncSchedule(setIdle=true){
       clearTimeout(autoSyncUploadTimer);
@@ -8971,7 +9118,9 @@
         localStorage.setItem(LS_LAST_LOCAL_CHANGE_AT, String(changeAt));
         localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(changeAt));
       }
-      localStorage.setItem(LS_SYNC_STATE_HASH, stableStringify(getCurrentComparableState()));
+      const comparable = stableStringify(getCurrentComparableState());
+      localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
+      localStorage.setItem(LS_LAST_VERIFIED_SYNC_HASH, comparable);
     }
     function markCloudSeen(snapshot){
       if(!snapshot) return;
@@ -9053,6 +9202,7 @@
       if(manualSyncBusy) return;
       const cfg = getSyncConfig(true);
       if(!cfg) return;
+      if(!await ensureAppsScriptCompatibility(cfg.url, { notify:true })) return;
       setSyncMenuBusy('send', 'Wysyłam synchronizację...');
       showToast('Wysylam synchronizacje...', 'ok');
       playSyncStartedSound();
@@ -9071,8 +9221,7 @@
         }
         const snapshot = buildSyncSnapshot(cfg.device);
         await sendAndVerifySyncSnapshot(cfg, snapshot, false);
-        localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(snapshot.lastLocalChangeAt || Date.now()));
-        markCloudSeen(snapshot);
+        markVerifiedSyncUpload(snapshot);
         playSyncSuccessSound();
         playSyncStandbySound();
         setAutoSyncIndicatorState('on');
@@ -9217,6 +9366,7 @@
       if(manualSyncBusy) return;
       const cfg = getSyncConfig(false);
       if(!cfg) return;
+      if(!await ensureAppsScriptCompatibility(cfg.url, { notify:true })) return;
       setSyncMenuBusy('load', 'Pobieram synchronizację...');
       try{
         const data = await jsonpRequest(cfg.url, { action:'syncList', pin:cfg.pin, limit:30 });
@@ -9361,6 +9511,9 @@
 
     async function autoSyncCheckOnForeground(reason){
       if(autoSyncBusy) return;
+      const now = Date.now();
+      if(now - lastAutoSyncForegroundCheckAt < 2000) return;
+      lastAutoSyncForegroundCheckAt = now;
       if(!isAutoSyncEnabled()){
         updateAutoSyncIndicator();
         playSyncOffNoticeSound();
@@ -9370,8 +9523,14 @@
         setAutoSyncIndicatorState('frozen', 'Eksport dniówki czeka na ręczną decyzję o nadpisaniu danych w Arkuszu.');
         return;
       }
+      if(isCurrentEndedWorkdayFullySettled()){
+        clearAutoSyncSchedule(false);
+        setAutoSyncIndicatorState('on');
+        return;
+      }
       const cfg = getAutoSyncConfig();
       if(!cfg) return;
+      if(!await ensureAppsScriptCompatibility(cfg.url, { notify:false })) return;
       autoSyncBusy = true;
       setAutoSyncIndicatorState('checking');
       playSyncStartedSound();
@@ -9445,6 +9604,7 @@
       }
       const cfg = getAutoSyncConfig();
       if(!cfg) return;
+      if(!await ensureAppsScriptCompatibility(cfg.url, { notify:false })) return;
       const pendingDailyExportBeforeUpload = hasPendingDailyExport();
       if(!pendingDailyExportBeforeUpload && !hasUnuploadedLocalChanges()){
         setAutoSyncIndicatorState('on');
@@ -9485,8 +9645,7 @@
         }
         const snapshot = buildSyncSnapshot(cfg.device);
         await sendAndVerifySyncSnapshotWithFallback(cfg, snapshot, !!keepalive);
-        localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(snapshot.lastLocalChangeAt || Date.now()));
-        markCloudSeen(snapshot);
+        markVerifiedSyncUpload(snapshot);
         playSyncSuccessSound();
         setAutoSyncIndicatorState('on');
       }catch(e){
@@ -9506,6 +9665,7 @@
       if(autoSyncBusy || !isAutoSyncEnabled()) return;
       const cfg = getAutoSyncConfig();
       if(!cfg) return;
+      if(!await ensureAppsScriptCompatibility(cfg.url, { notify:false })) return;
       const pendingDailyExportBeforeHideUpload = hasPendingDailyExport();
       if(!pendingDailyExportBeforeHideUpload && !hasUnuploadedLocalChanges()) return;
       autoSyncBusy = true;
@@ -9541,8 +9701,7 @@
         }
         const snapshot = buildSyncSnapshot(cfg.device);
         await sendAndVerifySyncSnapshotWithFallback(cfg, snapshot, true);
-        localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(snapshot.lastLocalChangeAt || Date.now()));
-        markCloudSeen(snapshot);
+        markVerifiedSyncUpload(snapshot);
         playSyncSuccessSound();
         playSyncStandbySound();
       }catch(e){
@@ -10006,7 +10165,7 @@
         const cur=localStorage.getItem(LS_APPSCRIPT)||'';
         const v=prompt('URL Google Apps Script (Web App):', cur);
         if(v!==null){
-          localStorage.setItem(LS_APPSCRIPT, v.trim());
+          storeAppsScriptUrl(v.trim());
           showToast(v.trim()?'URL zapisany':'URL wyczyszczony', 'ok');
         }
       }
