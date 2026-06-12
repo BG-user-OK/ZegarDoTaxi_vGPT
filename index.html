@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.12.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.12.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -1137,7 +1137,7 @@
     }
     .export-overwrite-actions{
       display:grid;
-      grid-template-columns:1fr 1.35fr;
+      grid-template-columns:.8fr 1.15fr 1.35fr;
       gap:7px;
       margin-top:9px;
     }
@@ -1151,6 +1151,10 @@
       font-weight:900;
     }
     .export-overwrite-btn.no{ background:#333; }
+    .export-overwrite-btn.abandon{
+      background:#5d1515;
+      color:#ffd2d2;
+    }
     .export-overwrite-btn.confirm{
       background:#826d0a;
       color:#fff7c8;
@@ -3660,6 +3664,7 @@
       <div class="export-overwrite-question">Czy chcesz nadpisać dane aktualnym eksportem?</div>
       <div class="export-overwrite-actions">
         <button class="export-overwrite-btn no" id="exportOverwriteNo" type="button">NIE</button>
+        <button class="export-overwrite-btn abandon" id="exportOverwriteAbandon" type="button">ZANIECHAJ</button>
         <button class="export-overwrite-btn confirm" id="exportOverwriteConfirm" type="button">TAK-eksportuj</button>
       </div>
     </div>
@@ -3668,7 +3673,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.12.0</div>
+    <div class="version">v6.12.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3933,7 +3938,7 @@
     }
     function normalizeDailyExportStatus(value){
       const s = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
-      const status = ['pending','blocked','confirmed'].includes(s.status) ? s.status : 'confirmed';
+      const status = ['pending','blocked','paused','suppressed','confirmed'].includes(s.status) ? s.status : 'confirmed';
       return {
         status,
         date:String(s.date || ''),
@@ -3952,14 +3957,23 @@
         existingAmount:s.existingAmount,
         existingAmountDisplay:String(s.existingAmountDisplay || ''),
         overwriteToken:String(s.overwriteToken || ''),
-        blockedAt:Number(s.blockedAt || 0)
+        blockedAt:Number(s.blockedAt || 0),
+        pausedAt:Number(s.pausedAt || 0),
+        suppressedAt:Number(s.suppressedAt || 0)
       };
     }
     function hasEndedWorkdayForExport(){
       return startWorkMinutes !== null && endWorkMinutes !== null;
     }
     function dailyExportSignature(payload){
-      return stableStringify(payload || {});
+      const source = Object.assign({}, payload || {});
+      delete source.export_date;
+      delete source.action;
+      delete source.pin;
+      delete source.callback;
+      delete source.overwrite_confirmed;
+      delete source.overwrite_token;
+      return stableStringify(source);
     }
     function buildConfirmedDailyExportStatusForCurrentState(){
       const payload = hasEndedWorkdayForExport() ? buildDailyExportPayload() : null;
@@ -4006,6 +4020,10 @@
           current.date === payload.date && current.signature === signature){
         return false;
       }
+      if((current.status === 'paused' || current.status === 'suppressed') &&
+          current.date === payload.date && current.signature === signature){
+        return false;
+      }
       if(current.status !== 'confirmed' || current.date !== payload.date || current.signature !== signature){
         setDailyExportPendingPayload(payload, 'ended_workday_changed');
         saveState();
@@ -4017,6 +4035,11 @@
       refreshDailyExportPendingFromCurrentState();
       const current = normalizeDailyExportStatus(dailyExportStatus);
       return (current.status === 'pending' || current.status === 'blocked') && !!current.payload;
+    }
+    function hasManualDailyExportAction(){
+      refreshDailyExportPendingFromCurrentState();
+      const current = normalizeDailyExportStatus(dailyExportStatus);
+      return (current.status === 'pending' || current.status === 'blocked' || current.status === 'paused') && !!current.payload;
     }
     function isDailyExportOverwriteBlocked(){
       const current = normalizeDailyExportStatus(dailyExportStatus);
@@ -4043,11 +4066,48 @@
       });
       saveState();
     }
-    function dismissDailyExportOverwritePrompt(){
+    function markDailyExportPaused(){
       const current = normalizeDailyExportStatus(dailyExportStatus);
       if(current.status !== 'blocked' || !current.overwriteRequired) return;
-      current.overwritePromptDismissed = true;
-      dailyExportStatus = current;
+      dailyExportStatus = normalizeDailyExportStatus({
+        status:'paused',
+        date:current.date,
+        signature:current.signature,
+        payload:current.payload,
+        attempts:current.attempts,
+        lastAttemptAt:current.lastAttemptAt,
+        reason:'overwrite_paused_by_user',
+        overwriteRequired:true,
+        overwritePromptDismissed:true,
+        existingAmount:current.existingAmount,
+        existingAmountDisplay:current.existingAmountDisplay,
+        overwriteToken:current.overwriteToken,
+        sheet:current.sheet,
+        row:current.row,
+        blockedAt:current.blockedAt,
+        pausedAt:Date.now()
+      });
+      exportOverwriteGuardArmed = false;
+      exportOverwriteGuardBusy = false;
+      saveState();
+    }
+    function markDailyExportSuppressed(){
+      const current = normalizeDailyExportStatus(dailyExportStatus);
+      if(current.status !== 'blocked' || !current.payload) return;
+      dailyExportStatus = normalizeDailyExportStatus({
+        status:'suppressed',
+        date:current.date,
+        signature:current.signature,
+        payload:current.payload,
+        attempts:current.attempts,
+        lastAttemptAt:current.lastAttemptAt,
+        reason:'reexport_abandoned_by_user',
+        existingAmount:current.existingAmount,
+        existingAmountDisplay:current.existingAmountDisplay,
+        sheet:current.sheet,
+        row:current.row,
+        suppressedAt:Date.now()
+      });
       exportOverwriteGuardArmed = false;
       exportOverwriteGuardBusy = false;
       saveState();
@@ -4172,6 +4232,16 @@
             ? 'Nadpisanie eksportu anulowane. Eksport oczekuje na ręczną decyzję.'
             : 'Dane dniówki istnieją w Arkuszu. Wymagana decyzja o nadpisaniu.'
         });
+      } else if(status.status === 'paused'){
+        setPostWorkVerificationState('export', 'idle', {
+          payload,
+          message:'Nadpisanie eksportu wstrzymane. Możesz wrócić do decyzji ręcznie.'
+        });
+      } else if(status.status === 'suppressed'){
+        setPostWorkVerificationState('export', 'idle', {
+          payload,
+          message:'Ponowny eksport tej wersji danych został zaniechany.'
+        });
       } else if((status.status === 'pending' || (status.status === 'confirmed' && status.verified !== true)) && current.export !== 'error' && current.export !== 'ok'){
         setPostWorkVerificationState('export', 'error', { payload, message:'Brak potwierdzenia danych w Arkuszu.' });
       }
@@ -4249,8 +4319,10 @@
           (current.existingAmount === 0 ? '0' : String(current.existingAmount || '-'));
       }
       const noBtn = document.getElementById('exportOverwriteNo');
+      const abandonBtn = document.getElementById('exportOverwriteAbandon');
       const confirmBtn = document.getElementById('exportOverwriteConfirm');
       if(noBtn) noBtn.disabled = exportOverwriteGuardBusy;
+      if(abandonBtn) abandonBtn.disabled = exportOverwriteGuardBusy;
       if(confirmBtn){
         confirmBtn.disabled = exportOverwriteGuardBusy;
         confirmBtn.classList.toggle('armed', exportOverwriteGuardArmed);
@@ -4265,15 +4337,29 @@
     }
     function cancelDailyExportOverwrite(){
       if(!isDailyExportOverwriteBlocked()) return;
-      dismissDailyExportOverwritePrompt();
+      markDailyExportPaused();
       const payload = normalizeDailyExportStatus(dailyExportStatus).payload;
-      setPostWorkVerificationState('export', 'error', {
+      setPostWorkVerificationState('export', 'idle', {
         payload,
-        message:'Nadpisanie eksportu anulowane przez użytkownika.'
+        message:'Nadpisanie eksportu wstrzymane. Możesz wrócić do decyzji ręcznie.'
       });
-      setAutoSyncIndicatorState('frozen', 'Eksport dniówki czeka na ręczną decyzję o nadpisaniu danych w Arkuszu.');
+      setAutoSyncIndicatorState(isAutoSyncEnabled() ? 'on' : 'off');
+      if(isAutoSyncEnabled()) scheduleAutoSyncUpload('export_conflict_paused', { immediate:true });
       renderAll();
-      showToast('Nadpisanie danych anulowane.', 'ok');
+      showToast('Nadpisanie wstrzymane. Auto Sync nie będzie ponawiać eksportu.', 'ok');
+    }
+    function abandonDailyExportOverwrite(){
+      if(!isDailyExportOverwriteBlocked()) return;
+      markDailyExportSuppressed();
+      const payload = normalizeDailyExportStatus(dailyExportStatus).payload;
+      setPostWorkVerificationState('export', 'idle', {
+        payload,
+        message:'Ponowny eksport tej wersji danych został zaniechany.'
+      });
+      setAutoSyncIndicatorState(isAutoSyncEnabled() ? 'on' : 'off');
+      if(isAutoSyncEnabled()) scheduleAutoSyncUpload('export_reexport_abandoned', { immediate:true });
+      renderAll();
+      showToast('Ponowny eksport zaniechany. Synchronizacja odblokowana.', 'ok');
     }
     async function confirmDailyExportOverwrite(){
       if(exportOverwriteGuardBusy) return;
@@ -8495,6 +8581,35 @@
       });
       return payload;
     }
+    async function verifyExistingDailyExportAgainstSheet(url, payload){
+      const response = await jsonpRequest(url, Object.assign({
+        action:'dailyExportVerify',
+        pin:getAppsScriptVerificationPin()
+      }, payload));
+      if(!response || response.ok !== true){
+        throw new Error(response && response.error ? response.error : 'dailyExportVerify failed');
+      }
+      if(response.matches === true && response.verified === true){
+        markDailyExportConfirmed(payload, response);
+        if(isCurrentPostWorkPayload(payload)){
+          setPostWorkVerificationState('export', 'ok', {
+            payload,
+            message:'Dane dniówki są już zgodne z Arkuszem.'
+          });
+        }
+        return 'matched';
+      }
+      if(response.present === true){
+        const previous = normalizeDailyExportStatus(dailyExportStatus);
+        markDailyExportOverwriteBlocked(payload, response, previous.overwritePromptDismissed === true);
+        if(previous.overwritePromptDismissed === true){
+          markDailyExportPaused();
+          return 'paused';
+        }
+        return 'conflict';
+      }
+      return 'missing';
+    }
     async function doExport(url, payloadOverride, options={}){
       const payload = payloadOverride || buildDailyExportPayload();
       const compatible = await ensureAppsScriptCompatibility(url, {
@@ -8543,12 +8658,28 @@
       }
     }
     async function retryPendingDailyExportIfNeeded(reason, options={}){
-      if(!hasPendingDailyExport()) return true;
-      if(isDailyExportOverwriteBlocked() && options.userInitiated !== true) return 'blocked';
+      refreshDailyExportPendingFromCurrentState();
+      let current = normalizeDailyExportStatus(dailyExportStatus);
+      if(current.status === 'suppressed' &&
+          current.date === String(current.payload && current.payload.date || '') &&
+          current.signature === dailyExportSignature(current.payload)){
+        return true;
+      }
+      if(current.status === 'paused' && options.userInitiated !== true) return true;
+      if(!hasPendingDailyExport() && !(current.status === 'paused' && options.userInitiated === true)) return true;
       const url = localStorage.getItem(LS_APPSCRIPT);
       if(!url) return false;
+      const payload = current.payload;
+      if(current.status === 'blocked' && options.userInitiated !== true){
+        try{
+          const verification = await verifyExistingDailyExportAgainstSheet(url, payload);
+          if(verification === 'matched' || verification === 'paused') return true;
+          if(verification === 'conflict') return 'blocked';
+        }catch(e){
+          return false;
+        }
+      }
       if(options.notify) showToast('Wysylam zalegla dniowke...', 'ok');
-      const payload = normalizeDailyExportStatus(dailyExportStatus).payload;
       const ok = await doExport(url, payload, {
         compatibilityNotify:options.notify || options.userInitiated === true
       });
@@ -8579,7 +8710,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.12.0';
+      return el ? el.textContent.trim() : 'v6.12.1';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -9333,6 +9464,15 @@
         status.date === String(payload.date || '') &&
         status.signature === dailyExportSignature(payload);
     }
+    function isCurrentDailyExportSettled(){
+      if(isCurrentDailyExportVerified()) return true;
+      if(!hasEndedWorkdayForExport() || pendingEndWorkExport) return false;
+      const payload = buildDailyExportPayload();
+      const status = normalizeDailyExportStatus(dailyExportStatus);
+      return status.status === 'suppressed' &&
+        status.date === String(payload.date || '') &&
+        status.signature === dailyExportSignature(payload);
+    }
     function isCurrentFinalSyncVerified(){
       if(!hasEndedWorkdayForExport()) return false;
       const identity = currentPostWorkIdentity();
@@ -9345,7 +9485,7 @@
         !!verification.syncId;
     }
     function canSeedVerifiedSyncHashFromCurrentState(){
-      return isCurrentDailyExportVerified() &&
+      return isCurrentDailyExportSettled() &&
         isCurrentFinalSyncVerified() &&
         !hasUnuploadedLocalChanges();
     }
@@ -9554,7 +9694,7 @@
     }
     async function sendPendingDailyExportFromMenu(){
       if(manualSyncBusy) return;
-      if(!hasPendingDailyExport()){
+      if(!hasManualDailyExportAction()){
         showToast('Brak zaleglej dniowki do wyslania.', 'ok');
         openWorkMenu();
         return;
@@ -9612,7 +9752,7 @@
     function openWorkMenu(){
       const frozenReason = autoSyncFrozenReason || '';
       autoSyncFrozenReason = '';
-      const dailyExportPending = hasPendingDailyExport();
+      const dailyExportPending = hasManualDailyExportAction();
       showOverlay(`
         <div class="big-panel">
           <h3>MENU START</h3>
@@ -9839,10 +9979,6 @@
       if(!isAutoSyncEnabled()){
         updateAutoSyncIndicator();
         playSyncOffNoticeSound();
-        return;
-      }
-      if(isDailyExportOverwriteBlocked()){
-        setAutoSyncIndicatorState('frozen', 'Eksport dniówki czeka na ręczną decyzję o nadpisaniu danych w Arkuszu.');
         return;
       }
       if(isCurrentEndedWorkdayFullySettled()){
@@ -10431,12 +10567,20 @@
       });
     }
     const exportOverwriteNoEl = document.getElementById('exportOverwriteNo');
+    const exportOverwriteAbandonEl = document.getElementById('exportOverwriteAbandon');
     const exportOverwriteConfirmEl = document.getElementById('exportOverwriteConfirm');
     if(exportOverwriteNoEl){
       exportOverwriteNoEl.addEventListener('click', (e)=>{
         e.preventDefault();
         e.stopPropagation();
         cancelDailyExportOverwrite();
+      });
+    }
+    if(exportOverwriteAbandonEl){
+      exportOverwriteAbandonEl.addEventListener('click', (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        abandonDailyExportOverwrite();
       });
     }
     if(exportOverwriteConfirmEl){
@@ -10453,7 +10597,8 @@
     }
     document.addEventListener('pointerdown', (e)=>{
       if(!exportOverwriteGuardArmed || exportOverwriteGuardBusy) return;
-      if(e.target && e.target.closest && e.target.closest('#exportOverwriteConfirm')) return;
+      if(e.target && e.target.closest &&
+          e.target.closest('#exportOverwriteConfirm, #exportOverwriteNo, #exportOverwriteAbandon')) return;
       e.preventDefault();
       e.stopPropagation();
       cancelDailyExportOverwrite();
