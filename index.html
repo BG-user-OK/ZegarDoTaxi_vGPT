@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.12.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.13.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -2800,6 +2800,7 @@
     }
     .prov-amount{
       display:flex; align-items:center; justify-content:flex-end;
+      min-width:0;
       padding:0 14px;
       background:
         linear-gradient(180deg, rgba(0,0,0,.64) 0%, rgba(0,0,0,.52) 48%, rgba(0,0,0,.76) 100%);
@@ -2807,6 +2808,8 @@
       color:#fff;
       font-size:24px; font-weight:900;
       font-variant-numeric:tabular-nums;
+      white-space:nowrap;
+      overflow:hidden;
       box-shadow:
         inset 0 4px 9px rgba(0,0,0,.78),
         inset 0 -1px 2px rgba(255,230,130,.1),
@@ -2994,6 +2997,130 @@
     .keypad-panel .keypad-live-preview{
       font-size:12px !important;
       padding:1px 0 2px !important;
+    }
+    .ai-paste-panel{
+      width:min(94vw, 520px);
+      min-height:min(72vh, 620px);
+      max-height:calc(100dvh - 20px);
+      padding:12px;
+      gap:10px;
+    }
+    .ai-paste-panel h3,
+    .ai-conflict-panel h3{
+      color:#e2e2e2;
+      letter-spacing:1px;
+      text-align:left;
+      text-transform:none;
+    }
+    .ai-paste-textarea{
+      flex:1 1 auto;
+      width:100%;
+      min-height:250px;
+      resize:none;
+      border:1px solid #3c3c3c;
+      border-radius:8px;
+      background:#050505;
+      color:#f2f2f2;
+      padding:12px;
+      font:700 17px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      box-sizing:border-box;
+      outline:none;
+    }
+    .ai-paste-textarea:focus{
+      border-color:#777;
+      box-shadow:0 0 0 2px rgba(255,255,255,.08);
+    }
+    .ai-paste-error{
+      min-height:24px;
+      color:#ff6767;
+      font-size:14px;
+      font-weight:800;
+      line-height:1.35;
+    }
+    .ai-paste-hint{
+      color:#8d8d8d;
+      font-size:13px;
+      line-height:1.35;
+    }
+    .ai-paste-actions{
+      display:grid;
+      grid-template-columns:1fr 1.35fr;
+      gap:10px;
+      flex:0 0 auto;
+    }
+    .ai-paste-actions button,
+    .ai-conflict-actions button{
+      min-height:68px;
+      border:none;
+      border-radius:10px;
+      color:#fff;
+      font-size:18px;
+      font-weight:950;
+      touch-action:manipulation;
+    }
+    .ai-paste-abandon{
+      background:linear-gradient(180deg,var(--red),var(--red-dark));
+    }
+    .ai-paste-insert{
+      background:linear-gradient(180deg,var(--ok),var(--ok-dark));
+    }
+    .ai-conflict-panel{
+      width:min(92vw, 460px);
+      height:auto;
+      min-height:330px;
+      max-height:min(70dvh, 520px);
+      padding:14px;
+      gap:12px;
+    }
+    .ai-conflict-progress{
+      color:#858585;
+      font-size:13px;
+      font-weight:800;
+      text-align:right;
+    }
+    .ai-conflict-values{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:8px;
+      padding:10px 0;
+    }
+    .ai-conflict-value{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      min-height:54px;
+      padding:8px 12px;
+      border-radius:8px;
+      background:#090909;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);
+      color:#aaa;
+      font-size:15px;
+      font-weight:800;
+    }
+    .ai-conflict-value strong{
+      color:#fff;
+      font-size:22px;
+      font-variant-numeric:tabular-nums;
+      white-space:nowrap;
+    }
+    .ai-conflict-actions{
+      display:grid;
+      grid-template-columns:repeat(3, 1fr);
+      gap:8px;
+      margin-top:auto;
+    }
+    .ai-conflict-actions.two-actions{
+      grid-template-columns:1fr 1fr;
+    }
+    .ai-conflict-overwrite{
+      background:linear-gradient(180deg,var(--ok),var(--ok-dark));
+    }
+    .ai-conflict-add{
+      background:linear-gradient(180deg,#1a6aaa,#0a3a6a);
+    }
+    .ai-conflict-skip{
+      background:linear-gradient(180deg,#555,#252525);
     }
     .counter-fields{ display:flex; flex-direction:column; gap:8px; }
     .counter-row{
@@ -3673,7 +3800,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.12.1</div>
+    <div class="version">v6.13.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3693,6 +3820,7 @@
     const LS_APP_VERSION_STATUS = 'tarcza_app_version_status_v1';
     const LS_POST_WORK_VERIFY = 'tarcza_post_work_verify_v1';
     const FINAL_BREAK_NO_WORK_THRESHOLD_MIN = 2;
+    const AI_PASTE_HOLD_MS = 2000;
 
     const PROVIDERS = [
       { key:'uber',    label:'UBER',    bg:'#000000', fg:'#ffffff' },
@@ -3758,6 +3886,7 @@
     let keypadSide = 'right';
     let counterPanelDraft = null;
     let moneyPanelDraft = null;
+    let aiPasteSession = null;
 
     const cx=200, cy=200, radius=200;
     let blinkState = false;
@@ -6472,7 +6601,7 @@
     }
     overlay.addEventListener('click',(e)=>{
       if(e.target!==overlay) return;
-      if(overlay.dataset.lockClose === 'tomorrowPreview') return;
+      if(overlay.dataset.lockClose === 'tomorrowPreview' || overlay.dataset.lockClose === 'aiPaste') return;
       moneyPanelDraft=null;
       counterPanelDraft=null;
       if(pendingEndWorkExport) abortPendingEndWorkReview();
@@ -7435,16 +7564,443 @@
         });
       });
       overlay.querySelectorAll('[data-money-key]').forEach(btn=>{
+        bindMoneyKeyWithAiHold(btn);
+      });
+    }
+
+    function normalizeAiLabel(value){
+      return String(value||'')
+        .toLocaleLowerCase('pl-PL')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g,'')
+        .replace(/[^a-z0-9]+/g,' ')
+        .trim();
+    }
+    function aiFieldFromLabel(label){
+      const normalized=normalizeAiLabel(label);
+      if(normalized==='uber') return { kind:'provider', key:'uber', label:'UBER' };
+      if(normalized==='bolt') return { kind:'provider', key:'bolt', label:'BOLT' };
+      if(normalized==='taxi') return { kind:'provider', key:'taxi', label:'TAXI' };
+      if(normalized==='priv') return { kind:'provider', key:'priv', label:'PRIV' };
+      if(normalized==='freenow' || normalized==='free now') return { kind:'provider', key:'freenow', label:'FREENOW' };
+      if(normalized==='agap') return { kind:'provider', key:'agap', label:'AGAP' };
+      if(normalized==='tip' || normalized==='tips' || normalized==='napiwek') return { kind:'provider', key:'tip', label:'NAPIWEK' };
+      if(normalized==='inne') return { kind:'provider', key:'other', label:'INNE' };
+      if(normalized==='swinka') return { kind:'provider', key:'swinka', label:'ŚWINKA' };
+      if(normalized==='km priv') return { kind:'privKm', key:'privKm', label:'km PRIV' };
+      if(normalized==='licznik' || normalized==='licznik end' || normalized==='licznik koncowy'){
+        return { kind:'endOdometer', key:'endOdometer', label:'LICZNIK END' };
+      }
+      return null;
+    }
+    function parseAiMoneyValue(raw,label){
+      const text=String(raw||'').replace(/\u00a0/g,' ').replace(/\s+/g,'').trim();
+      if(!/^[+-]?\d+(?:[.,]\d{1,2})?$/.test(text)){
+        throw new Error(`${label}: niepoprawna kwota „${String(raw||'').trim()}”.`);
+      }
+      const negative=text.startsWith('-');
+      const unsigned=text.replace(/^[+-]/,'');
+      const parts=unsigned.split(/[.,]/);
+      const whole=parseInt(parts[0]||'0',10);
+      const fraction=(parts[1]||'').padEnd(2,'0');
+      const groszy=whole*100+parseInt(fraction||'0',10);
+      if(!Number.isSafeInteger(groszy) || groszy>9999999999){
+        throw new Error(`${label}: kwota jest zbyt duża.`);
+      }
+      return negative ? -groszy : groszy;
+    }
+    function parseAiOdometerValue(raw){
+      const text=String(raw||'').replace(/\u00a0/g,' ').trim();
+      if(!/^\d[\d\s]*$/.test(text)){
+        throw new Error(`LICZNIK END: wpisz wyłącznie pełną liczbę kilometrów.`);
+      }
+      const digits=text.replace(/\s+/g,'');
+      if(digits.length>6){
+        throw new Error(`LICZNIK END: licznik może mieć maksymalnie 6 cyfr.`);
+      }
+      const value=parseInt(digits,10);
+      if(!Number.isFinite(value) || value<=0){
+        throw new Error(`LICZNIK END: wartość musi być większa od zera.`);
+      }
+      return value;
+    }
+    function parseAiPrivateKmValue(raw){
+      const groszy=parseAiMoneyValue(raw,'km PRIV');
+      if(groszy<0) throw new Error('km PRIV: wartość nie może być ujemna.');
+      if(groszy%100!==0) throw new Error('km PRIV: aplikacja zapisuje tylko pełne kilometry.');
+      return groszy/100;
+    }
+    function parseAiPasteText(rawText){
+      const text=String(rawText||'')
+        .replace(/```(?:text)?/gi,'')
+        .replace(/```/g,'')
+        .trim();
+      if(!text) throw new Error('Wklej dane przygotowane przez AI.');
+
+      const labelPattern='licznik(?:\\s+(?:end|końcowy|koncowy))?|km\\s*priv|free\\s*now|freenow|napiwek|tips?|świnka|swinka|uber|bolt|taxi|priv|agap|inne';
+      const labelRegex=new RegExp(`(^|[\\s;])(${labelPattern})(?=\\s*(?::|=)?\\s*[+-]?\\d)`,'gimu');
+      const matches=Array.from(text.matchAll(labelRegex));
+      if(!matches.length){
+        throw new Error('Nie znaleziono oznaczonych pól. Użyj np. „Uber: 123,45”.');
+      }
+      const firstLabelStart=matches[0].index+matches[0][1].length;
+      const prefix=text.slice(0,firstLabelStart).trim().replace(/:$/,'').trim();
+      if(prefix && !/^(?:wklej dane od ai|dane|oto dane)$/iu.test(prefix)){
+        throw new Error(`Nie rozpoznano tekstu przed pierwszym polem: „${prefix}”.`);
+      }
+
+      const parsed={ providers:{}, endOdometer:null, privKm:null, detected:0 };
+      const seen=new Set();
+      for(let index=0;index<matches.length;index++){
+        const match=matches[index];
+        const field=aiFieldFromLabel(match[2]);
+        if(!field) throw new Error(`Nieznane pole: ${match[2]}.`);
+        const fieldId=field.kind==='provider' ? `provider:${field.key}` : field.kind;
+        if(seen.has(fieldId)) throw new Error(`${field.label}: pole występuje więcej niż raz.`);
+        seen.add(fieldId);
+
+        const valueStart=match.index+match[0].length;
+        const next=matches[index+1];
+        const valueEnd=next ? next.index+next[1].length : text.length;
+        const rawValue=text.slice(valueStart,valueEnd)
+          .replace(/^\s*[:=]\s*/,'')
+          .replace(/[;\s]+$/,'')
+          .trim();
+        if(!rawValue) throw new Error(`${field.label}: brak wartości.`);
+
+        if(field.kind==='provider') parsed.providers[field.key]=parseAiMoneyValue(rawValue,field.label);
+        if(field.kind==='endOdometer') parsed.endOdometer=parseAiOdometerValue(rawValue);
+        if(field.kind==='privKm') parsed.privKm=parseAiPrivateKmValue(rawValue);
+        parsed.detected++;
+      }
+      if(!parsed.detected) throw new Error('Nie znaleziono danych do wstawienia.');
+      return parsed;
+    }
+    function currentAiStartOdometer(){
+      if(counterPanelDraft) return counterDraftFieldValue('start');
+      if(moneyPanelDraft) return moneyDraftCounterValue('start');
+      return counterStart;
+    }
+    function currentAiEndOdometerInfo(){
+      if(counterPanelDraft){
+        const manual=counterPanelDraft.originalEnd!==null || counterDraftWasEdited('end');
+        return { value:counterDraftFieldValue('end'), manual };
+      }
+      if(moneyPanelDraft){
+        const manual=moneyPanelDraft.counterEndOriginal!==null || moneyPanelDraft.counterEndDigits.length>0;
+        return { value:moneyDraftCounterValue('end'), manual };
+      }
+      return {
+        value:counterEnd!==null ? counterEnd : highestKnownCounterValue(),
+        manual:counterEnd!==null
+      };
+    }
+    function currentAiPrivateKm(){
+      return counterPanelDraft ? counterDraftFieldValue('priv') : privKmTotal;
+    }
+    function currentAiProviderValue(key){
+      return moneyPanelDraft ? (moneyPanelDraft.values[key]||0) : (revenues[key]||0);
+    }
+    function prepareAiPastePlan(parsed){
+      const plan={ providers:{}, endOdometer:null, privKm:null };
+      const conflicts=[];
+      Object.keys(parsed.providers).forEach(key=>{
+        const provider=PROVIDERS.find(item=>item.key===key);
+        const current=currentAiProviderValue(key);
+        const item={
+          id:`provider:${key}`,
+          kind:'provider',
+          key,
+          label:provider ? provider.label : key,
+          current,
+          ai:parsed.providers[key],
+          action:current===0 ? 'overwrite' : null
+        };
+        plan.providers[key]=item;
+        if(!item.action) conflicts.push(item);
+      });
+      if(parsed.privKm!==null){
+        const current=currentAiPrivateKm();
+        const item={
+          id:'privKm',
+          kind:'privKm',
+          key:'privKm',
+          label:'km PRIV',
+          current,
+          ai:parsed.privKm,
+          action:current===0 ? 'overwrite' : null
+        };
+        plan.privKm=item;
+        if(!item.action) conflicts.push(item);
+      }
+      if(parsed.endOdometer!==null){
+        const info=currentAiEndOdometerInfo();
+        const item={
+          id:'endOdometer',
+          kind:'endOdometer',
+          key:'endOdometer',
+          label:'LICZNIK END',
+          current:info.value,
+          ai:parsed.endOdometer,
+          action:info.manual ? null : 'overwrite'
+        };
+        plan.endOdometer=item;
+        if(!item.action) conflicts.push(item);
+      }
+      return { plan, conflicts };
+    }
+    function renderAiPastePanel(errorMessage=''){
+      const session=aiPasteSession;
+      if(!session) return;
+      showOverlay(`
+        <div class="big-panel ai-paste-panel">
+          <h3>Wklej dane od AI:</h3>
+          <textarea class="ai-paste-textarea" id="aiPasteText" spellcheck="false" autocomplete="off"
+                    placeholder="Uber: 156,65&#10;Bolt: 321,00&#10;LICZNIK END: 486183&#10;km priv: 0,00">${escapeHtml(session.text||'')}</textarea>
+          <div class="ai-paste-error" id="aiPasteError">${escapeHtml(errorMessage)}</div>
+          <div class="ai-paste-hint">Wymagane są etykiety pól. Kolejność wierszy jest dowolna.</div>
+          <div class="ai-paste-actions">
+            <button type="button" class="ai-paste-abandon" data-ai-act="abandon">ZREZYGNUJ</button>
+            <button type="button" class="ai-paste-insert" data-ai-act="insert">WSTAW</button>
+          </div>
+        </div>
+      `);
+      overlay.dataset.lockClose='aiPaste';
+      const textarea=overlay.querySelector('#aiPasteText');
+      overlay.querySelector('[data-ai-act="abandon"]').addEventListener('click',(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        abandonAiPaste();
+      });
+      overlay.querySelector('[data-ai-act="insert"]').addEventListener('click',(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        submitAiPaste();
+      });
+      setTimeout(()=>{
+        if(!textarea) return;
+        try{ textarea.focus({preventScroll:true}); }
+        catch(e){ textarea.focus(); }
+      },80);
+    }
+    function startAiDataPasteFlow(source){
+      aiPasteSession={
+        source:source==='money' ? 'money' : 'endWork',
+        text:'',
+        parsed:null,
+        plan:null,
+        conflicts:[],
+        conflictIndex:0
+      };
+      renderAiPastePanel();
+    }
+    function abandonAiPaste(){
+      const source=aiPasteSession ? aiPasteSession.source : 'endWork';
+      aiPasteSession=null;
+      if(source==='money'){
+        openMoneyPanel({ entryMode:moneyPanelDraft ? moneyPanelDraft.entryMode : 'normal' });
+      } else {
+        openFinalCounterEditor('endWork');
+      }
+    }
+    function submitAiPaste(){
+      const session=aiPasteSession;
+      const textarea=overlay.querySelector('#aiPasteText');
+      if(!session || !textarea) return;
+      session.text=textarea.value;
+      try{
+        const parsed=parseAiPasteText(session.text);
+        const startValue=currentAiStartOdometer();
+        if(parsed.endOdometer!==null && Number.isFinite(Number(startValue)) && Number(startValue)>0 &&
+           parsed.endOdometer<Number(startValue)){
+          throw new Error(`LICZNIK END (${parsed.endOdometer}) jest mniejszy niż licznik początkowy (${startValue}).`);
+        }
+        const prepared=prepareAiPastePlan(parsed);
+        session.parsed=parsed;
+        session.plan=prepared.plan;
+        session.conflicts=prepared.conflicts;
+        session.conflictIndex=0;
+        if(session.conflicts.length) renderAiConflict();
+        else finalizeAiPaste();
+      }catch(error){
+        renderAiPastePanel(error && error.message ? error.message : 'Nie udało się odczytać danych.');
+      }
+    }
+    function formatAiConflictValue(item,value){
+      if(item.kind==='provider') return formatAmountDisplay(value);
+      if(item.kind==='privKm') return `${value} km`;
+      return String(value);
+    }
+    function renderAiConflict(){
+      const session=aiPasteSession;
+      if(!session) return;
+      const conflict=session.conflicts[session.conflictIndex];
+      if(!conflict){
+        finalizeAiPaste();
+        return;
+      }
+      const allowAdd=conflict.kind!=='endOdometer';
+      showOverlay(`
+        <div class="big-panel ai-conflict-panel">
+          <div class="ai-conflict-progress">${session.conflictIndex+1} / ${session.conflicts.length}</div>
+          <h3>${escapeHtml(conflict.label)}</h3>
+          <div class="ai-conflict-values">
+            <div class="ai-conflict-value"><span>Obecnie</span><strong>${escapeHtml(formatAiConflictValue(conflict,conflict.current))}</strong></div>
+            <div class="ai-conflict-value"><span>Dane AI</span><strong>${escapeHtml(formatAiConflictValue(conflict,conflict.ai))}</strong></div>
+          </div>
+          <div class="ai-conflict-actions ${allowAdd?'':'two-actions'}">
+            <button type="button" class="ai-conflict-overwrite" data-ai-choice="overwrite">NADPISZ</button>
+            ${allowAdd?'<button type="button" class="ai-conflict-add" data-ai-choice="add">DODAJ</button>':''}
+            <button type="button" class="ai-conflict-skip" data-ai-choice="skip">POMIŃ</button>
+          </div>
+        </div>
+      `);
+      overlay.dataset.lockClose='aiPaste';
+      overlay.querySelectorAll('[data-ai-choice]').forEach(button=>{
+        button.addEventListener('click',(e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          conflict.action=button.dataset.aiChoice;
+          session.conflictIndex++;
+          renderAiConflict();
+        });
+      });
+    }
+    function ensureAiMoneyDraft(session){
+      if(moneyPanelDraft) return moneyPanelDraft;
+      moneyPanelDraft=createMoneyPanelDraft({
+        entryMode:session.source==='endWork' ? 'endWork' : 'normal',
+        counterTarget:'end'
+      });
+      return moneyPanelDraft;
+    }
+    function ensureAiCounterDraft(session){
+      if(counterPanelDraft) return counterPanelDraft;
+      counterPanelDraft=createCounterPanelDraft({
+        activeField:'end',
+        returnTarget:'money',
+        providerEntryMode:session.source==='endWork' ? 'endWork' : 'normal'
+      });
+      if(moneyPanelDraft){
+        const startManual=moneyPanelDraft.counterStartOriginal!==null || moneyPanelDraft.counterStartDigits.length>0;
+        const endManual=moneyPanelDraft.counterEndOriginal!==null || moneyPanelDraft.counterEndDigits.length>0;
+        if(startManual){
+          const value=moneyDraftCounterValue('start');
+          counterPanelDraft.originalStart=value;
+          counterPanelDraft.startBase=value;
+          counterPanelDraft.startDigits='';
+          counterPanelDraft.startCleared=false;
+        }
+        if(endManual){
+          const value=moneyDraftCounterValue('end');
+          counterPanelDraft.originalEnd=value;
+          counterPanelDraft.endBase=value;
+          counterPanelDraft.endDigits='';
+          counterPanelDraft.endCleared=false;
+        }
+      }
+      return counterPanelDraft;
+    }
+    function setCounterDraftExactValue(field,value){
+      if(!counterPanelDraft || !['start','end'].includes(field)) return;
+      counterPanelDraft[`${field}Base`]=0;
+      counterPanelDraft[`${field}Digits`]=String(Math.max(0,Math.trunc(value||0)));
+      counterPanelDraft[`${field}Cleared`]=true;
+    }
+    function applyAiPlanToDrafts(session){
+      const moneyDraft=ensureAiMoneyDraft(session);
+      Object.keys(session.plan.providers).forEach(key=>{
+        const item=session.plan.providers[key];
+        if(item.action==='overwrite') moneyDraft.values[key]=item.ai;
+        if(item.action==='add') moneyDraft.values[key]=item.current+item.ai;
+        if(item.action==='skip') moneyDraft.values[key]=item.current;
+      });
+      moneyDraft.editBase=moneyDraft.values[moneyDraft.activeProvider]||0;
+      moneyDraft.inputRaw='';
+      moneyDraft.negative=false;
+      moneyDraft.explicitClear=false;
+      moneyDraft.mode='replace';
+
+      const needsCounter=session.source==='endWork' ||
+        session.plan.endOdometer!==null || session.plan.privKm!==null;
+      if(!needsCounter) return false;
+      const counterDraft=ensureAiCounterDraft(session);
+      const endItem=session.plan.endOdometer;
+      if(endItem && endItem.action==='overwrite') setCounterDraftExactValue('end',endItem.ai);
+
+      const privItem=session.plan.privKm;
+      if(privItem){
+        if(privItem.action==='overwrite'){
+          counterDraft.privBase=0;
+          counterDraft.privDigits=String(privItem.ai);
+        } else if(privItem.action==='add'){
+          counterDraft.privBase=privItem.current;
+          counterDraft.privDigits=String(privItem.ai);
+        } else if(privItem.action==='skip'){
+          counterDraft.privBase=privItem.current;
+          counterDraft.privDigits='';
+        }
+      }
+      if(session.source==='endWork' || endItem) counterDraft.activeField='end';
+      else if(privItem) counterDraft.activeField='priv';
+      return true;
+    }
+    function finalizeAiPaste(){
+      const session=aiPasteSession;
+      if(!session) return;
+      const showCounter=applyAiPlanToDrafts(session);
+      aiPasteSession=null;
+      if(showCounter) renderCounterPanel();
+      else openMoneyPanel({ entryMode:moneyPanelDraft ? moneyPanelDraft.entryMode : 'normal' });
+    }
+    function bindMoneyKeyWithAiHold(btn){
+      const key=String(btn.dataset.moneyKey||'');
+      if(!/^[0-9]$/.test(key)){
         btn.addEventListener('pointerdown',(e)=>{
           e.preventDefault();
           e.stopPropagation();
           flashKeypadKey(btn);
-          moneyInlinePress(btn.dataset.moneyKey);
+          moneyInlinePress(key);
         });
         btn.addEventListener('click',(e)=>{
           e.preventDefault();
           e.stopPropagation();
         });
+        return;
+      }
+      let holdTimer=null;
+      let longFired=false;
+      const keypad=btn.closest('.money-inline-keypad');
+      function stopHold(){
+        clearTimeout(holdTimer);
+        stopHoldWarning(keypad);
+      }
+      btn.addEventListener('pointerdown',(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        longFired=false;
+        try{ btn.setPointerCapture(e.pointerId); }catch(error){}
+        startHoldWarning(keypad);
+        holdTimer=setTimeout(()=>{
+          longFired=true;
+          stopHoldWarning(keypad);
+          if(navigator.vibrate){ try{ navigator.vibrate([60,40,60]); }catch(error){} }
+          startAiDataPasteFlow('money');
+        },AI_PASTE_HOLD_MS);
+      });
+      btn.addEventListener('pointerup',(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        stopHold();
+        try{ btn.releasePointerCapture(e.pointerId); }catch(error){}
+        if(longFired) return;
+        flashKeypadKey(btn);
+        moneyInlinePress(key);
+      });
+      btn.addEventListener('pointercancel',stopHold);
+      btn.addEventListener('click',(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
       });
     }
 
@@ -7779,6 +8335,19 @@
       if(returnTarget==='main') closeOverlayToMain('counter_panel_cancel');
       else openMoneyPanel({ entryMode:providerEntryMode });
     }
+    function syncMoneyDraftCountersFromState(){
+      if(!moneyPanelDraft) return;
+      moneyPanelDraft.counterStartOriginal=counterStart;
+      moneyPanelDraft.counterEndOriginal=counterEnd;
+      moneyPanelDraft.counterStartBase=counterStart!==null
+        ? counterStart
+        : (lastCounterEnd!==null ? lastCounterEnd : 0);
+      moneyPanelDraft.counterEndBase=counterEnd!==null
+        ? counterEnd
+        : Math.max(moneyPanelDraft.counterStartBase,highestKnownCounterValue());
+      moneyPanelDraft.counterStartDigits='';
+      moneyPanelDraft.counterEndDigits='';
+    }
     function saveCounterPanel(){
       const draft=counterPanelDraft;
       if(!draft) return;
@@ -7795,6 +8364,7 @@
       const changed=previousStart!==counterStart || previousEnd!==counterEnd || previousPriv!==privKmTotal;
       const returnTarget=draft.returnTarget;
       const providerEntryMode=draft.providerEntryMode;
+      syncMoneyDraftCountersFromState();
       counterPanelDraft=null;
       if(changed) saveStateAndMarkOverlayDirty('counter_panel');
       if(returnTarget==='main') closeOverlayToMain('counter_panel');
@@ -8507,10 +9077,9 @@
       saveState();
       renderAll();
       syncWorkWakeLock();
-      showToast('Uzupelnij obroty i licznik, potem zatwierdz zielonym.', 'ok');
       moneyPanelDraft=null;
       counterPanelDraft=null;
-      openFinalCounterEditor('endWork');
+      startAiDataPasteFlow('endWork');
       return;
 
       // Eksport - dane zostają na ekranie po sukcesie. Reset nastąpi dopiero przy nowym START.
@@ -8710,7 +9279,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.12.1';
+      return el ? el.textContent.trim() : 'v6.13.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
