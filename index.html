@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.13.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.14.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -2524,6 +2524,43 @@
       background:linear-gradient(180deg,#5b1616,#250808);
       color:#ffdede;
     }
+    .shared-conflict-summary{
+      display:grid;
+      gap:10px;
+      margin:12px 0;
+      font-size:17px;
+      line-height:1.25;
+    }
+    .shared-conflict-version{
+      padding:10px;
+      border:1px solid #444;
+      background:#090909;
+      overflow-wrap:anywhere;
+    }
+    .shared-conflict-version strong{
+      display:block;
+      margin-bottom:5px;
+      color:#bbb;
+    }
+    .shared-conflict-actions{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:8px;
+      margin-top:auto;
+    }
+    .shared-conflict-actions button{
+      min-width:0;
+      min-height:66px;
+      padding:7px 4px;
+      border:1px solid #555;
+      color:#fff;
+      font-weight:800;
+      font-size:15px;
+      background:#151515;
+    }
+    .shared-conflict-actions [data-shared-choice="phone"]{ border-color:#32a852; }
+    .shared-conflict-actions [data-shared-choice="sheet"]{ border-color:#4285f4; }
+    .shared-conflict-actions [data-shared-choice="both"]{ border-color:#d6a400; }
     .sync-list{
       flex:1;
       overflow-y:auto;
@@ -3800,7 +3837,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.13.0</div>
+    <div class="version">v6.14.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3819,6 +3856,8 @@
     const LS_APPSCRIPT_COMPAT_CACHE = 'tarcza_appscript_compat_cache_v1';
     const LS_APP_VERSION_STATUS = 'tarcza_app_version_status_v1';
     const LS_POST_WORK_VERIFY = 'tarcza_post_work_verify_v1';
+    const LS_SHARED_DATA_BASE = 'tarcza_shared_data_base_v1';
+    const LS_SHARED_DATA_CONFLICTS = 'tarcza_shared_data_conflicts_v1';
     const FINAL_BREAK_NO_WORK_THRESHOLD_MIN = 2;
     const AI_PASTE_HOLD_MS = 2000;
 
@@ -3871,6 +3910,8 @@
     let notes = [];
     let recentNoteSymbols = [];
     let recentNoteTextBySymbol = {};
+    let emojiRecords = [];
+    let sharedDataConflicts = [];
 
     let editMode = "start";
     let editHour = 0, editMinute = 0;
@@ -3928,7 +3969,7 @@
           workTargetMinutes
         };
         localStorage.setItem(LS_KEY, JSON.stringify(state));
-        const persist = { lastCounterEnd, notes, recentNoteSymbols, recentNoteTextBySymbol };
+        const persist = { lastCounterEnd, notes, recentNoteSymbols, recentNoteTextBySymbol, emojiRecords };
         localStorage.setItem(LS_PERSIST, JSON.stringify(persist));
         const comparable = stableStringify({state, persist});
         const previous = localStorage.getItem(LS_SYNC_STATE_HASH) || '';
@@ -3992,9 +4033,12 @@
           notes = Array.isArray(p.notes) ? p.notes : [];
           recentNoteSymbols = Array.isArray(p.recentNoteSymbols) ? p.recentNoteSymbols.slice(0,50) : [];
           recentNoteTextBySymbol = (p.recentNoteTextBySymbol && typeof p.recentNoteTextBySymbol === 'object' && !Array.isArray(p.recentNoteTextBySymbol)) ? p.recentNoteTextBySymbol : {};
+          emojiRecords = Array.isArray(p.emojiRecords) ? p.emojiRecords : [];
         }
+        const sharedMigration = migrateSharedRecords();
+        loadSharedDataConflicts();
         const correction = applyFinalBreakCorrectionIfNoWorkAfterBreak({ notify:true });
-        if(correction) saveState();
+        if(sharedMigration || correction) saveState();
       }catch(e){}
     }
 
@@ -4010,10 +4054,10 @@
           revenues, counterStart, counterEnd, privKmTotal,
           workTargetMinutes
         },
-        persist:{ lastCounterEnd, notes, recentNoteSymbols, recentNoteTextBySymbol }
+        persist:{ lastCounterEnd, notes, recentNoteSymbols, recentNoteTextBySymbol, emojiRecords }
       };
     }
-    function applyStateObjects(state, persist){
+    function applyStateObjects(state, persist, options={}){
       const s = state || {};
       startWorkMinutes = s.startWorkMinutes ?? null;
       endWorkMinutes = s.endWorkMinutes ?? null;
@@ -4043,9 +4087,13 @@
 
       const p = persist || {};
       lastCounterEnd = p.lastCounterEnd ?? null;
-      notes = Array.isArray(p.notes) ? p.notes : [];
-      recentNoteSymbols = Array.isArray(p.recentNoteSymbols) ? p.recentNoteSymbols.slice(0,50) : [];
-      recentNoteTextBySymbol = (p.recentNoteTextBySymbol && typeof p.recentNoteTextBySymbol === 'object' && !Array.isArray(p.recentNoteTextBySymbol)) ? p.recentNoteTextBySymbol : {};
+      if(options.preserveSharedData !== true){
+        notes = Array.isArray(p.notes) ? p.notes : [];
+        recentNoteSymbols = Array.isArray(p.recentNoteSymbols) ? p.recentNoteSymbols.slice(0,50) : [];
+        recentNoteTextBySymbol = (p.recentNoteTextBySymbol && typeof p.recentNoteTextBySymbol === 'object' && !Array.isArray(p.recentNoteTextBySymbol)) ? p.recentNoteTextBySymbol : {};
+        emojiRecords = Array.isArray(p.emojiRecords) ? p.emojiRecords : [];
+        migrateSharedRecords();
+      }
       const correction = applyFinalBreakCorrectionIfNoWorkAfterBreak({ notify:true });
       syncApplyInProgress = true;
       try{ saveState(); }
@@ -4064,6 +4112,430 @@
       syncApplyInProgress = true;
       try{ saveState(); }
       finally{ syncApplyInProgress = false; }
+    }
+    const SHARED_NOTE_FIELDS = [
+      'order','text','icon','alarmTime','alerts','customOffsets','ackedAlerts',
+      'postponedAtDate','postponedUntilDate','deleted','deletedAt','createdAt'
+    ];
+    const SHARED_EMOJI_FIELDS = [
+      'emoji','order','active','rememberedText','lastUsedAt'
+    ];
+    function sharedNowIso(){
+      return new Date().toISOString();
+    }
+    function createSharedRecordId(prefix){
+      if(window.crypto && typeof window.crypto.randomUUID === 'function'){
+        return prefix + '_' + window.crypto.randomUUID();
+      }
+      return prefix + '_' + getDeviceId() + '_' + Date.now().toString(36) + '_' + Math.floor(Math.random()*1e9).toString(36);
+    }
+    function emojiRecordId(symbol){
+      const code = Array.from(String(symbol || ''))
+        .map(ch=>ch.codePointAt(0).toString(16))
+        .join('_');
+      return 'emoji_' + (code || 'empty');
+    }
+    function normalizedIso(value, fallback=''){
+      const raw = String(value || '').trim();
+      if(!raw) return fallback;
+      const ms = Date.parse(raw);
+      return Number.isFinite(ms) ? new Date(ms).toISOString() : fallback;
+    }
+    function inferredNoteCreatedAt(id, fallback){
+      const numeric = Number(id);
+      if(Number.isFinite(numeric) && numeric > 946684800000 && numeric < Date.now()+86400000){
+        return new Date(numeric).toISOString();
+      }
+      return fallback;
+    }
+    function normalizeSharedNote(note, index=0){
+      const source = (note && typeof note === 'object' && !Array.isArray(note)) ? note : {};
+      const fallbackNow = sharedNowIso();
+      const id = String(source.id || createSharedRecordId('note'));
+      const createdAt = normalizedIso(source.createdAt, inferredNoteCreatedAt(id, fallbackNow));
+      const updatedAt = normalizedIso(source.updatedAt, createdAt);
+      const alerts = Array.isArray(source.alerts)
+        ? [...new Set(source.alerts.map(Number).filter(Number.isFinite))].sort((a,b)=>a-b)
+        : [];
+      const customOffsets = Array.isArray(source.customOffsets)
+        ? [...new Set(source.customOffsets.map(Number).filter(Number.isFinite))].slice(0,8)
+        : [];
+      const ackedAlerts = (source.ackedAlerts && typeof source.ackedAlerts === 'object' && !Array.isArray(source.ackedAlerts))
+        ? Object.keys(source.ackedAlerts).reduce((out,key)=>{
+            if(source.ackedAlerts[key]) out[String(key)] = true;
+            return out;
+          }, {})
+        : {};
+      return {
+        id,
+        order:Number.isFinite(Number(source.order)) ? Number(source.order) : index + 1,
+        text:String(source.text || ''),
+        icon:trimNoteSymbol(source.icon || '') || '•',
+        alarmTime:String(source.alarmTime || ''),
+        alerts,
+        customOffsets,
+        ackedAlerts,
+        postponedAtDate:String(source.postponedAtDate || ''),
+        postponedUntilDate:String(source.postponedUntilDate || ''),
+        deleted:source.deleted === true,
+        deletedAt:source.deleted === true ? normalizedIso(source.deletedAt, updatedAt) : '',
+        createdAt,
+        updatedAt,
+        revision:Number(source.revision || 0),
+        changeSource:String(source.changeSource || 'migration')
+      };
+    }
+    function normalizeSharedEmoji(record, index=0){
+      const source = (record && typeof record === 'object' && !Array.isArray(record)) ? record : {};
+      const emoji = trimNoteSymbol(source.emoji || source.symbol || '');
+      return {
+        id:String(source.id || emojiRecordId(emoji)),
+        emoji,
+        order:Number.isFinite(Number(source.order)) ? Number(source.order) : index + 1,
+        active:source.active !== false,
+        rememberedText:String(source.rememberedText || ''),
+        lastUsedAt:normalizedIso(source.lastUsedAt, ''),
+        updatedAt:normalizedIso(source.updatedAt, source.lastUsedAt ? normalizedIso(source.lastUsedAt, sharedNowIso()) : sharedNowIso()),
+        revision:Number(source.revision || 0),
+        changeSource:String(source.changeSource || 'migration')
+      };
+    }
+    function activeNotes(){
+      return notes.filter(note=>note && note.deleted !== true);
+    }
+    function syncLegacyEmojiViews(){
+      const active = emojiRecords
+        .filter(record=>record && record.active !== false && record.emoji)
+        .sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0) ||
+          (Date.parse(b.lastUsedAt || '')||0)-(Date.parse(a.lastUsedAt || '')||0))
+        .slice(0,50);
+      recentNoteSymbols = active.map(record=>record.emoji);
+      recentNoteTextBySymbol = {};
+      active.forEach(record=>{
+        if(record.rememberedText) recentNoteTextBySymbol[record.emoji] = record.rememberedText;
+      });
+    }
+    function migrateSharedRecords(){
+      let changed = false;
+      const usedNoteIds = new Set();
+      notes = (Array.isArray(notes) ? notes : []).map((note,index)=>{
+        const normalized = normalizeSharedNote(note,index);
+        if(usedNoteIds.has(normalized.id)){
+          normalized.id = createSharedRecordId('note');
+          normalized.revision = 0;
+          normalized.changeSource = 'migration';
+          changed = true;
+        }
+        usedNoteIds.add(normalized.id);
+        if(stableStringify(note) !== stableStringify(normalized)) changed = true;
+        return normalized;
+      });
+      if(!Array.isArray(emojiRecords) || emojiRecords.length === 0){
+        emojiRecords = recentNoteSymbols.map((symbol,index)=>normalizeSharedEmoji({
+          id:emojiRecordId(symbol),
+          emoji:symbol,
+          order:index+1,
+          active:true,
+          rememberedText:recentNoteTextBySymbol[symbol] || '',
+          changeSource:'migration'
+        }, index));
+        if(emojiRecords.length) changed = true;
+      } else {
+        const byId = new Map();
+        emojiRecords.forEach((record,index)=>{
+          const normalized = normalizeSharedEmoji(record,index);
+          if(!normalized.emoji) return;
+          const existing = byId.get(normalized.id);
+          if(!existing || (Date.parse(normalized.updatedAt)||0) >= (Date.parse(existing.updatedAt)||0)){
+            byId.set(normalized.id, normalized);
+          }
+          if(stableStringify(record) !== stableStringify(normalized)) changed = true;
+        });
+        emojiRecords = Array.from(byId.values());
+      }
+      syncLegacyEmojiViews();
+      return changed;
+    }
+    function touchSharedRecord(record, source){
+      if(!record) return;
+      record.updatedAt = sharedNowIso();
+      record.changeSource = source || ('phone:' + getDeviceId());
+    }
+    function sharedRecordContent(type, record){
+      const fields = type === 'notes' ? SHARED_NOTE_FIELDS : SHARED_EMOJI_FIELDS;
+      const out = {};
+      fields.forEach(field=>{ out[field] = record ? record[field] : undefined; });
+      return out;
+    }
+    function sharedValuesEqual(left, right){
+      return stableStringify(left) === stableStringify(right);
+    }
+    function sharedRecordsEqual(type, left, right){
+      return sharedValuesEqual(sharedRecordContent(type,left), sharedRecordContent(type,right));
+    }
+    function sharedRecordMap(records){
+      const out = {};
+      (records || []).forEach(record=>{
+        if(record && record.id) out[String(record.id)] = JSON.parse(JSON.stringify(record));
+      });
+      return out;
+    }
+    function emptySharedDataBase(){
+      return { schema:'tarcza-shared-base-v1', serverRevision:0, emojis:{}, notes:{} };
+    }
+    function loadSharedDataBase(){
+      try{
+        const parsed = JSON.parse(localStorage.getItem(LS_SHARED_DATA_BASE) || '{}');
+        return {
+          schema:'tarcza-shared-base-v1',
+          serverRevision:Number(parsed.serverRevision || 0),
+          emojis:(parsed.emojis && typeof parsed.emojis === 'object') ? parsed.emojis : {},
+          notes:(parsed.notes && typeof parsed.notes === 'object') ? parsed.notes : {}
+        };
+      }catch(e){
+        return emptySharedDataBase();
+      }
+    }
+    function saveSharedDataBase(data){
+      const base = {
+        schema:'tarcza-shared-base-v1',
+        serverRevision:Number(data && data.serverRevision || 0),
+        emojis:sharedRecordMap(data && data.emojis),
+        notes:sharedRecordMap(data && data.notes)
+      };
+      localStorage.setItem(LS_SHARED_DATA_BASE, JSON.stringify(base));
+      return base;
+    }
+    function storeSharedDataBaseObject(base){
+      const normalized = {
+        schema:'tarcza-shared-base-v1',
+        serverRevision:Number(base && base.serverRevision || 0),
+        emojis:(base && base.emojis && typeof base.emojis === 'object') ? base.emojis : {},
+        notes:(base && base.notes && typeof base.notes === 'object') ? base.notes : {}
+      };
+      localStorage.setItem(LS_SHARED_DATA_BASE, JSON.stringify(normalized));
+      return normalized;
+    }
+    function loadSharedDataConflicts(){
+      try{
+        const parsed = JSON.parse(localStorage.getItem(LS_SHARED_DATA_CONFLICTS) || '[]');
+        sharedDataConflicts = Array.isArray(parsed) ? parsed : [];
+      }catch(e){
+        sharedDataConflicts = [];
+      }
+      return sharedDataConflicts;
+    }
+    function saveSharedDataConflicts(conflicts){
+      sharedDataConflicts = Array.isArray(conflicts) ? conflicts : [];
+      if(sharedDataConflicts.length){
+        localStorage.setItem(LS_SHARED_DATA_CONFLICTS, JSON.stringify(sharedDataConflicts));
+      } else {
+        localStorage.removeItem(LS_SHARED_DATA_CONFLICTS);
+      }
+    }
+    function normalizeRemoteSharedData(data){
+      return {
+        ok:!!(data && data.ok),
+        serverRevision:Number(data && data.serverRevision || 0),
+        emojis:Array.isArray(data && data.emojis) ? data.emojis.map(normalizeSharedEmoji).filter(r=>r.emoji) : [],
+        notes:Array.isArray(data && data.notes) ? data.notes.map(normalizeSharedNote) : []
+      };
+    }
+    function mergeSharedRecord(type, local, remote, base){
+      const fields = type === 'notes' ? SHARED_NOTE_FIELDS : SHARED_EMOJI_FIELDS;
+      const merged = JSON.parse(JSON.stringify(remote || local || base || {}));
+      const conflicts = [];
+      fields.forEach(field=>{
+        const localValue = local ? local[field] : undefined;
+        const remoteValue = remote ? remote[field] : undefined;
+        const baseValue = base ? base[field] : undefined;
+        const localChanged = !base || !sharedValuesEqual(localValue, baseValue);
+        const remoteChanged = !base || !sharedValuesEqual(remoteValue, baseValue);
+        if(localChanged && remoteChanged && !sharedValuesEqual(localValue, remoteValue)){
+          if(type === 'emojis'){
+            if(field === 'lastUsedAt'){
+              const localMs = Date.parse(localValue || '') || 0;
+              const remoteMs = Date.parse(remoteValue || '') || 0;
+              merged[field] = localMs > remoteMs ? localValue : remoteValue;
+            } else {
+              merged[field] = remoteValue;
+            }
+          } else {
+            conflicts.push(field);
+          }
+        } else if(localChanged && !remoteChanged){
+          merged[field] = localValue;
+        } else {
+          merged[field] = remoteValue;
+        }
+      });
+      if(remote){
+        merged.id = remote.id;
+        merged.revision = Number(remote.revision || 0);
+        merged.updatedAt = remote.updatedAt || merged.updatedAt;
+        merged.changeSource = remote.changeSource || merged.changeSource;
+      }
+      return { merged, conflicts };
+    }
+    function prepareSharedDataMerge(remoteData){
+      const remote = normalizeRemoteSharedData(remoteData);
+      const base = loadSharedDataBase();
+      const result = { emojis:[], notes:[] };
+      const changes = [];
+      const conflicts = [];
+      [
+        { type:'emojis', local:emojiRecords.map(normalizeSharedEmoji), remote:remote.emojis, base:base.emojis },
+        { type:'notes', local:notes.map(normalizeSharedNote), remote:remote.notes, base:base.notes }
+      ].forEach(group=>{
+        const localMap = sharedRecordMap(group.local);
+        const remoteMap = sharedRecordMap(group.remote);
+        const ids = new Set([...Object.keys(localMap), ...Object.keys(remoteMap), ...Object.keys(group.base || {})]);
+        ids.forEach(id=>{
+          const local = localMap[id] || null;
+          const server = remoteMap[id] || null;
+          const previous = group.base && group.base[id] ? group.base[id] : null;
+          if(!local && server){
+            result[group.type].push(server);
+            return;
+          }
+          if(local && !server){
+            result[group.type].push(local);
+            changes.push({
+              type:group.type,
+              id,
+              baseRevision:0,
+              record:local
+            });
+            return;
+          }
+          if(!local && !server) return;
+          if(!previous){
+            if(sharedRecordsEqual(group.type, local, server)){
+              result[group.type].push(server);
+            } else if(group.type === 'emojis'){
+              const initial = mergeSharedRecord(group.type, local, server, null);
+              result[group.type].push(initial.merged);
+              if(!sharedRecordsEqual(group.type, initial.merged, server)){
+                changes.push({
+                  type:group.type,
+                  id,
+                  baseRevision:Number(server.revision || 0),
+                  record:initial.merged
+                });
+              }
+            } else {
+              conflicts.push({ type:group.type, id, fields:SHARED_NOTE_FIELDS.slice(), local, remote:server, base:null });
+            }
+            return;
+          }
+          const mergedResult = mergeSharedRecord(group.type, local, server, previous);
+          if(mergedResult.conflicts.length){
+            conflicts.push({
+              type:group.type,
+              id,
+              fields:mergedResult.conflicts,
+              local,
+              remote:server,
+              base:previous
+            });
+            return;
+          }
+          result[group.type].push(mergedResult.merged);
+          if(!sharedRecordsEqual(group.type, mergedResult.merged, server)){
+            changes.push({
+              type:group.type,
+              id,
+              baseRevision:Number(server.revision || 0),
+              record:mergedResult.merged
+            });
+          }
+        });
+      });
+      result.notes.sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
+      result.emojis.sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
+      return { remote, result, changes, conflicts };
+    }
+    function applyMergedSharedData(result){
+      notes = (result.notes || []).map(normalizeSharedNote);
+      emojiRecords = (result.emojis || []).map(normalizeSharedEmoji);
+      syncLegacyEmojiViews();
+      saveStateSilently();
+      renderNotesBar();
+    }
+    async function fetchSharedData(cfg){
+      const response = await jsonpRequest(cfg.url, {
+        action:'sharedDataRead',
+        pin:cfg.pin
+      });
+      if(!response || response.ok !== true){
+        throw new Error(response && response.error ? response.error : 'sharedDataRead failed');
+      }
+      return normalizeRemoteSharedData(response);
+    }
+    function sendSharedDataChanges(cfg, changes){
+      return fetch(cfg.url, {
+        method:'POST',
+        mode:'no-cors',
+        keepalive:false,
+        headers:{ 'Content-Type':'text/plain' },
+        body:JSON.stringify({
+          action:'sharedDataWrite',
+          pin:cfg.pin,
+          deviceId:cfg.deviceId || getDeviceId(),
+          deviceLabel:cfg.device || '',
+          changes
+        })
+      });
+    }
+    async function syncSharedData(cfg, options={}){
+      const initialRemote = await fetchSharedData(cfg);
+      let prepared = prepareSharedDataMerge(initialRemote);
+      if(prepared.conflicts.length){
+        saveSharedDataConflicts(prepared.conflicts);
+        const error = new Error('shared data conflict');
+        error.sharedDataConflict = true;
+        throw error;
+      }
+      applyMergedSharedData(prepared.result);
+      if(!prepared.changes.length){
+        saveSharedDataBase(initialRemote);
+        saveSharedDataConflicts([]);
+        if(!hasUnuploadedLocalChanges()){
+          const comparable = currentComparableStateString();
+          localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
+          localStorage.setItem(LS_LAST_VERIFIED_SYNC_HASH, comparable);
+        }
+        return { changed:false, serverRevision:initialRemote.serverRevision };
+      }
+      await sendSharedDataChanges(cfg, prepared.changes);
+      const delays = [350, 900, 1700];
+      let verifiedRemote = null;
+      for(const delay of delays){
+        if(delay) await waitMs(delay);
+        const candidate = await fetchSharedData(cfg);
+        const verification = prepareSharedDataMerge(candidate);
+        if(verification.conflicts.length){
+          saveSharedDataConflicts(verification.conflicts);
+          const error = new Error('shared data conflict');
+          error.sharedDataConflict = true;
+          throw error;
+        }
+        if(verification.changes.length === 0){
+          verifiedRemote = candidate;
+          applyMergedSharedData(verification.result);
+          break;
+        }
+      }
+      if(!verifiedRemote) throw new Error('shared data write verification failed');
+      saveSharedDataBase(verifiedRemote);
+      saveSharedDataConflicts([]);
+      if(!hasUnuploadedLocalChanges()){
+        const comparable = currentComparableStateString();
+        localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
+        localStorage.setItem(LS_LAST_VERIFIED_SYNC_HASH, comparable);
+      }
+      if(options.notify) showToast('Notatki i emotikony zsynchronizowane.', 'ok');
+      return { changed:true, serverRevision:verifiedRemote.serverRevision };
     }
     function normalizeDailyExportStatus(value){
       const s = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
@@ -6165,12 +6637,13 @@
     }
     function restoreDuePostponedNotes(newWorkDate){
       let changed = false;
-      for(const n of notes){
+      for(const n of activeNotes()){
         if(!n || !n.postponedUntilDate) continue;
         if(String(n.postponedUntilDate) <= String(newWorkDate)){
-          delete n.postponedUntilDate;
-          delete n.postponedAtDate;
+          n.postponedUntilDate = '';
+          n.postponedAtDate = '';
           n.ackedAlerts = {};
+          touchSharedRecord(n);
           changed = true;
         }
       }
@@ -6182,6 +6655,7 @@
       note.postponedAtDate = baseDate;
       note.postponedUntilDate = addDaysISO(baseDate, 1);
       note.ackedAlerts = {};
+      touchSharedRecord(note);
       saveStateAndScheduleAutoSync('note_postponed');
       renderNotesBar();
     }
@@ -6192,7 +6666,7 @@
     }
 
     function getSortedNotesForDisplay(){
-      return notes
+      return activeNotes()
         .filter(note=>!isNotePostponed(note))
         .map((note,index)=>({ note, index, time:getNoteDisplayTimeMinutes(note) }))
         .sort((a,b)=>{
@@ -6429,6 +6903,7 @@
         if(nowMs >= t.ms && !t.acked){
           if(!n.ackedAlerts) n.ackedAlerts = {};
           n.ackedAlerts[t.offset] = true;
+          touchSharedRecord(n);
           break;
         }
       }
@@ -8476,14 +8951,34 @@
     function rememberNoteSymbol(s, text){
       const sym = trimNoteSymbol(s);
       if(!sym || sym==='•') return;
-      recentNoteSymbols = [sym, ...recentNoteSymbols.filter(x=>x!==sym)].slice(0,50);
-      if(typeof text === 'string' && text.trim()){
-        recentNoteTextBySymbol[sym] = text.trim();
+      const now = sharedNowIso();
+      const id = emojiRecordId(sym);
+      let record = emojiRecords.find(item=>item.id===id);
+      if(!record){
+        record = normalizeSharedEmoji({
+          id,
+          emoji:sym,
+          active:true,
+          order:1,
+          lastUsedAt:now,
+          updatedAt:now,
+          changeSource:'phone:' + getDeviceId()
+        });
+        emojiRecords.push(record);
       }
-      const keep = new Set(recentNoteSymbols);
-      Object.keys(recentNoteTextBySymbol).forEach(key=>{
-        if(!keep.has(key)) delete recentNoteTextBySymbol[key];
+      emojiRecords.forEach(item=>{
+        if(item.id !== id && item.active !== false){
+          item.order = (Number(item.order) || 0) + 1;
+          touchSharedRecord(item);
+        }
       });
+      record.emoji = sym;
+      record.order = 1;
+      record.active = true;
+      record.lastUsedAt = now;
+      if(typeof text === 'string' && text.trim()) record.rememberedText = text.trim();
+      touchSharedRecord(record);
+      syncLegacyEmojiViews();
     }
     const EMOJI_SEARCH_URL = 'https://emojiterra.com/keyboard/pl/';
     let emojiSearchReturnPending = false;
@@ -8603,7 +9098,7 @@
     }
 
     function getPostponedNotesForPreview(){
-      return notes
+      return activeNotes()
         .map((note, index)=>({note, index}))
         .filter(item=>isNotePostponed(item.note));
     }
@@ -8613,7 +9108,7 @@
       const text = String(note.text || '').trim();
       const textHtml = text ? `<span class="tomorrow-note-text">${escapeHtml(text)}</span>` : '';
       return `
-        <button type="button" class="tomorrow-note-btn" data-note-id="${note.id}">
+        <button type="button" class="tomorrow-note-btn" data-note-id="${escapeHtml(note.id)}">
           <span class="tomorrow-note-icon">${icon}</span>
           ${time}
           ${textHtml}
@@ -8642,15 +9137,15 @@
       overlay.querySelectorAll('[data-note-id]').forEach(btn=>{
         btn.addEventListener('click',(e)=>{
           e.stopPropagation();
-          const id = parseInt(btn.dataset.noteId, 10);
-          if(Number.isFinite(id)) openNoteEditor(id, { returnToTomorrowPreview:true });
+          const id = String(btn.dataset.noteId || '');
+          if(id) openNoteEditor(id, { returnToTomorrowPreview:true });
         });
       });
     }
 
     function openNoteEditor(noteId, options={}){
       const returnToTomorrowPreview = !!(options && options.returnToTomorrowPreview);
-      const ex = noteId!==null?notes.find(n=>n.id===noteId):null;
+      const ex = noteId!==null?notes.find(n=>String(n.id)===String(noteId) && n.deleted !== true):null;
       if(noteId!==null && !ex && returnToTomorrowPreview){
         openTomorrowNotesPreview();
         return;
@@ -8881,13 +9376,20 @@
           ex.alerts = alertOffs;
           ex.customOffsets = savedOffsets;
           ex.ackedAlerts = {};
+          touchSharedRecord(ex);
         } else {
-          notes.push({
-            id:Date.now(), text:t, icon:i,
+          const now = sharedNowIso();
+          notes.push(normalizeSharedNote({
+            id:createSharedRecordId('note'),
+            order:activeNotes().length + 1,
+            text:t, icon:i,
             alarmTime: aT, alerts: alertOffs,
             customOffsets: savedOffsets,
-            ackedAlerts: {}
-          });
+            ackedAlerts: {},
+            createdAt:now,
+            updatedAt:now,
+            changeSource:'phone:' + getDeviceId()
+          }, notes.length));
         }
         saveStateAndMarkOverlayDirty('note_edit');
         if(returnToTomorrowPreview) openTomorrowNotesPreview();
@@ -8896,7 +9398,12 @@
       const del=overlay.querySelector('[data-act="delete"]');
       if(del) del.addEventListener('click',(e)=>{
         e.stopPropagation();
-        notes = notes.filter(n=>n.id!==noteId);
+        const target = notes.find(n=>String(n.id)===String(noteId));
+        if(target){
+          target.deleted = true;
+          target.deletedAt = sharedNowIso();
+          touchSharedRecord(target);
+        }
         saveStateAndMarkOverlayDirty('note_delete');
         if(returnToTomorrowPreview) openTomorrowNotesPreview();
         else closeOverlayToMain('note_delete');
@@ -9279,7 +9786,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.13.0';
+      return el ? el.textContent.trim() : 'v6.14.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -10225,6 +10732,138 @@
       const busy = overlay.querySelector('.sync-working');
       if(busy) busy.remove();
     }
+    function sharedConflictRecordLabel(conflict, record){
+      if(!record) return '(brak rekordu)';
+      if(conflict.type === 'notes'){
+        const icon = trimNoteSymbol(record.icon || '') || '•';
+        const text = String(record.text || '').trim() || '(bez treści)';
+        const time = record.alarmTime ? ' [' + record.alarmTime + ']' : '';
+        const deleted = record.deleted === true ? ' [USUNIĘTA]' : '';
+        return icon + ' ' + text + time + deleted;
+      }
+      return String(record.emoji || '(brak emoji)') +
+        (record.active === false ? ' [NIEAKTYWNA]' : '') +
+        (record.rememberedText ? ' — ' + record.rememberedText : '');
+    }
+    function replaceLocalSharedRecord(type, id, record){
+      if(type === 'notes'){
+        const index = notes.findIndex(item=>String(item.id)===String(id));
+        const normalized = normalizeSharedNote(record, index >= 0 ? index : notes.length);
+        if(index >= 0) notes[index] = normalized;
+        else notes.push(normalized);
+      } else {
+        const index = emojiRecords.findIndex(item=>String(item.id)===String(id));
+        const normalized = normalizeSharedEmoji(record, index >= 0 ? index : emojiRecords.length);
+        if(index >= 0) emojiRecords[index] = normalized;
+        else emojiRecords.push(normalized);
+      }
+      syncLegacyEmojiViews();
+    }
+    function resolveSharedDataConflict(choice){
+      const conflict = sharedDataConflicts[0];
+      if(!conflict) return;
+      const base = loadSharedDataBase();
+      const bucket = conflict.type === 'notes' ? base.notes : base.emojis;
+      if(choice === 'sheet'){
+        replaceLocalSharedRecord(conflict.type, conflict.id, conflict.remote);
+        bucket[conflict.id] = JSON.parse(JSON.stringify(conflict.remote));
+      } else if(choice === 'phone'){
+        bucket[conflict.id] = JSON.parse(JSON.stringify(conflict.remote));
+      } else if(choice === 'both' && conflict.type === 'notes'){
+        replaceLocalSharedRecord('notes', conflict.id, conflict.remote);
+        bucket[conflict.id] = JSON.parse(JSON.stringify(conflict.remote));
+        const clone = normalizeSharedNote(Object.assign({}, conflict.local, {
+          id:createSharedRecordId('note'),
+          revision:0,
+          createdAt:sharedNowIso(),
+          updatedAt:sharedNowIso(),
+          changeSource:'phone:' + getDeviceId()
+        }), notes.length);
+        notes.push(clone);
+      } else {
+        return;
+      }
+      storeSharedDataBaseObject(base);
+      sharedDataConflicts.shift();
+      saveSharedDataConflicts(sharedDataConflicts);
+      saveState();
+      renderNotesBar();
+      if(sharedDataConflicts.length){
+        renderSharedDataConflict();
+      } else {
+        retrySharedDataAfterConflict();
+      }
+    }
+    async function retrySharedDataAfterConflict(){
+      const cfg = getSyncConfig(false);
+      if(!cfg){
+        openWorkMenu();
+        return;
+      }
+      renderSyncLoading('Zapisuję rozwiązanie konfliktu...');
+      try{
+        await syncSharedData(cfg, { notify:true });
+        setAutoSyncIndicatorState('on');
+        showToast('Konflikt danych rozwiązany.', 'ok');
+        openWorkMenu();
+      }catch(e){
+        if(e && e.sharedDataConflict){
+          setAutoSyncIndicatorState('frozen', 'Notatki wymagają decyzji: telefon, Arkusz albo obie wersje.');
+          renderSharedDataConflict();
+        } else {
+          setAutoSyncIndicatorState('frozen', 'Nie udało się zapisać rozwiązania konfliktu danych.');
+          showToast('Nie udało się zsynchronizować danych wspólnych.', 'err');
+          openWorkMenu();
+        }
+      }
+    }
+    function renderSharedDataConflict(){
+      loadSharedDataConflicts();
+      const conflict = sharedDataConflicts[0];
+      if(!conflict){
+        openWorkMenu();
+        return;
+      }
+      const fieldList = (conflict.fields || []).join(', ');
+      showOverlay(`
+        <div class="big-panel">
+          <h3>KONFLIKT NOTATKI</h3>
+          <div class="sync-warning">
+            Ten sam rekord zmieniono niezależnie w telefonie i w Arkuszu.
+            <br><br>
+            Pola: ${escapeHtml(fieldList || '-')}
+          </div>
+          <div class="shared-conflict-summary">
+            <div class="shared-conflict-version">
+              <strong>TELEFON</strong>
+              ${escapeHtml(sharedConflictRecordLabel(conflict, conflict.local))}
+            </div>
+            <div class="shared-conflict-version">
+              <strong>ARKUSZ</strong>
+              ${escapeHtml(sharedConflictRecordLabel(conflict, conflict.remote))}
+            </div>
+          </div>
+          <div class="shared-conflict-actions">
+            <button type="button" data-shared-choice="phone">TELEFON</button>
+            <button type="button" data-shared-choice="sheet">ARKUSZ</button>
+            <button type="button" data-shared-choice="both">OBIE</button>
+          </div>
+          <div class="panel-actions">
+            <button class="cancel-btn" data-act="back">X</button>
+          </div>
+        </div>
+      `);
+      overlay.querySelector('[data-act="back"]').addEventListener('click',(e)=>{
+        e.stopPropagation();
+        openWorkMenu();
+      });
+      overlay.querySelectorAll('[data-shared-choice]').forEach(button=>{
+        button.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          resolveSharedDataConflict(button.dataset.sharedChoice);
+        });
+      });
+    }
     async function sendSyncSnapshot(){
       if(manualSyncBusy) return;
       const cfg = getSyncConfig(true);
@@ -10246,6 +10885,7 @@
           showToast('Najpierw niech powiedzie sie eksport dniowki.', 'err');
           return;
         }
+        await syncSharedData(cfg);
         const snapshot = buildSyncSnapshot(cfg.device);
         await sendAndVerifySyncSnapshot(cfg, snapshot, false);
         markVerifiedSyncUpload(snapshot);
@@ -10255,8 +10895,13 @@
         showToast('Synchronizacja wyslana.', 'ok');
         hideOverlay();
       }catch(e){
-        setAutoSyncIndicatorState('frozen');
-        showToast('Synchronizacja nieudana.', 'err');
+        if(e && e.sharedDataConflict){
+          setAutoSyncIndicatorState('frozen', 'Notatki wymagają decyzji: telefon, Arkusz albo obie wersje.');
+          renderSharedDataConflict();
+        } else {
+          setAutoSyncIndicatorState('frozen');
+          showToast('Synchronizacja nieudana.', 'err');
+        }
       }finally{
         clearSyncMenuBusy();
       }
@@ -10322,6 +10967,7 @@
       const frozenReason = autoSyncFrozenReason || '';
       autoSyncFrozenReason = '';
       const dailyExportPending = hasManualDailyExportAction();
+      const sharedConflictPending = loadSharedDataConflicts().length > 0;
       showOverlay(`
         <div class="big-panel">
           <h3>MENU START</h3>
@@ -10330,6 +10976,7 @@
             <button class="sync-menu-btn primary" type="button" data-sync-act="edit">Edytuj start / cel</button>
             <button class="sync-menu-btn ${isAutoSyncEnabled()?'primary':''}" type="button" data-sync-act="auto">Auto Sync: ${isAutoSyncEnabled()?'ON':'OFF'}</button>
             ${dailyExportPending ? '<button class="sync-menu-btn warn" type="button" data-sync-act="daily">Wy&#347;lij dniówk&#281;</button>' : ''}
+            ${sharedConflictPending ? '<button class="sync-menu-btn warn" type="button" data-sync-act="sharedConflict">Rozwi&#261;&#380; konflikt notatek</button>' : ''}
             <button class="sync-menu-btn" type="button" data-sync-act="send">Wy&#347;lij synchronizacj&#281;</button>
             <button class="sync-menu-btn" type="button" data-sync-act="load">Pobierz synchronizacj&#281;</button>
           </div>
@@ -10359,6 +11006,13 @@
               setAutoSyncEnabled(true);
               openWorkMenu();
             }
+          });
+          return;
+        }
+        if(a === 'sharedConflict'){
+          btn.addEventListener('click',(e)=>{
+            e.stopPropagation();
+            renderSharedDataConflict();
           });
           return;
         }
@@ -10400,13 +11054,19 @@
       if(!await ensureAppsScriptCompatibility(cfg.url, { notify:true })) return;
       setSyncMenuBusy('load', 'Pobieram synchronizację...');
       try{
+        await syncSharedData(cfg);
         const data = await jsonpRequest(cfg.url, { action:'syncList', pin:cfg.pin, limit:30 });
         if(!data || !data.ok) throw new Error(data && data.error ? data.error : 'syncList failed');
         renderSyncSnapshotList(data.snapshots || [], cfg);
       }catch(e){
-        localStorage.removeItem(LS_SYNC_PIN);
-        showToast('Nie udalo sie pobrac synchronizacji.', 'err');
-        openWorkMenu();
+        if(e && e.sharedDataConflict){
+          setAutoSyncIndicatorState('frozen', 'Notatki wymagają decyzji: telefon, Arkusz albo obie wersje.');
+          renderSharedDataConflict();
+        } else {
+          localStorage.removeItem(LS_SYNC_PIN);
+          showToast('Nie udalo sie pobrac synchronizacji.', 'err');
+          openWorkMenu();
+        }
       }finally{
         clearSyncMenuBusy();
       }
@@ -10534,7 +11194,7 @@
         state.breakActive = false;
         state.currentBreakStart = null;
       }
-      applyStateObjects(state, persist);
+      applyStateObjects(state, persist, { preserveSharedData:true });
       clearLocalSyncDirty(snapshot);
       renderAll();
       syncWorkWakeLock();
@@ -10550,11 +11210,7 @@
         playSyncOffNoticeSound();
         return;
       }
-      if(isCurrentEndedWorkdayFullySettled()){
-        clearAutoSyncSchedule(false);
-        setAutoSyncIndicatorState('on');
-        return;
-      }
+      const endedWorkdayWasSettled = isCurrentEndedWorkdayFullySettled();
       const cfg = getAutoSyncConfig();
       if(!cfg) return;
       if(!await ensureAppsScriptCompatibility(cfg.url, { notify:false })) return;
@@ -10563,6 +11219,14 @@
       playSyncStartedSound();
       showToast('Sprawdzam synchronizacje...', 'ok');
       try{
+        await syncSharedData(cfg);
+        if(endedWorkdayWasSettled && !hasUnuploadedLocalChanges()){
+          clearAutoSyncSchedule(false);
+          setAutoSyncIndicatorState('on');
+          playSyncNoChangesSound();
+          playSyncStandbySound();
+          return;
+        }
         const exportOk = await retryPendingDailyExportIfNeeded('auto_sync_foreground', { notify:false, scheduleSyncAfterSuccess:true });
         if(exportOk === 'blocked'){
           setAutoSyncIndicatorState('frozen', 'Eksport dniówki czeka na decyzję o nadpisaniu danych w Arkuszu.');
@@ -10614,8 +11278,13 @@
         playSyncSuccessSound();
         setAutoSyncIndicatorState('applied');
       }catch(e){
-        setAutoSyncIndicatorState('frozen');
-        showToast('Auto Sync zatrzymany - sprawdz ustawienia.', 'err');
+        if(e && e.sharedDataConflict){
+          setAutoSyncIndicatorState('frozen', 'Notatki wymagają decyzji: telefon, Arkusz albo obie wersje.');
+          showToast('Konflikt notatek - otwórz menu synchronizacji.', 'err');
+        } else {
+          setAutoSyncIndicatorState('frozen');
+          showToast('Auto Sync zatrzymany - sprawdz ustawienia.', 'err');
+        }
       }finally{
         autoSyncBusy = false;
       }
@@ -10640,6 +11309,7 @@
       autoSyncBusy = true;
       setAutoSyncIndicatorState('checking');
       try{
+        await syncSharedData(cfg);
         const list = await fetchSyncList(cfg);
         if(list && list.ok){
           const candidate = findNewestOtherSnapshot(list.snapshots || [], cfg.deviceId);
@@ -10676,7 +11346,11 @@
         playSyncSuccessSound();
         setAutoSyncIndicatorState('on');
       }catch(e){
-        setAutoSyncIndicatorState('frozen', 'Automatyczna wysylka synchronizacji nie powiodla sie. Sprawdz polaczenie albo uzyj synchronizacji recznej.');
+        if(e && e.sharedDataConflict){
+          setAutoSyncIndicatorState('frozen', 'Notatki wymagają decyzji: telefon, Arkusz albo obie wersje.');
+        } else {
+          setAutoSyncIndicatorState('frozen', 'Automatyczna wysylka synchronizacji nie powiodla sie. Sprawdz polaczenie albo uzyj synchronizacji recznej.');
+        }
       }finally{
         autoSyncBusy = false;
       }
@@ -10698,6 +11372,7 @@
       autoSyncBusy = true;
       playSyncStartedSound();
       try{
+        await syncSharedData(cfg);
         const list = await fetchSyncList(cfg);
         if(list && list.ok){
           const candidate = findNewestOtherSnapshot(list.snapshots || [], cfg.deviceId);
@@ -10732,7 +11407,11 @@
         playSyncSuccessSound();
         playSyncStandbySound();
       }catch(e){
-        setAutoSyncIndicatorState('frozen');
+        if(e && e.sharedDataConflict){
+          setAutoSyncIndicatorState('frozen', 'Notatki wymagają decyzji: telefon, Arkusz albo obie wersje.');
+        } else {
+          setAutoSyncIndicatorState('frozen');
+        }
       }finally{
         autoSyncBusy = false;
       }
