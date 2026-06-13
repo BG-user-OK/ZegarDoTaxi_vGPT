@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.14.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.14.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -3837,7 +3837,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.14.0</div>
+    <div class="version">v6.14.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -4273,6 +4273,9 @@
     function sharedRecordsEqual(type, left, right){
       return sharedValuesEqual(sharedRecordContent(type,left), sharedRecordContent(type,right));
     }
+    function sharedRecordCameFromThisDevice(record){
+      return String(record && record.changeSource || '') === 'phone:' + getDeviceId();
+    }
     function sharedRecordMap(records){
       const out = {};
       (records || []).forEach(record=>{
@@ -4423,6 +4426,18 @@
                   record:initial.merged
                 });
               }
+            } else if(sharedRecordCameFromThisDevice(server)){
+              const repaired = normalizeSharedNote(Object.assign({}, local, {
+                id:server.id,
+                revision:Number(server.revision || 0)
+              }));
+              result[group.type].push(repaired);
+              changes.push({
+                type:group.type,
+                id,
+                baseRevision:Number(server.revision || 0),
+                record:repaired
+              });
             } else {
               conflicts.push({ type:group.type, id, fields:SHARED_NOTE_FIELDS.slice(), local, remote:server, base:null });
             }
@@ -9786,7 +9801,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.14.0';
+      return el ? el.textContent.trim() : 'v6.14.1';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
