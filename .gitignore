@@ -1,0 +1,14 @@
+# Publish only the deployable PWA.
+/*
+
+!/.gitignore
+!/index.html
+!/sw.js
+!/manifest.json
+!/icon-192.png
+!/icon-512.png
+!/icon-512-maskable.png
+!/Photos/
+!/Photos/**
+
+/Photos/.gitkeep

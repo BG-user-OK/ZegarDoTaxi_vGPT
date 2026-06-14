@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.14.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.15.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -2294,6 +2294,10 @@
       background:linear-gradient(180deg,#6a3030,#3b1818);
       color:#f0c1c1;
     }
+    .money-panel .counter-target-toggle.target-priv{
+      background:linear-gradient(180deg,#24536a,#123040);
+      color:#bdeaff;
+    }
     .money-panel .counter-target-toggle:active{
       filter:brightness(1.2);
     }
@@ -3837,7 +3841,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.14.1</div>
+    <div class="version">v6.15.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -3858,6 +3862,7 @@
     const LS_POST_WORK_VERIFY = 'tarcza_post_work_verify_v1';
     const LS_SHARED_DATA_BASE = 'tarcza_shared_data_base_v1';
     const LS_SHARED_DATA_CONFLICTS = 'tarcza_shared_data_conflicts_v1';
+    const LS_SHARED_DATA_VERIFIED_HASH = 'tarcza_shared_data_verified_hash_v1';
     const FINAL_BREAK_NO_WORK_THRESHOLD_MIN = 2;
     const AI_PASTE_HOLD_MS = 2000;
 
@@ -4273,6 +4278,24 @@
     function sharedRecordsEqual(type, left, right){
       return sharedValuesEqual(sharedRecordContent(type,left), sharedRecordContent(type,right));
     }
+    function currentSharedDataComparableString(){
+      const comparableRecords = (type, records)=>(records || [])
+        .filter(record=>record && record.id)
+        .map(record=>Object.assign({ id:String(record.id) }, sharedRecordContent(type, record)))
+        .sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+      return stableStringify({
+        schema:'tarcza-shared-comparable-v1',
+        emojis:comparableRecords('emojis', emojiRecords.map(normalizeSharedEmoji)),
+        notes:comparableRecords('notes', notes.map(normalizeSharedNote))
+      });
+    }
+    function hasUnverifiedSharedDataChanges(){
+      const verified = localStorage.getItem(LS_SHARED_DATA_VERIFIED_HASH) || '';
+      return !verified || verified !== currentSharedDataComparableString();
+    }
+    function markSharedDataVerified(){
+      localStorage.setItem(LS_SHARED_DATA_VERIFIED_HASH, currentSharedDataComparableString());
+    }
     function sharedRecordCameFromThisDevice(record){
       return String(record && record.changeSource || '') === 'phone:' + getDeviceId();
     }
@@ -4487,8 +4510,47 @@
       }
       return normalizeRemoteSharedData(response);
     }
-    function sendSharedDataChanges(cfg, changes){
-      return fetch(cfg.url, {
+    function createSharedWriteRequestId(){
+      return 'shared_' + getDeviceId() + '_' + Date.now().toString(36) + '_' +
+        Math.floor(Math.random()*1e9).toString(36);
+    }
+    async function waitForSharedWriteReceipt(cfg, requestId){
+      const delays = [250, 500, 900, 1500, 2500, 3500, 4500, 5500];
+      for(const delay of delays){
+        if(delay) await waitMs(delay);
+        let status;
+        try{
+          status = await jsonpRequest(cfg.url, {
+            action:'sharedDataWriteStatus',
+            pin:cfg.pin,
+            requestId
+          });
+        }catch(cause){
+          const error = new Error('shared data write status failed');
+          error.sharedDataRetryable = true;
+          throw error;
+        }
+        if(!status || status.ok !== true){
+          const error = new Error(status && status.error ? status.error : 'shared data write status failed');
+          error.sharedDataRetryable = true;
+          throw error;
+        }
+        if(!status.found) continue;
+        const receipt = status.receipt || {};
+        if(receipt.error){
+          const error = new Error(receipt.error);
+          error.sharedDataRetryable = true;
+          throw error;
+        }
+        return receipt;
+      }
+      const error = new Error('shared data write receipt timeout');
+      error.sharedDataRetryable = true;
+      throw error;
+    }
+    async function sendSharedDataChanges(cfg, changes){
+      const requestId = createSharedWriteRequestId();
+      await fetch(cfg.url, {
         method:'POST',
         mode:'no-cors',
         keepalive:false,
@@ -4498,59 +4560,49 @@
           pin:cfg.pin,
           deviceId:cfg.deviceId || getDeviceId(),
           deviceLabel:cfg.device || '',
+          requestId,
           changes
         })
       });
-    }
-    async function syncSharedData(cfg, options={}){
-      const initialRemote = await fetchSharedData(cfg);
-      let prepared = prepareSharedDataMerge(initialRemote);
-      if(prepared.conflicts.length){
-        saveSharedDataConflicts(prepared.conflicts);
-        const error = new Error('shared data conflict');
-        error.sharedDataConflict = true;
+      const receipt = await waitForSharedWriteReceipt(cfg, requestId);
+      if(receipt.writeOk === true && Number(receipt.appliedCount || 0) !== changes.length){
+        const error = new Error('shared data write applied an unexpected number of changes');
+        error.sharedDataRetryable = true;
         throw error;
       }
-      applyMergedSharedData(prepared.result);
-      if(!prepared.changes.length){
-        saveSharedDataBase(initialRemote);
-        saveSharedDataConflicts([]);
-        if(!hasUnuploadedLocalChanges()){
-          const comparable = currentComparableStateString();
-          localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
-          localStorage.setItem(LS_LAST_VERIFIED_SYNC_HASH, comparable);
-        }
-        return { changed:false, serverRevision:initialRemote.serverRevision };
-      }
-      await sendSharedDataChanges(cfg, prepared.changes);
-      const delays = [350, 900, 1700];
-      let verifiedRemote = null;
-      for(const delay of delays){
-        if(delay) await waitMs(delay);
-        const candidate = await fetchSharedData(cfg);
-        const verification = prepareSharedDataMerge(candidate);
-        if(verification.conflicts.length){
-          saveSharedDataConflicts(verification.conflicts);
+      return receipt;
+    }
+    async function syncSharedData(cfg, options={}){
+      let remote = await fetchSharedData(cfg);
+      let changed = false;
+      for(let round=0; round<4; round++){
+        const prepared = prepareSharedDataMerge(remote);
+        if(prepared.conflicts.length){
+          saveSharedDataConflicts(prepared.conflicts);
           const error = new Error('shared data conflict');
           error.sharedDataConflict = true;
           throw error;
         }
-        if(verification.changes.length === 0){
-          verifiedRemote = candidate;
-          applyMergedSharedData(verification.result);
-          break;
+        applyMergedSharedData(prepared.result);
+        if(!prepared.changes.length){
+          saveSharedDataBase(remote);
+          saveSharedDataConflicts([]);
+          markSharedDataVerified();
+          if(!hasUnuploadedLocalChanges()){
+            const comparable = currentComparableStateString();
+            localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
+            localStorage.setItem(LS_LAST_VERIFIED_SYNC_HASH, comparable);
+          }
+          if(options.notify) showToast('Notatki i emotikony zsynchronizowane.', 'ok');
+          return { changed, serverRevision:remote.serverRevision };
         }
+        await sendSharedDataChanges(cfg, prepared.changes);
+        changed = true;
+        remote = await fetchSharedData(cfg);
       }
-      if(!verifiedRemote) throw new Error('shared data write verification failed');
-      saveSharedDataBase(verifiedRemote);
-      saveSharedDataConflicts([]);
-      if(!hasUnuploadedLocalChanges()){
-        const comparable = currentComparableStateString();
-        localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
-        localStorage.setItem(LS_LAST_VERIFIED_SYNC_HASH, comparable);
-      }
-      if(options.notify) showToast('Notatki i emotikony zsynchronizowane.', 'ok');
-      return { changed:true, serverRevision:verifiedRemote.serverRevision };
+      const error = new Error('shared data write verification failed');
+      error.sharedDataRetryable = true;
+      throw error;
     }
     function normalizeDailyExportStatus(value){
       const s = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
@@ -7708,9 +7760,10 @@
       const suggestedStart=counterStart!==null ? counterStart : (lastCounterEnd!==null ? lastCounterEnd : 0);
       const suggestedEnd=counterEnd!==null ? counterEnd : Math.max(suggestedStart,highestKnownCounterValue());
       let counterTarget=options.counterTarget;
-      if(!['start','end'].includes(counterTarget)){
+      if(!['priv','end','start'].includes(counterTarget)){
         if(entryMode==='endWork') counterTarget='end';
         else if(startWorkMinutes===null || counterStart===null) counterTarget='start';
+        else if(endWorkMinutes===null) counterTarget='priv';
         else counterTarget='end';
       }
       return {
@@ -7728,7 +7781,10 @@
         counterStartBase:suggestedStart,
         counterEndBase:suggestedEnd,
         counterStartDigits:'',
-        counterEndDigits:''
+        counterEndDigits:'',
+        privKmBaseTotal:privKmTotal,
+        privKmDigits:'',
+        privKmDirty:false
       };
     }
     function moneyDraftTotal(){
@@ -7774,13 +7830,28 @@
       return value!==0 ? formatAmountDisplay(value) : '&mdash;';
     }
     function moneyCounterDraftProp(target,suffix){
+      if(target==='priv') return `privKm${suffix}`;
       const prefix=target==='start'?'counterStart':'counterEnd';
       return `${prefix}${suffix}`;
     }
+    function moneyDraftPrivateKmAddition(){
+      const draft=moneyPanelDraft;
+      if(!draft) return 0;
+      return parseInt(draft.privKmDigits||'0',10)||0;
+    }
+    function moneyDraftPrivateKmTotal(){
+      const draft=moneyPanelDraft;
+      if(!draft) return privKmTotal;
+      return draft.privKmBaseTotal + moneyDraftPrivateKmAddition();
+    }
     function moneyDraftCounterValue(target){
       const draft=moneyPanelDraft;
-      if(!draft) return counterEnd!==null?counterEnd:highestKnownCounterValue();
-      const selected=['start','end'].includes(target)?target:draft.counterTarget;
+      if(!draft){
+        if(target==='priv') return 0;
+        return counterEnd!==null?counterEnd:highestKnownCounterValue();
+      }
+      const selected=['priv','end','start'].includes(target)?target:draft.counterTarget;
+      if(selected==='priv') return moneyDraftPrivateKmAddition();
       const digits=draft[moneyCounterDraftProp(selected,'Digits')];
       const base=draft[moneyCounterDraftProp(selected,'Base')];
       if(!digits) return base;
@@ -7791,6 +7862,7 @@
     }
     function moneyCounterKnown(target){
       const draft=moneyPanelDraft;
+      if(target==='priv') return true;
       if(!draft) return target==='start'?counterStart!==null:counterEnd!==null;
       return draft[moneyCounterDraftProp(target,'Original')]!==null ||
              draft[moneyCounterDraftProp(target,'Digits')].length>0;
@@ -7822,7 +7894,9 @@
     function toggleMoneyCounterTarget(){
       const draft=moneyPanelDraft;
       if(!draft) return;
-      draft.counterTarget=draft.counterTarget==='start'?'end':'start';
+      const targetOrder=['priv','end','start'];
+      const targetIndex=Math.max(0,targetOrder.indexOf(draft.counterTarget));
+      draft.counterTarget=targetOrder[(targetIndex+1)%targetOrder.length];
       draft.activeProvider='__counter';
       draft.editBase=moneyDraftCounterValue(draft.counterTarget);
       draft.inputRaw='';
@@ -7852,8 +7926,10 @@
         const digitsProp=moneyCounterDraftProp(draft.counterTarget,'Digits');
         if(key==='back'){
           draft[digitsProp]=draft[digitsProp].slice(0,-1);
+          if(draft.counterTarget==='priv') draft.privKmDirty=draft.privKmDigits.length>0;
         } else if(/^[0-9]$/.test(key) && draft[digitsProp].length<6){
           draft[digitsProp]+=key;
+          if(draft.counterTarget==='priv') draft.privKmDirty=true;
         } else {
           return;
         }
@@ -7913,12 +7989,13 @@
         counterAmount.innerHTML=moneyCounterDisplay();
         const toggle=counterButton.querySelector('[data-counter-target-toggle]');
         if(toggle){
-          toggle.textContent=draft.counterTarget==='start'?'START':'END';
+          const targetLabel=draft.counterTarget==='start'?'START':(draft.counterTarget==='end'?'END':'PRIV');
+          const nextLabel=draft.counterTarget==='priv'?'END':(draft.counterTarget==='end'?'START':'PRIV');
+          toggle.textContent=targetLabel;
           toggle.classList.toggle('target-start',draft.counterTarget==='start');
           toggle.classList.toggle('target-end',draft.counterTarget==='end');
-          toggle.setAttribute('aria-label',draft.counterTarget==='start'
-            ? 'Edytowany licznik początkowy. Przełącz na końcowy.'
-            : 'Edytowany licznik końcowy. Przełącz na początkowy.');
+          toggle.classList.toggle('target-priv',draft.counterTarget==='priv');
+          toggle.setAttribute('aria-label',`Edytowane: ${targetLabel}. Przełącz na ${nextLabel}.`);
         }
       }
       const modeBox=panel.querySelector('.money-inline-mode');
@@ -7951,6 +8028,11 @@
         if(counterEnd!==nextEnd) changed=true;
         counterEnd=nextEnd;
       }
+      if(draft.privKmDirty){
+        const nextPriv=moneyDraftPrivateKmTotal();
+        if(privKmTotal!==nextPriv) changed=true;
+        privKmTotal=nextPriv;
+      }
       moneyPanelDraft=null;
       if(changed) saveStateAndMarkOverlayDirty('money_panel');
       return changed;
@@ -7981,10 +8063,10 @@
           <div class="prov-btn counter-provider-control ${counterWarning?'counter-warning':''}" data-provider-counter-select role="button" tabindex="0" style="background:#2a2a2a;color:#f0f0f0;">
             <span class="prov-label">LICZNIK</span>
             <button type="button"
-                    class="counter-target-toggle ${moneyPanelDraft.counterTarget==='start'?'target-start':'target-end'}"
+                    class="counter-target-toggle target-${moneyPanelDraft.counterTarget}"
                     data-counter-target-toggle
                     aria-label="${moneyPanelDraft.counterTarget==='start'?'Edytowany licznik początkowy. Przełącz na końcowy.':'Edytowany licznik końcowy. Przełącz na początkowy.'}">
-              ${moneyPanelDraft.counterTarget==='start'?'START':'END'}
+              ${moneyPanelDraft.counterTarget==='start'?'START':(moneyPanelDraft.counterTarget==='end'?'END':'PRIV')}
             </button>
           </div>
           <div class="prov-amount ${counterKnown?'filled':'empty'} ${counterWarning?'counter-warning':''}" data-provider-counter-select>${moneyCounterDisplay()}</div>
@@ -8056,6 +8138,7 @@
       overlay.querySelectorAll('[data-money-key]').forEach(btn=>{
         bindMoneyKeyWithAiHold(btn);
       });
+      updateMoneyPanelView();
     }
 
     function normalizeAiLabel(value){
@@ -8186,7 +8269,9 @@
       };
     }
     function currentAiPrivateKm(){
-      return counterPanelDraft ? counterDraftFieldValue('priv') : privKmTotal;
+      if(counterPanelDraft) return counterDraftFieldValue('priv');
+      if(moneyPanelDraft) return moneyDraftPrivateKmTotal();
+      return privKmTotal;
     }
     function currentAiProviderValue(key){
       return moneyPanelDraft ? (moneyPanelDraft.values[key]||0) : (revenues[key]||0);
@@ -8387,6 +8472,10 @@
           counterPanelDraft.endBase=value;
           counterPanelDraft.endDigits='';
           counterPanelDraft.endCleared=false;
+        }
+        if(moneyPanelDraft.privKmDirty){
+          counterPanelDraft.privBase=moneyPanelDraft.privKmBaseTotal;
+          counterPanelDraft.privDigits=moneyPanelDraft.privKmDigits;
         }
       }
       return counterPanelDraft;
@@ -8837,6 +8926,9 @@
         : Math.max(moneyPanelDraft.counterStartBase,highestKnownCounterValue());
       moneyPanelDraft.counterStartDigits='';
       moneyPanelDraft.counterEndDigits='';
+      moneyPanelDraft.privKmBaseTotal=privKmTotal;
+      moneyPanelDraft.privKmDigits='';
+      moneyPanelDraft.privKmDirty=false;
     }
     function saveCounterPanel(){
       const draft=counterPanelDraft;
@@ -9801,7 +9893,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.14.1';
+      return el ? el.textContent.trim() : 'v6.15.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -10612,7 +10704,7 @@
         return;
       }
       if(autoSyncIndicatorState === 'frozen' && !autoSyncFrozenAcknowledged) return;
-      if(!hasPendingDailyExport() && !hasUnuploadedLocalChanges()) return;
+      if(!hasPendingDailyExport() && !hasUnuploadedLocalChanges() && !hasUnverifiedSharedDataChanges()) return;
       const cfg = getAutoSyncConfig();
       if(!cfg) return;
       const immediate = options.immediate === true;
@@ -11317,7 +11409,7 @@
       if(!cfg) return;
       if(!await ensureAppsScriptCompatibility(cfg.url, { notify:false })) return;
       const pendingDailyExportBeforeUpload = hasPendingDailyExport();
-      if(!pendingDailyExportBeforeUpload && !hasUnuploadedLocalChanges()){
+      if(!pendingDailyExportBeforeUpload && !hasUnuploadedLocalChanges() && !hasUnverifiedSharedDataChanges()){
         setAutoSyncIndicatorState('on');
         return;
       }
@@ -11363,6 +11455,9 @@
       }catch(e){
         if(e && e.sharedDataConflict){
           setAutoSyncIndicatorState('frozen', 'Notatki wymagają decyzji: telefon, Arkusz albo obie wersje.');
+        } else if(e && e.sharedDataRetryable){
+          setAutoSyncIndicatorState('on');
+          scheduleAutoSyncUpload('shared_data_retry');
         } else {
           setAutoSyncIndicatorState('frozen', 'Automatyczna wysylka synchronizacji nie powiodla sie. Sprawdz polaczenie albo uzyj synchronizacji recznej.');
         }
@@ -11383,7 +11478,7 @@
       if(!cfg) return;
       if(!await ensureAppsScriptCompatibility(cfg.url, { notify:false })) return;
       const pendingDailyExportBeforeHideUpload = hasPendingDailyExport();
-      if(!pendingDailyExportBeforeHideUpload && !hasUnuploadedLocalChanges()) return;
+      if(!pendingDailyExportBeforeHideUpload && !hasUnuploadedLocalChanges() && !hasUnverifiedSharedDataChanges()) return;
       autoSyncBusy = true;
       playSyncStartedSound();
       try{
@@ -11424,6 +11519,9 @@
       }catch(e){
         if(e && e.sharedDataConflict){
           setAutoSyncIndicatorState('frozen', 'Notatki wymagają decyzji: telefon, Arkusz albo obie wersje.');
+        } else if(e && e.sharedDataRetryable){
+          setAutoSyncIndicatorState('on');
+          scheduleAutoSyncUpload('shared_data_retry');
         } else {
           setAutoSyncIndicatorState('frozen');
         }
