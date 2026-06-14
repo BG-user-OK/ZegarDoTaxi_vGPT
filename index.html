@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.15.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.15.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -2927,6 +2927,30 @@
       display:flex; justify-content:space-between; align-items:center;
       padding:4px 2px 2px;
     }
+    .version-status-actions{
+      gap:8px;
+    }
+    .version-status-actions .version-status-text-btn{
+      width:auto;
+      min-width:108px;
+      padding:0 15px;
+      font-size:17px;
+      line-height:1;
+      white-space:nowrap;
+    }
+    .version-status-actions [data-act="verify"]{
+      margin-left:auto;
+    }
+    @media (max-width:340px){
+      .version-status-actions{
+        flex-wrap:wrap;
+      }
+      .version-status-actions .version-status-text-btn{
+        min-width:100px;
+        padding-inline:11px;
+        font-size:16px;
+      }
+    }
 
     .keypad{
       display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;
@@ -3841,7 +3865,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.15.0</div>
+    <div class="version">v6.15.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -9893,7 +9917,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.15.0';
+      return el ? el.textContent.trim() : 'v6.15.1';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -10028,10 +10052,10 @@
             ${escapeHtml(status.message || 'Brak dodatkowych informacji.')}
           </div>
           <div style="flex:1;"></div>
-          <div class="panel-actions">
+          <div class="panel-actions version-status-actions">
             <button class="cancel-btn" data-act="close">X</button>
-            ${canMigrate ? '<button class="ok-btn" data-act="migrate">UŻYJ URL</button>' : ''}
-            <button class="ok-btn" data-act="verify">SPRAWDŹ</button>
+            ${canMigrate ? '<button class="ok-btn version-status-text-btn" data-act="migrate">UŻYJ URL</button>' : ''}
+            <button class="ok-btn version-status-text-btn" data-act="verify">SPRAWDŹ</button>
           </div>
         </div>
       `);
