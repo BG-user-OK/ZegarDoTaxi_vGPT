@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.15.2: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.15.3: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -3065,10 +3065,12 @@
     }
     .ai-paste-panel{
       width:min(94vw, 520px);
-      min-height:min(72vh, 620px);
-      max-height:calc(100dvh - 20px);
+      height:min(92dvh, 680px);
+      min-height:min(500px, calc(100dvh - 16px));
+      max-height:calc(100dvh - 16px);
       padding:12px;
-      gap:10px;
+      gap:8px;
+      overflow:hidden;
     }
     .ai-paste-panel h3,
     .ai-conflict-panel h3{
@@ -3080,7 +3082,7 @@
     .ai-paste-textarea{
       flex:1 1 auto;
       width:100%;
-      min-height:250px;
+      min-height:110px;
       resize:none;
       border:1px solid #3c3c3c;
       border-radius:8px;
@@ -3107,6 +3109,22 @@
       font-size:13px;
       line-height:1.35;
     }
+    .ai-paste-example-title{
+      flex:0 0 auto;
+      color:#a8a8a8;
+      font-size:13px;
+      font-weight:900;
+      line-height:1.2;
+    }
+    .ai-paste-example{
+      flex:0 0 auto;
+      max-height:92px;
+      overflow:auto;
+      color:#686868;
+      font:700 12px/1.3 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      white-space:pre-line;
+      scrollbar-width:thin;
+    }
     .ai-paste-actions{
       display:grid;
       grid-template-columns:1fr 1.35fr;
@@ -3128,6 +3146,36 @@
     }
     .ai-paste-insert{
       background:linear-gradient(180deg,var(--ok),var(--ok-dark));
+    }
+    @media (max-height:540px){
+      .ai-paste-panel{
+        height:calc(100dvh - 10px);
+        min-height:0;
+        max-height:calc(100dvh - 10px);
+        padding:8px 10px;
+        gap:5px;
+      }
+      .ai-paste-panel h3{
+        margin-bottom:0;
+        font-size:16px;
+      }
+      .ai-paste-actions button{
+        min-height:52px;
+        font-size:16px;
+      }
+      .ai-paste-textarea{
+        min-height:82px;
+        padding:8px;
+        font-size:15px;
+      }
+      .ai-paste-error{
+        min-height:18px;
+        font-size:12px;
+      }
+      .ai-paste-example{
+        max-height:56px;
+        font-size:11px;
+      }
     }
     .ai-conflict-panel{
       width:min(94vw, 480px);
@@ -4010,7 +4058,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.15.2</div>
+    <div class="version">v6.15.3</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -8499,14 +8547,19 @@
       showOverlay(`
         <div class="big-panel ai-paste-panel">
           <h3>Wklej dane od AI:</h3>
-          <textarea class="ai-paste-textarea" id="aiPasteText" spellcheck="false" autocomplete="off"
-                    placeholder="Uber: 156,65&#10;Bolt: 321,00&#10;LICZNIK END: 486183&#10;km priv: 0,00">${escapeHtml(session.text||'')}</textarea>
-          <div class="ai-paste-error" id="aiPasteError">${escapeHtml(errorMessage)}</div>
-          <div class="ai-paste-hint">Wymagane są etykiety pól. Kolejność wierszy jest dowolna.</div>
           <div class="ai-paste-actions">
             <button type="button" class="ai-paste-abandon" data-ai-act="abandon">ZREZYGNUJ</button>
             <button type="button" class="ai-paste-insert" data-ai-act="insert">WSTAW</button>
           </div>
+          <textarea class="ai-paste-textarea" id="aiPasteText" spellcheck="false" autocomplete="off"
+                    placeholder="Wklej tutaj dane przygotowane przez AI">${escapeHtml(session.text||'')}</textarea>
+          <div class="ai-paste-error" id="aiPasteError">${escapeHtml(errorMessage)}</div>
+          <div class="ai-paste-hint">Wymagane są etykiety pól. Kolejność wierszy jest dowolna.</div>
+          <div class="ai-paste-example-title">Przykład:</div>
+          <div class="ai-paste-example">Uber: 156,65
+Bolt: 321,00
+LICZNIK END: 486183
+km priv: 0,00</div>
         </div>
       `);
       overlay.dataset.lockClose='aiPaste';
@@ -10092,7 +10145,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.15.2';
+      return el ? el.textContent.trim() : 'v6.15.3';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -10307,6 +10360,33 @@
       }
       return pin;
     }
+    function syncErrorText(error){
+      return String(error && error.message || error || '').trim();
+    }
+    function isSyncPinAuthError(error){
+      const message=syncErrorText(error).toLocaleLowerCase('pl-PL');
+      return /wrong sync pin|invalid sync pin|missing sync pin|nieprawidłow(?:y|ego) pin|brak pin(?:-u)?|unauthori[sz]ed|authorization rejected/.test(message);
+    }
+    function isSyncNetworkError(error){
+      const message=syncErrorText(error).toLocaleLowerCase('pl-PL');
+      return message==='network' || message==='timeout' || /failed to fetch|networkerror|brak połączenia/.test(message);
+    }
+    function promptAndStoreSyncPin(message){
+      const pin=(prompt(`${message}\n\nPIN synchronizacji i eksportu:`, '') || '').trim();
+      if(!pin) return '';
+      localStorage.setItem(LS_SYNC_PIN, pin);
+      clearAppsScriptCompatibilityCache();
+      appsScriptCompatibilitySessionKey='';
+      return pin;
+    }
+    function replaceSyncConfigPin(cfg,pin){
+      return Object.assign({}, cfg || {}, { pin:String(pin || '').trim() });
+    }
+    function clearRejectedSyncPin(){
+      localStorage.removeItem(LS_SYNC_PIN);
+      clearAppsScriptCompatibilityCache();
+      appsScriptCompatibilitySessionKey='';
+    }
     function appsScriptCompatibilityProblem(response, url, options={}){
       if(!response || response.ok !== true){
         return String(response && response.error || 'Endpoint nie zwrócił konfiguracji zgodności.');
@@ -10510,7 +10590,7 @@
       if(!state || state.startWorkMinutes === null || typeof state.startWorkMinutes === 'undefined') return 'not_started';
       return state.endWorkMinutes === null || typeof state.endWorkMinutes === 'undefined' ? 'active' : 'ended';
     }
-    function getSyncConfig(needDevice){
+    function getSyncConfig(needDevice, options={}){
       let url = localStorage.getItem(LS_APPSCRIPT) || '';
       if(!url){
         url = (prompt('URL Google Apps Script:', '') || '').trim();
@@ -10520,10 +10600,14 @@
 
       let pin = localStorage.getItem(LS_SYNC_PIN) || '';
       if(!pin){
-        pin = (prompt('PIN synchronizacji:', '') || '').trim();
-        if(pin) localStorage.setItem(LS_SYNC_PIN, pin);
+        pin = promptAndStoreSyncPin(
+          options.pinMessage || 'Do tej operacji wymagany jest PIN synchronizacji.'
+        );
       }
-      if(!pin){ showToast('Brak PIN synchronizacji.', 'err'); return null; }
+      if(!pin){
+        if(options.silentPinCancel !== true) showToast('Brak PIN synchronizacji.', 'err');
+        return null;
+      }
 
       let device = localStorage.getItem(LS_SYNC_DEVICE) || '';
       if(needDevice && !device){
@@ -11006,6 +11090,7 @@
       });
     }
     let manualSyncBusy = false;
+    let manualSyncListContext = null;
     function setSyncMenuBusy(action, text){
       manualSyncBusy = true;
       const menu = overlay.querySelector('.sync-menu');
@@ -11353,11 +11438,47 @@
       `);
       overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); hideOverlay(); });
     }
-    async function openSyncSnapshotList(){
+    async function openSyncSnapshotList(options={}){
       if(manualSyncBusy) return;
-      const cfg = getSyncConfig(false);
-      if(!cfg) return;
-      if(!await ensureAppsScriptCompatibility(cfg.url, { notify:true })) return;
+      const authRetryCount=Number(options.authRetryCount || 0);
+      const cfg = options.cfg || getSyncConfig(false, {
+        pinMessage:'Do pobrania synchronizacji wymagany jest PIN.',
+        silentPinCancel:true
+      });
+      if(!cfg){
+        openWorkMenu();
+        return;
+      }
+      const compatible=await ensureAppsScriptCompatibility(cfg.url, {
+        notify:false,
+        force:authRetryCount>0,
+        freezeAutoSync:false
+      });
+      if(!compatible){
+        const status=loadAppVersionStatus();
+        const compatibilityError=status.message || 'Nie udało się potwierdzić dostępu do synchronizacji.';
+        if(isSyncPinAuthError(compatibilityError) && authRetryCount<1){
+          clearRejectedSyncPin();
+          const pin=promptAndStoreSyncPin('PIN jest nieprawidłowy. Wpisz poprawny PIN, aby pobrać synchronizację.');
+          if(pin){
+            return openSyncSnapshotList({
+              cfg:replaceSyncConfigPin(cfg,pin),
+              authRetryCount:authRetryCount+1
+            });
+          }
+          openWorkMenu();
+          return;
+        }
+        if(isSyncPinAuthError(compatibilityError)) clearRejectedSyncPin();
+        showToast(
+          isSyncPinAuthError(compatibilityError)
+            ? 'Nieprawidłowy PIN synchronizacji.'
+            : compatibilityError,
+          'err'
+        );
+        openWorkMenu();
+        return;
+      }
       setSyncMenuBusy('load', 'Pobieram synchronizację...');
       try{
         await syncSharedData(cfg);
@@ -11368,9 +11489,26 @@
         if(e && e.sharedDataConflict){
           setAutoSyncIndicatorState('frozen', 'Notatki wymagają decyzji: telefon, Arkusz albo obie wersje.');
           renderSharedDataConflict();
+        } else if(isSyncPinAuthError(e)){
+          clearSyncMenuBusy();
+          clearRejectedSyncPin();
+          if(authRetryCount<1){
+            const pin=promptAndStoreSyncPin('PIN jest nieprawidłowy. Wpisz poprawny PIN, aby pobrać synchronizację.');
+            if(pin){
+              return openSyncSnapshotList({
+                cfg:replaceSyncConfigPin(cfg,pin),
+                authRetryCount:authRetryCount+1
+              });
+            }
+          } else {
+            showToast('Nieprawidłowy PIN synchronizacji.', 'err');
+          }
+          openWorkMenu();
         } else {
-          localStorage.removeItem(LS_SYNC_PIN);
-          showToast('Nie udalo sie pobrac synchronizacji.', 'err');
+          const message=isSyncNetworkError(e)
+            ? 'Brak połączenia. Nie udało się pobrać synchronizacji.'
+            : 'Nie udało się pobrać synchronizacji.';
+          showToast(message, 'err');
           openWorkMenu();
         }
       }finally{
@@ -11378,6 +11516,10 @@
       }
     }
     function renderSyncSnapshotList(items, cfg){
+      manualSyncListContext={
+        items:Array.isArray(items) ? items.slice() : [],
+        cfg:Object.assign({}, cfg || {})
+      };
       const romanMonths = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
       const syncDateFallback = (s)=>{
         const local = String(s.savedAtLocal || s.savedAtIso || '');
@@ -11442,6 +11584,13 @@
         });
       });
     }
+    function restoreSyncSnapshotList(){
+      if(manualSyncListContext){
+        renderSyncSnapshotList(manualSyncListContext.items, manualSyncListContext.cfg);
+      } else {
+        openWorkMenu();
+      }
+    }
     function confirmSyncLoad(id, cfg){
       showOverlay(`
         <div class="big-panel">
@@ -11458,17 +11607,27 @@
           </div>
         </div>
       `);
-      overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); openSyncSnapshotList(); });
+      overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); restoreSyncSnapshotList(); });
       overlay.querySelector('[data-act="ok"]').addEventListener('click',async (e)=>{
         e.stopPropagation();
         await loadSyncSnapshot(id, cfg);
       });
     }
-    async function loadSyncSnapshot(id, cfg){
+    async function loadSyncSnapshot(id, cfg, options={}){
+      const authRetryCount=Number(options.authRetryCount || 0);
+      let activeCfg=replaceSyncConfigPin(cfg, localStorage.getItem(LS_SYNC_PIN) || '');
+      if(!activeCfg.pin){
+        const pin=promptAndStoreSyncPin('Do pobrania wybranej synchronizacji wymagany jest PIN.');
+        if(!pin){
+          restoreSyncSnapshotList();
+          return;
+        }
+        activeCfg=replaceSyncConfigPin(cfg,pin);
+      }
       renderSyncLoading('Pobieram stan...');
       playSyncStartedSound();
       try{
-        const data = await jsonpRequest(cfg.url, { action:'syncLoad', pin:cfg.pin, id });
+        const data = await jsonpRequest(activeCfg.url, { action:'syncLoad', pin:activeCfg.pin, id });
         if(!data || !data.ok || !data.snapshot) throw new Error(data && data.error ? data.error : 'syncLoad failed');
         applySyncSnapshot(data.snapshot);
         markCloudSeen(data.snapshot);
@@ -11478,10 +11637,27 @@
         hideOverlay();
         showToast('Synchronizacja pobrana.', 'ok');
       }catch(e){
-        localStorage.removeItem(LS_SYNC_PIN);
-        setAutoSyncIndicatorState('frozen');
-        showToast('Nie udalo sie pobrac stanu.', 'err');
-        openWorkMenu();
+        if(isSyncPinAuthError(e)){
+          clearRejectedSyncPin();
+          if(authRetryCount<1){
+            const pin=promptAndStoreSyncPin('PIN jest nieprawidłowy. Wpisz poprawny PIN, aby pobrać wybrany stan.');
+            if(pin){
+              return loadSyncSnapshot(id, replaceSyncConfigPin(activeCfg,pin), {
+                authRetryCount:authRetryCount+1
+              });
+            }
+          } else {
+            showToast('Nieprawidłowy PIN synchronizacji.', 'err');
+          }
+          restoreSyncSnapshotList();
+          return;
+        }
+        const message=isSyncNetworkError(e)
+          ? 'Brak połączenia. Nie udało się pobrać wybranego stanu.'
+          : 'Nie udało się pobrać wybranego stanu.';
+        setAutoSyncIndicatorState('frozen', message);
+        showToast(message, 'err');
+        restoreSyncSnapshotList();
       }
     }
     function applySyncSnapshot(snapshot){
