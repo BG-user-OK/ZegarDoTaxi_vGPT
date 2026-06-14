@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.15.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.15.2: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -3130,12 +3130,13 @@
       background:linear-gradient(180deg,var(--ok),var(--ok-dark));
     }
     .ai-conflict-panel{
-      width:min(92vw, 460px);
+      width:min(94vw, 480px);
       height:auto;
-      min-height:330px;
-      max-height:min(70dvh, 520px);
+      min-height:min(440px, calc(100dvh - 20px));
+      max-height:calc(100dvh - 20px);
       padding:14px;
-      gap:12px;
+      gap:10px;
+      overflow:hidden;
     }
     .ai-conflict-progress{
       color:#858585;
@@ -3143,49 +3144,193 @@
       font-weight:800;
       text-align:right;
     }
-    .ai-conflict-values{
+    .ai-conflict-top-actions{
       display:grid;
-      grid-template-columns:1fr;
+      grid-template-columns:1fr 1fr;
       gap:8px;
-      padding:10px 0;
+    }
+    .ai-conflict-top-actions.single-action{
+      grid-template-columns:1fr;
+    }
+    .ai-conflict-top-actions button,
+    .ai-conflict-overwrite{
+      min-height:60px;
+      border:none;
+      border-radius:10px;
+      color:#fff;
+      font-size:18px;
+      font-weight:950;
+      touch-action:manipulation;
+    }
+    .ai-conflict-identity{
+      min-height:74px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:4px 10px;
+    }
+    .ai-conflict-identity img{
+      display:block;
+      width:min(54%, 190px);
+      max-height:70px;
+      object-fit:contain;
+      filter:drop-shadow(0 2px 6px rgba(0,0,0,.7));
+    }
+    .ai-conflict-identity img.square{
+      width:70px;
+      height:70px;
+    }
+    .ai-conflict-identity-label{
+      color:#e8e8e8;
+      font-size:20px;
+      font-weight:950;
+      text-align:center;
+    }
+    .ai-conflict-comparison{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) clamp(44px, 14vw, 62px) minmax(0,1fr);
+      align-items:stretch;
+      gap:7px;
+      min-height:112px;
     }
     .ai-conflict-value{
+      min-width:0;
       display:flex;
-      justify-content:space-between;
+      flex-direction:column;
+      justify-content:center;
       align-items:center;
-      gap:12px;
-      min-height:54px;
-      padding:8px 12px;
+      gap:7px;
+      padding:10px 5px;
       border-radius:8px;
       background:#090909;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);
-      color:#aaa;
-      font-size:15px;
+      text-align:center;
+    }
+    .ai-conflict-value span{
+      color:#858585;
+      font-size:12px;
       font-weight:800;
+      letter-spacing:.5px;
+      text-transform:uppercase;
     }
     .ai-conflict-value strong{
-      color:#fff;
-      font-size:22px;
+      max-width:100%;
+      font-size:clamp(16px, 5vw, 24px);
+      line-height:1.05;
       font-variant-numeric:tabular-nums;
       white-space:nowrap;
     }
-    .ai-conflict-actions{
-      display:grid;
-      grid-template-columns:repeat(3, 1fr);
-      gap:8px;
-      margin-top:auto;
+    .ai-conflict-value.ai strong{
+      color:#f4d94c;
+      text-shadow:0 0 8px rgba(244,217,76,.2);
     }
-    .ai-conflict-actions.two-actions{
-      grid-template-columns:1fr 1fr;
+    .ai-conflict-value.current strong{
+      color:#fff;
+      text-shadow:0 0 7px rgba(255,255,255,.18);
     }
+    .ai-conflict-symbols{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:5px;
+      font-size:clamp(22px, 7vw, 30px);
+      font-weight:950;
+      line-height:1;
+    }
+    .ai-conflict-symbol{
+      width:100%;
+      min-height:27px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      filter:drop-shadow(0 0 5px currentColor);
+    }
+    .ai-conflict-symbol.overwrite{ color:#35b85a; }
+    .ai-conflict-symbol.add{ color:#d44848; font-size:.78em; }
+    .ai-conflict-symbol.skip{ color:#d98328; }
     .ai-conflict-overwrite{
-      background:linear-gradient(180deg,var(--ok),var(--ok-dark));
+      width:100%;
+      min-height:74px;
+      margin-top:auto;
+      background:linear-gradient(180deg,#239447,#126129);
+      box-shadow:0 0 18px rgba(35,148,71,.24);
     }
     .ai-conflict-add{
-      background:linear-gradient(180deg,#1a6aaa,#0a3a6a);
+      background:linear-gradient(180deg,#a93636,#671b1b);
+      box-shadow:0 0 14px rgba(169,54,54,.2);
     }
     .ai-conflict-skip{
-      background:linear-gradient(180deg,#555,#252525);
+      background:linear-gradient(180deg,#d07a22,#81430d);
+      box-shadow:0 0 14px rgba(208,122,34,.2);
+    }
+    @media (max-width:350px){
+      .ai-conflict-panel{
+        padding:10px;
+        gap:7px;
+      }
+      .ai-conflict-top-actions button{
+        min-height:54px;
+        font-size:16px;
+      }
+      .ai-conflict-identity{
+        min-height:62px;
+      }
+      .ai-conflict-identity img{
+        max-height:58px;
+      }
+      .ai-conflict-identity img.square{
+        width:58px;
+        height:58px;
+      }
+      .ai-conflict-comparison{
+        grid-template-columns:minmax(0,1fr) 42px minmax(0,1fr);
+        gap:4px;
+        min-height:102px;
+      }
+      .ai-conflict-value strong{
+        font-size:clamp(15px, 4.8vw, 19px);
+      }
+      .ai-conflict-overwrite{
+        min-height:66px;
+      }
+    }
+    @media (orientation:landscape) and (max-height:620px){
+      .ai-conflict-panel{
+        width:min(88vw, 620px);
+        min-height:min(370px, calc(100dvh - 16px));
+        max-height:calc(100dvh - 16px);
+        padding:8px 12px;
+        gap:5px;
+      }
+      .ai-conflict-progress{
+        font-size:11px;
+      }
+      .ai-conflict-top-actions button{
+        min-height:46px;
+        font-size:16px;
+      }
+      .ai-conflict-identity{
+        min-height:48px;
+        padding:0 8px;
+      }
+      .ai-conflict-identity img{
+        max-height:46px;
+      }
+      .ai-conflict-identity img.square{
+        width:46px;
+        height:46px;
+      }
+      .ai-conflict-comparison{
+        min-height:82px;
+      }
+      .ai-conflict-value{
+        gap:3px;
+        padding:5px;
+      }
+      .ai-conflict-overwrite{
+        min-height:54px;
+      }
     }
     .counter-fields{ display:flex; flex-direction:column; gap:8px; }
     .counter-row{
@@ -3865,7 +4010,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.15.1</div>
+    <div class="version">v6.15.2</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -8430,6 +8575,23 @@
       if(item.kind==='privKm') return `${value} km`;
       return String(value);
     }
+    function aiConflictIdentityHtml(conflict){
+      const label=escapeHtml(conflict.label);
+      let src='';
+      let square=false;
+      if(conflict.kind==='provider' && PROVIDERS.some(provider=>provider.key===conflict.key)){
+        src=`Photos/${conflict.key}.png`;
+      } else if(conflict.kind==='endOdometer' || conflict.kind==='privKm'){
+        src='Photos/licznik.png';
+        square=true;
+      }
+      if(!src) return `<div class="ai-conflict-identity-label">${label}</div>`;
+      return `
+        <img src="${src}" alt="${label}" title="${label}" class="${square?'square':''}"
+             onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
+        <span class="ai-conflict-identity-label" hidden>${label}</span>
+      `;
+    }
     function renderAiConflict(){
       const session=aiPasteSession;
       if(!session) return;
@@ -8442,16 +8604,29 @@
       showOverlay(`
         <div class="big-panel ai-conflict-panel">
           <div class="ai-conflict-progress">${session.conflictIndex+1} / ${session.conflicts.length}</div>
-          <h3>${escapeHtml(conflict.label)}</h3>
-          <div class="ai-conflict-values">
-            <div class="ai-conflict-value"><span>Obecnie</span><strong>${escapeHtml(formatAiConflictValue(conflict,conflict.current))}</strong></div>
-            <div class="ai-conflict-value"><span>Dane AI</span><strong>${escapeHtml(formatAiConflictValue(conflict,conflict.ai))}</strong></div>
-          </div>
-          <div class="ai-conflict-actions ${allowAdd?'':'two-actions'}">
-            <button type="button" class="ai-conflict-overwrite" data-ai-choice="overwrite">NADPISZ</button>
-            ${allowAdd?'<button type="button" class="ai-conflict-add" data-ai-choice="add">DODAJ</button>':''}
+          <div class="ai-conflict-top-actions ${allowAdd?'':'single-action'}">
+            ${allowAdd?'<button type="button" class="ai-conflict-add" data-ai-choice="add">SUMUJ</button>':''}
             <button type="button" class="ai-conflict-skip" data-ai-choice="skip">POMIŃ</button>
           </div>
+          <div class="ai-conflict-identity" aria-label="${escapeHtml(conflict.label)}">
+            ${aiConflictIdentityHtml(conflict)}
+          </div>
+          <div class="ai-conflict-comparison">
+            <div class="ai-conflict-value ai">
+              <span>Dane AI</span>
+              <strong>${escapeHtml(formatAiConflictValue(conflict,conflict.ai))}</strong>
+            </div>
+            <div class="ai-conflict-symbols" aria-hidden="true">
+              <span class="ai-conflict-symbol overwrite" title="Nadpisz">→</span>
+              ${allowAdd?'<span class="ai-conflict-symbol add" title="Sumuj">＋→</span>':''}
+              <span class="ai-conflict-symbol skip" title="Pomiń">↛</span>
+            </div>
+            <div class="ai-conflict-value current">
+              <span>Aplikacja</span>
+              <strong>${escapeHtml(formatAiConflictValue(conflict,conflict.current))}</strong>
+            </div>
+          </div>
+          <button type="button" class="ai-conflict-overwrite" data-ai-choice="overwrite">NADPISZ</button>
         </div>
       `);
       overlay.dataset.lockClose='aiPaste';
@@ -9917,7 +10092,7 @@
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.15.1';
+      return el ? el.textContent.trim() : 'v6.15.2';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
