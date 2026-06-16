@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.15.3: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.16.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -675,6 +675,126 @@
     }
     .btn:active{ transform:scale(.985); }
     .btn.empty-slot{ background:#0a0a0a; box-shadow:inset 0 0 0 1px #1a1a1a; pointer-events:none; opacity:.3; }
+    .early-month-module{
+      position:absolute;
+      left:calc((100% - 12px) / 3 + 6px);
+      top:0;
+      width:calc(((100% - 12px) / 3) * 2 + 6px);
+      height:100%;
+      z-index:12;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      border:none;
+      border-radius:18px;
+      padding:0;
+      background:#000;
+      color:#f5f5f5;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.05), 0 0 28px rgba(255,216,72,.16);
+      opacity:0;
+      pointer-events:none;
+      transform:scale(.985);
+      transition:opacity .9s ease, transform .9s ease, box-shadow .9s ease;
+    }
+    .early-month-module.visible{
+      opacity:1;
+      pointer-events:auto;
+      transform:scale(1);
+    }
+    .early-month-module.fading{
+      opacity:0;
+      pointer-events:none;
+      transform:scale(.985);
+      box-shadow:none;
+    }
+    .early-month-content{
+      flex:1 1 auto;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+      padding:10px 8px 8px;
+      text-align:center;
+    }
+    .early-month-icon{
+      font-size:clamp(48px, 18vw, 96px);
+      line-height:1;
+      filter:drop-shadow(0 0 10px rgba(255,216,72,.34));
+    }
+    .early-month-days{
+      font-size:clamp(34px, 12vw, 72px);
+      line-height:.95;
+      font-weight:1000;
+      color:#ffdc4c;
+      text-shadow:0 0 10px rgba(255,216,72,.48), 0 0 20px rgba(255,180,0,.22);
+      font-variant-numeric:tabular-nums;
+    }
+    .early-month-title{
+      font-size:clamp(18px, 5.2vw, 32px);
+      line-height:1.08;
+      font-weight:1000;
+      letter-spacing:.4px;
+      text-transform:uppercase;
+      color:#f2f2f2;
+      text-shadow:0 0 10px rgba(255,255,255,.22);
+    }
+    .early-month-subtitle{
+      max-width:96%;
+      font-size:clamp(13px, 3.4vw, 20px);
+      line-height:1.15;
+      font-weight:850;
+      color:#a6a6a6;
+      overflow-wrap:anywhere;
+    }
+    .early-month-actions{
+      flex:0 0 38%;
+      min-height:86px;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:0;
+      border-top:1px solid rgba(255,255,255,.08);
+    }
+    .early-month-action{
+      border:none;
+      border-radius:0;
+      padding:6px 5px;
+      color:#fff;
+      font-size:clamp(14px, 4vw, 24px);
+      line-height:1.08;
+      font-weight:1000;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      white-space:normal;
+      appearance:none;
+      -webkit-appearance:none;
+    }
+    .early-month-action.create{
+      background:linear-gradient(180deg,#16933e,#07591f);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.16), inset 0 -14px 18px rgba(0,0,0,.28);
+    }
+    .early-month-action.tomorrow{
+      background:linear-gradient(180deg,#c91d1d,#7f0e0e);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.14), inset 0 -14px 18px rgba(0,0,0,.3);
+    }
+    .early-month-module.busy .early-month-action{
+      filter:brightness(.55);
+      pointer-events:none;
+    }
+    .early-month-module.success{
+      box-shadow:inset 0 0 0 1px rgba(70,255,126,.22), 0 0 28px rgba(46,204,113,.24);
+    }
+    .early-month-module.error{
+      box-shadow:inset 0 0 0 1px rgba(255,70,70,.28), 0 0 28px rgba(255,20,20,.22);
+    }
+    @media (orientation: landscape) and (max-height:620px) and (pointer:coarse){
+      .early-month-module{ display:none !important; }
+    }
 
     /* === v1.12: long-press progress ring === */
     .btn .lp-ring{
@@ -4042,6 +4162,7 @@
         </div>
       </button>
       <button class="driving-focus-restore-area" id="drivingFocusRestoreArea" type="button" aria-label="Pokaż ukryte moduły"></button>
+      <div class="early-month-module" id="earlyMonthModule" aria-hidden="true"></div>
     </div>
     <div class="export-overwrite-guard" id="exportOverwriteGuard" aria-hidden="true" role="alertdialog" aria-labelledby="exportOverwriteTitle">
       <div class="export-overwrite-title" id="exportOverwriteTitle">Dane tej dniówki już istnieją w Arkuszu!</div>
@@ -4058,7 +4179,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.15.3</div>
+    <div class="version">v6.16.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -4080,8 +4201,12 @@
     const LS_SHARED_DATA_BASE = 'tarcza_shared_data_base_v1';
     const LS_SHARED_DATA_CONFLICTS = 'tarcza_shared_data_conflicts_v1';
     const LS_SHARED_DATA_VERIFIED_HASH = 'tarcza_shared_data_verified_hash_v1';
+    const LS_EARLY_MONTH_SHEET = 'tarcza_early_month_sheet_v1';
     const FINAL_BREAK_NO_WORK_THRESHOLD_MIN = 2;
     const AI_PASTE_HOLD_MS = 2000;
+    const EARLY_MONTH_WINDOW_DAYS = 7;
+    const EARLY_MONTH_FREE_AREA_MS = 30000;
+    const EARLY_MONTH_WATCH_RECHECK_MS = 1000;
 
     const PROVIDERS = [
       { key:'uber',    label:'UBER',    bg:'#000000', fg:'#ffffff' },
@@ -7205,6 +7330,7 @@
       renderDate();
       updateDrivingFocusFade();
       renderBattery();
+      reevaluateEarlyMonthPromptWatch();
     }
 
     // === Data pod zegarem ===
@@ -10145,7 +10271,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.15.3';
+      return el ? el.textContent.trim() : 'v6.16.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -10912,6 +11038,340 @@ km priv: 0,00</div>
       }
       return { url, pin, device, deviceId:getDeviceId() };
     }
+    let earlyMonthPromptArmed = false;
+    let earlyMonthPromptVisible = false;
+    let earlyMonthAreaTimer = null;
+    let earlyMonthAreaFreeSince = 0;
+    let earlyMonthRequestBusy = false;
+    let earlyMonthPromptData = null;
+
+    function normalizeEarlyMonthState(value){
+      const s = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+      return {
+        checkDate:String(s.checkDate || ''),
+        askTomorrowDate:String(s.askTomorrowDate || ''),
+        failedDate:String(s.failedDate || ''),
+        armedDate:String(s.armedDate || ''),
+        targetName:String(s.targetName || ''),
+        daysRemaining:Number.isFinite(Number(s.daysRemaining)) ? Number(s.daysRemaining) : null
+      };
+    }
+    function loadEarlyMonthState(){
+      try{ return normalizeEarlyMonthState(JSON.parse(localStorage.getItem(LS_EARLY_MONTH_SHEET) || '{}')); }
+      catch(e){ return normalizeEarlyMonthState(null); }
+    }
+    function saveEarlyMonthState(state){
+      localStorage.setItem(LS_EARLY_MONTH_SHEET, JSON.stringify(normalizeEarlyMonthState(state)));
+    }
+    function updateEarlyMonthState(patch){
+      const next = Object.assign(loadEarlyMonthState(), patch || {});
+      saveEarlyMonthState(next);
+      return next;
+    }
+    function daysRemainingInCurrentMonth(){
+      const d = new Date();
+      return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() - d.getDate();
+    }
+    function isEarlyMonthWindowToday(){
+      const days = daysRemainingInCurrentMonth();
+      return days >= 0 && days <= EARLY_MONTH_WINDOW_DAYS;
+    }
+    function isLandscapePhoneMainLayout(){
+      return !!(window.matchMedia &&
+        window.matchMedia('(orientation: landscape) and (max-height:620px) and (pointer:coarse)').matches);
+    }
+    function clearEarlyMonthAreaTimer(){
+      clearTimeout(earlyMonthAreaTimer);
+      earlyMonthAreaTimer = null;
+    }
+    function clearEarlyMonthModule(){
+      const el = document.getElementById('earlyMonthModule');
+      if(!el) return;
+      el.className = 'early-month-module';
+      el.innerHTML = '';
+      el.setAttribute('aria-hidden', 'true');
+    }
+    function fadeEarlyMonthModule(callback){
+      const el = document.getElementById('earlyMonthModule');
+      if(!el){
+        if(callback) callback();
+        return;
+      }
+      el.classList.add('fading');
+      el.classList.remove('visible');
+      setTimeout(()=>{
+        clearEarlyMonthModule();
+        if(callback) callback();
+      }, 900);
+    }
+    function disarmEarlyMonthPrompt(patch={}){
+      earlyMonthPromptArmed = false;
+      earlyMonthPromptData = null;
+      earlyMonthAreaFreeSince = 0;
+      clearEarlyMonthAreaTimer();
+      updateEarlyMonthState(Object.assign({
+        armedDate:'',
+        targetName:'',
+        daysRemaining:null
+      }, patch));
+    }
+    function isEarlyMonthPromptAreaFree(){
+      if(!earlyMonthPromptArmed || earlyMonthPromptVisible || earlyMonthRequestBusy) return false;
+      if(document.visibilityState !== 'visible') return false;
+      if(isLandscapePhoneMainLayout()) return false;
+      if(!isMainScreenVisibleForDrivingFocus()) return false;
+      const controls = document.querySelector('.controls');
+      if(!controls || controls.classList.contains('results-ended')) return false;
+      if(shouldShowExportOverwriteGuard()) return false;
+      if(!drivingFocusFaded) return false;
+      const required = ['potBtn','moneyBtn','breakBtn','coinBtn'];
+      for(const id of required){
+        const el = document.getElementById(id);
+        if(!el) return false;
+        if(shouldKeepDrivingFocusModuleVisible(id)) return false;
+        if(!el.classList.contains('driving-focus-faded') && !el.classList.contains('empty-slot')) return false;
+      }
+      return true;
+    }
+    function scheduleEarlyMonthAreaWatch(delayMs){
+      clearEarlyMonthAreaTimer();
+      earlyMonthAreaTimer = setTimeout(()=>reevaluateEarlyMonthPromptWatch(), Math.max(0, delayMs || 0));
+    }
+    function reevaluateEarlyMonthPromptWatch(){
+      if(!earlyMonthPromptArmed || earlyMonthPromptVisible){
+        clearEarlyMonthAreaTimer();
+        earlyMonthAreaFreeSince = 0;
+        return;
+      }
+      if(!isEarlyMonthPromptAreaFree()){
+        earlyMonthAreaFreeSince = 0;
+        scheduleEarlyMonthAreaWatch(EARLY_MONTH_WATCH_RECHECK_MS);
+        return;
+      }
+      if(!earlyMonthAreaFreeSince) earlyMonthAreaFreeSince = Date.now();
+      const remaining = EARLY_MONTH_FREE_AREA_MS - (Date.now() - earlyMonthAreaFreeSince);
+      if(remaining > 0){
+        scheduleEarlyMonthAreaWatch(remaining);
+        return;
+      }
+      confirmAndShowEarlyMonthPrompt();
+    }
+    function renderEarlyMonthPrompt(data){
+      const el = document.getElementById('earlyMonthModule');
+      if(!el) return;
+      earlyMonthPromptVisible = true;
+      const days = Number(data && data.daysRemaining);
+      const label = Number.isFinite(days) ? `${days}d` : '';
+      el.className = 'early-month-module';
+      el.setAttribute('aria-hidden', 'false');
+      el.innerHTML = `
+        <div class="early-month-content">
+          <div class="early-month-icon" aria-hidden="true">&#128197;</div>
+          <div class="early-month-days">${escapeHtml(label)}</div>
+          <div class="early-month-subtitle">${escapeHtml(data && data.targetName ? data.targetName : 'nowy miesiac')}</div>
+        </div>
+        <div class="early-month-actions">
+          <button class="early-month-action create" type="button" data-early-month-act="create">ZR&#211;B ZAK&#321;ADK&#280;<br>NOWY MIESI&#260;C</button>
+          <button class="early-month-action tomorrow" type="button" data-early-month-act="tomorrow">SPYTAJ<br>JUTRO</button>
+        </div>
+      `;
+      el.querySelector('[data-early-month-act="create"]').addEventListener('click',(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        createEarlyMonthSheetFromPrompt();
+      });
+      el.querySelector('[data-early-month-act="tomorrow"]').addEventListener('click',(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        askEarlyMonthTomorrow();
+      });
+      requestAnimationFrame(()=>el.classList.add('visible'));
+    }
+    function renderEarlyMonthResult(kind, title, subtitle){
+      const el = document.getElementById('earlyMonthModule');
+      if(!el) return;
+      earlyMonthPromptVisible = true;
+      el.className = `early-month-module ${kind === 'error' ? 'error' : 'success'}`;
+      el.setAttribute('aria-hidden', 'false');
+      el.innerHTML = `
+        <div class="early-month-content">
+          <div class="early-month-icon" aria-hidden="true">${kind === 'error' ? '&#9888;' : '&#9989;'}</div>
+          <div class="early-month-title">${escapeHtml(title)}</div>
+          <div class="early-month-subtitle">${escapeHtml(subtitle || '')}</div>
+        </div>
+      `;
+      el.addEventListener('click', dismissEarlyMonthResult, { once:true });
+      requestAnimationFrame(()=>el.classList.add('visible'));
+    }
+    function dismissEarlyMonthResult(e){
+      if(e){
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      fadeEarlyMonthModule(()=>{
+        earlyMonthPromptVisible = false;
+        earlyMonthRequestBusy = false;
+      });
+    }
+    function armEarlyMonthPrompt(data){
+      const today = todayISO();
+      earlyMonthPromptArmed = true;
+      earlyMonthPromptData = {
+        date:today,
+        targetName:String(data && data.targetName || ''),
+        daysRemaining:Number(data && data.daysRemaining)
+      };
+      earlyMonthAreaFreeSince = 0;
+      updateEarlyMonthState({
+        checkDate:today,
+        armedDate:today,
+        askTomorrowDate:'',
+        failedDate:'',
+        targetName:earlyMonthPromptData.targetName,
+        daysRemaining:earlyMonthPromptData.daysRemaining
+      });
+      reevaluateEarlyMonthPromptWatch();
+    }
+    function initializeEarlyMonthPrompt(){
+      const state = loadEarlyMonthState();
+      const today = todayISO();
+      if(state.armedDate === today &&
+          state.askTomorrowDate !== today &&
+          state.failedDate !== today &&
+          isEarlyMonthWindowToday()){
+        earlyMonthPromptArmed = true;
+        earlyMonthPromptData = {
+          date:today,
+          targetName:state.targetName,
+          daysRemaining:state.daysRemaining
+        };
+        reevaluateEarlyMonthPromptWatch();
+      }
+    }
+    async function requestEarlyMonthSheet(mode, cfg){
+      const activeCfg = cfg || getAutoSyncConfig();
+      if(!activeCfg) throw new Error('Brak konfiguracji Auto Sync.');
+      const response = await jsonpRequest(activeCfg.url, {
+        action:'nextMonthSheet',
+        mode:mode || 'check',
+        pin:activeCfg.pin,
+        date:todayISO(),
+        appVersion:appVersionLabel()
+      });
+      if(!response || response.ok !== true){
+        throw new Error(response && response.error ? response.error : 'Nie udało się sprawdzić zakładki nowego miesiąca.');
+      }
+      return response;
+    }
+    async function maybeCheckEarlyMonthSheetAfterOutgoingSync(cfg, source){
+      if(!isEarlyMonthWindowToday()) return;
+      const today = todayISO();
+      const state = loadEarlyMonthState();
+      if(state.checkDate === today || state.askTomorrowDate === today || state.failedDate === today) return;
+      if(earlyMonthRequestBusy) return;
+      earlyMonthRequestBusy = true;
+      try{
+        const response = await requestEarlyMonthSheet('check', cfg);
+        if(response.eligible === false) return;
+        if(response.exists === true){
+          disarmEarlyMonthPrompt({
+            checkDate:today,
+            askTomorrowDate:'',
+            failedDate:''
+          });
+          return;
+        }
+        armEarlyMonthPrompt(response);
+      }catch(e){
+        // A failed optional check must not disturb synchronization.
+      }finally{
+        earlyMonthRequestBusy = false;
+      }
+    }
+    function handleSuccessfulOutgoingSyncForEarlyMonth(cfg, snapshot, source){
+      setTimeout(()=>{
+        maybeCheckEarlyMonthSheetAfterOutgoingSync(cfg, source).catch(()=>{});
+      }, 0);
+    }
+    async function confirmAndShowEarlyMonthPrompt(){
+      if(!earlyMonthPromptArmed || earlyMonthPromptVisible || earlyMonthRequestBusy) return;
+      if(!isEarlyMonthPromptAreaFree()){
+        reevaluateEarlyMonthPromptWatch();
+        return;
+      }
+      earlyMonthRequestBusy = true;
+      try{
+        const response = await requestEarlyMonthSheet('check');
+        if(response.exists === true || response.eligible === false){
+          disarmEarlyMonthPrompt({
+            checkDate:todayISO(),
+            askTomorrowDate:'',
+            failedDate:''
+          });
+          return;
+        }
+        earlyMonthPromptData = {
+          date:todayISO(),
+          targetName:String(response.targetName || earlyMonthPromptData && earlyMonthPromptData.targetName || ''),
+          daysRemaining:Number(response.daysRemaining)
+        };
+        renderEarlyMonthPrompt(earlyMonthPromptData);
+      }catch(e){
+        earlyMonthAreaFreeSince = 0;
+        scheduleEarlyMonthAreaWatch(EARLY_MONTH_WATCH_RECHECK_MS);
+      }finally{
+        earlyMonthRequestBusy = false;
+      }
+    }
+    function askEarlyMonthTomorrow(){
+      const today = todayISO();
+      disarmEarlyMonthPrompt({
+        checkDate:today,
+        askTomorrowDate:today,
+        failedDate:''
+      });
+      fadeEarlyMonthModule(()=>{
+        earlyMonthPromptVisible = false;
+      });
+    }
+    async function createEarlyMonthSheetFromPrompt(){
+      if(earlyMonthRequestBusy) return;
+      const el = document.getElementById('earlyMonthModule');
+      earlyMonthRequestBusy = true;
+      if(el) el.classList.add('busy');
+      try{
+        const response = await requestEarlyMonthSheet('create');
+        if(response.exists !== true){
+          throw new Error(response.error || 'Zakładka nie została potwierdzona.');
+        }
+        const targetName = String(response.targetName || earlyMonthPromptData && earlyMonthPromptData.targetName || 'nowy miesiac');
+        disarmEarlyMonthPrompt({
+          checkDate:todayISO(),
+          askTomorrowDate:'',
+          failedDate:''
+        });
+        fadeEarlyMonthModule(()=>{
+          renderEarlyMonthResult('success', 'UTWORZONO ZAKŁADKĘ', targetName);
+        });
+      }catch(e){
+        const message = String(e && e.message || '').trim();
+        disarmEarlyMonthPrompt({
+          checkDate:todayISO(),
+          askTomorrowDate:'',
+          failedDate:todayISO()
+        });
+        fadeEarlyMonthModule(()=>{
+          renderEarlyMonthResult(
+            'error',
+            'NIE UDAŁO SIĘ UTWORZYĆ',
+            message ? `ZAKŁADKI NOWEGO MIESIĄCA: ${message}` : 'ZAKŁADKI NOWEGO MIESIĄCA'
+          );
+        });
+      }finally{
+        earlyMonthRequestBusy = false;
+        if(el) el.classList.remove('busy');
+      }
+    }
     function getLastLocalChangeAt(){
       return Number(localStorage.getItem(LS_LAST_LOCAL_CHANGE_AT) || 0);
     }
@@ -11280,6 +11740,7 @@ km priv: 0,00</div>
         const snapshot = buildSyncSnapshot(cfg.device);
         await sendAndVerifySyncSnapshot(cfg, snapshot, false);
         markVerifiedSyncUpload(snapshot);
+        handleSuccessfulOutgoingSyncForEarlyMonth(cfg, snapshot, 'manual_sync');
         playSyncSuccessSound();
         playSyncStandbySound();
         setAutoSyncIndicatorState('on');
@@ -11825,6 +12286,7 @@ km priv: 0,00</div>
         const snapshot = buildSyncSnapshot(cfg.device);
         await sendAndVerifySyncSnapshotWithFallback(cfg, snapshot, !!keepalive);
         markVerifiedSyncUpload(snapshot);
+        handleSuccessfulOutgoingSyncForEarlyMonth(cfg, snapshot, 'auto_sync_upload');
         playSyncSuccessSound();
         setAutoSyncIndicatorState('on');
       }catch(e){
@@ -11889,6 +12351,7 @@ km priv: 0,00</div>
         const snapshot = buildSyncSnapshot(cfg.device);
         await sendAndVerifySyncSnapshotWithFallback(cfg, snapshot, true);
         markVerifiedSyncUpload(snapshot);
+        handleSuccessfulOutgoingSyncForEarlyMonth(cfg, snapshot, 'auto_sync_hide');
         playSyncSuccessSound();
         playSyncStandbySound();
       }catch(e){
@@ -11949,8 +12412,11 @@ km priv: 0,00</div>
       if(document.visibilityState === 'visible'){
         autoSyncHiddenUploaded = false;
         syncWorkWakeLock();
+        reevaluateEarlyMonthPromptWatch();
         autoSyncCheckOnForeground('visible');
       } else if(document.visibilityState === 'hidden'){
+        earlyMonthAreaFreeSince = 0;
+        clearEarlyMonthAreaTimer();
         flushScheduledAutoSync('hidden');
       }
     });
@@ -11959,9 +12425,11 @@ km priv: 0,00</div>
     });
     window.addEventListener('pageshow', ()=>{
       autoSyncHiddenUploaded = false;
+      reevaluateEarlyMonthPromptWatch();
       autoSyncCheckOnForeground('pageshow');
     });
     window.addEventListener('focus', ()=>{
+      reevaluateEarlyMonthPromptWatch();
       autoSyncCheckOnForeground('focus');
     });
 
@@ -12454,6 +12922,7 @@ km priv: 0,00</div>
     renderAll();
     syncWorkWakeLock();
     updateAutoSyncIndicator();
+    initializeEarlyMonthPrompt();
     setTimeout(()=>verifyAppsScriptAfterStartup({ force:appVersionFreshlyChanged }), 500);
     setTimeout(()=>autoSyncCheckOnForeground('startup'), 1400);
     window.addEventListener('online', ()=>{
