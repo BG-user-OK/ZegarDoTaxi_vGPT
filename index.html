@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.16.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.16.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -589,6 +589,8 @@
       text-shadow:0 0 8px rgba(46,204,113,.78);
     }
     .auto-sync-indicator{
+      --auto-sync-scheduled-orange:#ff7a00;
+      --auto-sync-progress-angle:0deg;
       position:fixed;
       top:35px;
       right:20px;
@@ -626,7 +628,13 @@
     }
     .auto-sync-indicator.scheduled{
       opacity:1;
-      background:#ff7a00;
+      background-color:var(--auto-sync-scheduled-orange);
+      background:
+        conic-gradient(
+          from -90deg,
+          #000 0deg var(--auto-sync-progress-angle),
+          var(--auto-sync-scheduled-orange) var(--auto-sync-progress-angle) 360deg
+        );
       box-shadow:
         0 0 0 1px rgba(255,154,31,.55),
         0 0 12px rgba(255,122,0,.95),
@@ -4179,7 +4187,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.16.0</div>
+    <div class="version">v6.16.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -10271,7 +10279,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.16.0';
+      return el ? el.textContent.trim() : 'v6.16.1';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -10958,9 +10966,50 @@ km priv: 0,00</div>
         if(current) current.classList.add('green-faded');
       }, AUTO_SYNC_GREEN_VISIBLE_MS);
     }
+    function stopAutoSyncScheduledProgress(reset=true){
+      if(autoSyncScheduledAnimationFrame){
+        cancelAnimationFrame(autoSyncScheduledAnimationFrame);
+        autoSyncScheduledAnimationFrame = null;
+      }
+      if(reset){
+        autoSyncScheduledDelayMs = 0;
+        autoSyncScheduledDeadlineAt = 0;
+        const el = document.getElementById('autoSyncIndicator');
+        if(el) el.style.setProperty('--auto-sync-progress-angle', '0deg');
+      }
+    }
+    function renderAutoSyncScheduledProgress(){
+      if(autoSyncIndicatorState !== 'scheduled' || !autoSyncScheduledDelayMs || !autoSyncScheduledDeadlineAt){
+        stopAutoSyncScheduledProgress();
+        return;
+      }
+      const el = document.getElementById('autoSyncIndicator');
+      if(!el){
+        stopAutoSyncScheduledProgress();
+        return;
+      }
+      const elapsed = Math.max(0, Math.min(autoSyncScheduledDelayMs, Date.now() - autoSyncScheduledAt));
+      const angle = Math.max(0, Math.min(360, (elapsed / autoSyncScheduledDelayMs) * 360));
+      el.style.setProperty('--auto-sync-progress-angle', `${angle.toFixed(2)}deg`);
+      if(angle < 360){
+        autoSyncScheduledAnimationFrame = requestAnimationFrame(renderAutoSyncScheduledProgress);
+      } else {
+        autoSyncScheduledAnimationFrame = null;
+      }
+    }
+    function startAutoSyncScheduledProgress(delayMs){
+      stopAutoSyncScheduledProgress(false);
+      autoSyncScheduledDelayMs = Math.max(0, Number(delayMs) || 0);
+      autoSyncScheduledDeadlineAt = autoSyncScheduledAt + autoSyncScheduledDelayMs;
+      const el = document.getElementById('autoSyncIndicator');
+      if(el) el.style.setProperty('--auto-sync-progress-angle', '0deg');
+      if(autoSyncIndicatorState !== 'scheduled' || !autoSyncScheduledDelayMs) return;
+      autoSyncScheduledAnimationFrame = requestAnimationFrame(renderAutoSyncScheduledProgress);
+    }
     function setAutoSyncIndicatorState(state, reason){
       const previousState = autoSyncIndicatorState;
       autoSyncIndicatorState = state || 'off';
+      if(autoSyncIndicatorState !== 'scheduled') stopAutoSyncScheduledProgress();
       const importantState = ['checking','scheduled','downloading','applied','frozen'].includes(autoSyncIndicatorState);
       if(importantState || (autoSyncIndicatorState === 'on' && previousState && previousState !== 'on')){
         clearAutoSyncGreenFade();
@@ -11018,6 +11067,9 @@ km priv: 0,00</div>
     let autoSyncUploadTimer = null;
     let autoSyncScheduledReason = '';
     let autoSyncScheduledAt = 0;
+    let autoSyncScheduledDelayMs = 0;
+    let autoSyncScheduledDeadlineAt = 0;
+    let autoSyncScheduledAnimationFrame = null;
     let autoSyncOverlayDirty = false;
     let autoSyncOverlayDirtyReason = '';
     let lastAutoSyncForegroundCheckAt = 0;
@@ -11434,6 +11486,7 @@ km priv: 0,00</div>
       autoSyncUploadTimer = null;
       autoSyncScheduledReason = '';
       autoSyncScheduledAt = 0;
+      stopAutoSyncScheduledProgress();
       if(setIdle && isAutoSyncEnabled() && autoSyncIndicatorState === 'scheduled'){
         setAutoSyncIndicatorState('on');
       }
@@ -11459,6 +11512,7 @@ km priv: 0,00</div>
       autoSyncScheduledReason = reason || 'state_change';
       autoSyncScheduledAt = Date.now();
       setAutoSyncIndicatorState('scheduled');
+      startAutoSyncScheduledProgress(delayMs);
       autoSyncUploadTimer = setTimeout(()=>{
         performScheduledAutoSyncUpload(autoSyncScheduledReason || 'debounced', false);
       }, delayMs);
