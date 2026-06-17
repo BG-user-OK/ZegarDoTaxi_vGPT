@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.17.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.17.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -274,6 +274,18 @@
       width:min(97vw, 67vh); aspect-ratio:1/1;
       position:relative; display:flex; align-items:center; justify-content:center;
       margin:8px 0;
+    }
+    .clock-wrap::before{
+      content:'';
+      position:absolute;
+      left:6.5217%;
+      top:6.5217%;
+      width:86.9565%;
+      height:86.9565%;
+      border-radius:50%;
+      background:#000;
+      pointer-events:none;
+      z-index:0;
     }
     .uber-reminder-zone{
       position:absolute;
@@ -4260,7 +4272,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.17.0</div>
+    <div class="version">v6.17.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -10534,7 +10546,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.17.0';
+      return el ? el.textContent.trim() : 'v6.17.1';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
