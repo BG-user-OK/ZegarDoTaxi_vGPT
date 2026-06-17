@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.16.2: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.17.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -82,6 +82,7 @@
       touch-action: manipulation;
     }
     html,body{ margin:0; padding:0; width:100%; height:100%; background:#000; color:var(--txt); font-family:Arial, Helvetica, sans-serif; overflow:hidden; }
+    body.uber-reminder-active{ background:#ff1010; }
     body{ display:flex; align-items:center; justify-content:center; }
 
     .app{
@@ -90,6 +91,9 @@
       align-items:center; justify-content:space-between;
       padding:6px 8px 30px;
       gap:6px; position:relative; background:#000;
+    }
+    .app.uber-reminder-active{
+      background:#ff1010;
     }
 
     .notes-bar{
@@ -270,6 +274,69 @@
       width:min(97vw, 67vh); aspect-ratio:1/1;
       position:relative; display:flex; align-items:center; justify-content:center;
       margin:8px 0;
+    }
+    .uber-reminder-zone{
+      position:absolute;
+      left:0;
+      top:0;
+      width:0;
+      height:0;
+      border:none;
+      border-radius:12px;
+      padding:0;
+      margin:0;
+      background:transparent;
+      color:#fff;
+      z-index:18;
+      display:block;
+      opacity:1;
+      pointer-events:auto;
+      touch-action:manipulation;
+      overflow:visible;
+      outline:none;
+      appearance:none;
+      -webkit-appearance:none;
+    }
+    .uber-reminder-zone.blocked{
+      pointer-events:none;
+    }
+    .uber-reminder-zone[hidden]{
+      display:none;
+    }
+    .uber-reminder-confirm-target{
+      display:none;
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:var(--uber-target-size, 96px);
+      height:var(--uber-target-size, 96px);
+      transform:translate(-50%,-50%);
+      align-items:center;
+      justify-content:center;
+      border-radius:50%;
+      overflow:hidden;
+      pointer-events:none;
+    }
+    .uber-reminder-zone.arming .uber-reminder-confirm-target{
+      display:flex;
+    }
+    .uber-reminder-letter{
+      position:relative;
+      z-index:1;
+      font-size:calc(var(--uber-target-size, 96px) * .74);
+      line-height:1;
+      font-weight:1000;
+      color:#fff;
+      text-shadow:0 0 12px rgba(255,255,255,.8), 0 0 24px rgba(255,255,255,.38);
+    }
+    .uber-reminder-confirm-target::after{
+      content:'';
+      position:absolute;
+      inset:0;
+      z-index:2;
+      background:conic-gradient(from -90deg, #000 0deg var(--uber-progress-angle, 0deg), transparent var(--uber-progress-angle, 0deg) 360deg);
+      border-radius:50%;
+      pointer-events:none;
     }
     .clock-svg{ width:100%; height:100%; display:block; overflow:visible; }
     /* Punkty 4+5: druga warstwa SVG NAD cyframi godzin - dla strzałki i kropki minut */
@@ -4071,6 +4138,12 @@
       </svg>
     </div>
 
+    <button class="uber-reminder-zone" id="uberReminderZone" type="button" aria-label="Uzbrój przypomnienie Uber">
+      <span class="uber-reminder-confirm-target" id="uberReminderConfirmTarget" aria-hidden="true">
+        <span class="uber-reminder-letter">U</span>
+      </span>
+    </button>
+
     <div class="controls">
       <button class="btn work-btn" id="workBtn" type="button">
         <div class="lp-ring"></div>
@@ -4187,7 +4260,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.16.2</div>
+    <div class="version">v6.17.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -4210,11 +4283,13 @@
     const LS_SHARED_DATA_CONFLICTS = 'tarcza_shared_data_conflicts_v1';
     const LS_SHARED_DATA_VERIFIED_HASH = 'tarcza_shared_data_verified_hash_v1';
     const LS_EARLY_MONTH_SHEET = 'tarcza_early_month_sheet_v1';
+    const LS_UBER_REMINDER_ACTIVE = 'tarcza_uber_reminder_active_v1';
     const FINAL_BREAK_NO_WORK_THRESHOLD_MIN = 2;
     const AI_PASTE_HOLD_MS = 2000;
     const EARLY_MONTH_WINDOW_DAYS = 7;
     const EARLY_MONTH_FREE_AREA_MS = 30000;
     const EARLY_MONTH_WATCH_RECHECK_MS = 1000;
+    const UBER_REMINDER_ARM_MS = 60000;
 
     const PROVIDERS = [
       { key:'uber',    label:'UBER',    bg:'#000000', fg:'#ffffff' },
@@ -4288,6 +4363,10 @@
     let blinkState = false;
     let syncApplyInProgress = false;
     let postWorkVerification = null;
+    let uberReminderState = 'idle';
+    let uberReminderArmStartedAt = 0;
+    let uberReminderArmTimer = null;
+    let uberReminderArmFrame = null;
 
     function normalizeForSyncCompare(value, key){
       if(Array.isArray(value)) return value.map(v=>normalizeForSyncCompare(v, key));
@@ -7338,6 +7417,7 @@
       renderDate();
       updateDrivingFocusFade();
       renderBattery();
+      renderUberReminder();
       reevaluateEarlyMonthPromptWatch();
     }
 
@@ -7500,6 +7580,181 @@
       if(pendingEndWorkExport) abortPendingEndWorkReview();
       else closeOverlayToMain('overlay_close');
     });
+
+    function loadUberReminderState(){
+      clearUberReminderArmingTimers();
+      uberReminderState = localStorage.getItem(LS_UBER_REMINDER_ACTIVE) === '1' ? 'active' : 'idle';
+      uberReminderArmStartedAt = 0;
+      renderUberReminder();
+    }
+    function saveUberReminderActive(active){
+      try{
+        if(active) localStorage.setItem(LS_UBER_REMINDER_ACTIVE, '1');
+        else localStorage.removeItem(LS_UBER_REMINDER_ACTIVE);
+      }catch(e){}
+    }
+    function clearUberReminderArmingTimers(){
+      clearTimeout(uberReminderArmTimer);
+      uberReminderArmTimer = null;
+      cancelAnimationFrame(uberReminderArmFrame);
+      uberReminderArmFrame = null;
+    }
+    function isMainScreenVisibleForUberReminder(){
+      const endOverlay = document.getElementById('endConfirmOverlay');
+      return !overlay.classList.contains('show') &&
+             (!endOverlay || endOverlay.classList.contains('hidden')) &&
+             !endConfirmActive;
+    }
+    function getUberReminderZoneRect(){
+      const app = document.querySelector('.app');
+      const clock = document.querySelector('.clock-wrap');
+      const controls = document.querySelector('.controls');
+      const work = document.getElementById('workBtn');
+      if(!app || !clock || !controls || !work) return null;
+      const appRect = app.getBoundingClientRect();
+      const clockRect = clock.getBoundingClientRect();
+      const controlsRect = controls.getBoundingClientRect();
+      const workRect = work.getBoundingClientRect();
+      if(!appRect.width || !appRect.height || !workRect.width || !workRect.height) return null;
+
+      const landscape = window.matchMedia('(orientation: landscape) and (max-height:620px) and (pointer:coarse)').matches;
+      let left = workRect.left;
+      let top = clockRect.bottom + 2;
+      let width = workRect.width;
+      let height = workRect.top - 2 - top;
+
+      if(landscape){
+        const topGapTop = appRect.top + 8;
+        const topGapBottom = workRect.top - 4;
+        const topGapHeight = topGapBottom - topGapTop;
+        if(topGapHeight >= 28){
+          top = topGapTop;
+          height = topGapHeight;
+        } else {
+          const notes = document.getElementById('notesBar');
+          const notesRect = notes ? notes.getBoundingClientRect() : { left:appRect.right, right:appRect.right };
+          const candidates = [
+            { left:controlsRect.right + 4, right:clockRect.left - 4 },
+            { left:clockRect.right + 4, right:notesRect.left - 4 },
+            { left:appRect.left + 8, right:workRect.left - 4 }
+          ].map(item=>Object.assign(item, { width:item.right - item.left }))
+           .sort((a,b)=>b.width-a.width);
+          const best = candidates[0];
+          if(!best || best.width < 32) return null;
+          left = best.left;
+          width = Math.min(best.width, Math.max(48, workRect.width));
+          height = Math.min(110, Math.max(32, clockRect.height * .24));
+          top = Math.min(appRect.bottom - height - 8, Math.max(appRect.top + 8, clockRect.top + clockRect.height * .66));
+        }
+      }
+
+      const maxLeft = appRect.right - width - 4;
+      left = Math.max(appRect.left + 4, Math.min(left, maxLeft));
+      top = Math.max(appRect.top + 4, Math.min(top, appRect.bottom - height - 4));
+      if(width < 32 || height < 22) return null;
+      return {
+        left:left - appRect.left,
+        top:top - appRect.top,
+        width,
+        height
+      };
+    }
+    function positionUberReminderZone(){
+      const zone = document.getElementById('uberReminderZone');
+      if(!zone) return null;
+      const rect = getUberReminderZoneRect();
+      if(!rect){
+        zone.hidden = true;
+        return null;
+      }
+      zone.hidden = false;
+      zone.style.left = `${rect.left}px`;
+      zone.style.top = `${rect.top}px`;
+      zone.style.width = `${rect.width}px`;
+      zone.style.height = `${rect.height}px`;
+      const targetSize = Math.max(32, Math.min(128, rect.width, rect.height));
+      zone.style.setProperty('--uber-target-size', `${targetSize}px`);
+      return rect;
+    }
+    function renderUberReminder(){
+      const app = document.querySelector('.app');
+      const zone = document.getElementById('uberReminderZone');
+      const target = document.getElementById('uberReminderConfirmTarget');
+      const active = uberReminderState === 'active';
+      document.body.classList.toggle('uber-reminder-active', active);
+      if(app) app.classList.toggle('uber-reminder-active', active);
+      if(!zone) return;
+      positionUberReminderZone();
+      zone.classList.toggle('arming', uberReminderState === 'arming');
+      zone.classList.toggle('active', active);
+      zone.classList.toggle('blocked', !isMainScreenVisibleForUberReminder());
+      zone.setAttribute('aria-label',
+        uberReminderState === 'arming' ? 'Potwierdz przypomnienie Uber' :
+        active ? 'Wylacz przypomnienie Uber' :
+        'Uzbroj przypomnienie Uber'
+      );
+      if(target) target.setAttribute('aria-hidden', uberReminderState === 'arming' ? 'false' : 'true');
+      if(uberReminderState !== 'arming'){
+        zone.style.setProperty('--uber-progress-angle', '0deg');
+      }
+    }
+    function tickUberReminderArming(){
+      const zone = document.getElementById('uberReminderZone');
+      if(uberReminderState !== 'arming' || !zone) return;
+      const progress = Math.max(0, Math.min(1, (Date.now() - uberReminderArmStartedAt) / UBER_REMINDER_ARM_MS));
+      zone.style.setProperty('--uber-progress-angle', `${progress * 360}deg`);
+      if(progress < 1){
+        uberReminderArmFrame = requestAnimationFrame(tickUberReminderArming);
+      }
+    }
+    function startUberReminderArming(){
+      if(uberReminderState !== 'idle') return;
+      clearUberReminderArmingTimers();
+      uberReminderState = 'arming';
+      uberReminderArmStartedAt = Date.now();
+      renderUberReminder();
+      tickUberReminderArming();
+      uberReminderArmTimer = setTimeout(()=>{
+        if(uberReminderState !== 'arming') return;
+        clearUberReminderArmingTimers();
+        uberReminderState = 'idle';
+        uberReminderArmStartedAt = 0;
+        renderUberReminder();
+      }, UBER_REMINDER_ARM_MS);
+    }
+    function activateUberReminder(){
+      clearUberReminderArmingTimers();
+      uberReminderState = 'active';
+      uberReminderArmStartedAt = 0;
+      saveUberReminderActive(true);
+      renderUberReminder();
+    }
+    function disableUberReminder(){
+      clearUberReminderArmingTimers();
+      uberReminderState = 'idle';
+      uberReminderArmStartedAt = 0;
+      saveUberReminderActive(false);
+      renderUberReminder();
+    }
+    function isPointInsideUberConfirmTarget(e){
+      const target = document.getElementById('uberReminderConfirmTarget');
+      if(!target) return false;
+      const rect = target.getBoundingClientRect();
+      return e.clientX >= rect.left && e.clientX <= rect.right &&
+             e.clientY >= rect.top && e.clientY <= rect.bottom;
+    }
+    function handleUberReminderZoneClick(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if(!isMainScreenVisibleForUberReminder()) return;
+      if(uberReminderState === 'idle'){
+        startUberReminderArming();
+      } else if(uberReminderState === 'arming'){
+        if(isPointInsideUberConfirmTarget(e)) activateUberReminder();
+      } else if(uberReminderState === 'active'){
+        disableUberReminder();
+      }
+    }
 
     const DRIVING_FOCUS_VISIBLE_MS = 2 * 60 * 1000;
     const DRIVING_FOCUS_RESTORE_TOUCH_LOCK_MS = 1000;
@@ -10279,7 +10534,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.16.2';
+      return el ? el.textContent.trim() : 'v6.17.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -13042,10 +13297,14 @@ km priv: 0,00</div>
         openWorkMenu();
       }
     });
+    document.getElementById('uberReminderZone').addEventListener('click', handleUberReminderZoneClick);
+    window.addEventListener('resize', renderUberReminder);
+    window.addEventListener('orientationchange', ()=>setTimeout(renderUberReminder, 180));
 
     // ===== init =====
     initializeAppVersionTracking();
     loadState();
+    loadUberReminderState();
     loadPostWorkVerification();
     initializeDailyExportStatus();
     initializeSyncTracking();
