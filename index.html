@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.16.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.16.2: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -4187,7 +4187,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.16.1</div>
+    <div class="version">v6.16.2</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -5405,7 +5405,7 @@
       if(result){
         showToast('Eksport z nadpisaniem potwierdzony.', 'ok');
         if(isAutoSyncEnabled()) setAutoSyncIndicatorState('on');
-        scheduleAutoSyncUpload('end_work_overwrite_confirmed', { immediate:true });
+        scheduleAutoSyncUpload('end_work_overwrite_confirmed', { immediate:true, forceFinalSync:true });
       } else {
         showToast('Eksport z nadpisaniem nie powiódł się.', 'err');
       }
@@ -10053,7 +10053,7 @@ km priv: 0,00</div>
         showToast('Dane tej dniówki już istnieją w Arkuszu.', 'err');
       } else if(ok){
         showToast('Eksport OK. Dane pozostaja na ekranie.','ok');
-        scheduleAutoSyncUpload('end_work_final_sync', { immediate:true });
+        scheduleAutoSyncUpload('end_work_final_sync', { immediate:true, forceFinalSync:true });
         renderAll();
       } else {
         saveState();
@@ -10279,7 +10279,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.16.1';
+      return el ? el.textContent.trim() : 'v6.16.2';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -10703,6 +10703,13 @@ km priv: 0,00</div>
       }
     }
     function isAutoSyncEnabled(){ return localStorage.getItem(LS_AUTO_SYNC_ENABLED) === '1'; }
+    function isForcedFinalSyncReason(reason){
+      const value = String(reason || '');
+      return value === 'end_work_final_sync' || value === 'end_work_overwrite_confirmed';
+    }
+    function shouldForceFinalSync(reason, options={}){
+      return options.forceFinalSync === true && isForcedFinalSyncReason(reason);
+    }
     function setAutoSyncEnabled(on){
       localStorage.setItem(LS_AUTO_SYNC_ENABLED, on ? '1' : '0');
       if(!on) clearAutoSyncSchedule(false);
@@ -11030,7 +11037,7 @@ km priv: 0,00</div>
       if(!el) return;
       el.className = 'auto-sync-indicator';
       el.innerHTML = '';
-      if(!isAutoSyncEnabled()){
+      if(!isAutoSyncEnabled() && !autoSyncForcedFinalSyncActive){
         autoSyncIndicatorState = 'off';
       } else if((!localStorage.getItem(LS_SYNC_DEVICE) || autoSyncIndicatorState === 'frozen') && !autoSyncFrozenAcknowledged){
         autoSyncIndicatorState = 'frozen';
@@ -11066,6 +11073,8 @@ km priv: 0,00</div>
     let autoSyncGreenFaded = false;
     let autoSyncUploadTimer = null;
     let autoSyncScheduledReason = '';
+    let autoSyncScheduledForceFinalSync = false;
+    let autoSyncForcedFinalSyncActive = false;
     let autoSyncScheduledAt = 0;
     let autoSyncScheduledDelayMs = 0;
     let autoSyncScheduledDeadlineAt = 0;
@@ -11485,6 +11494,7 @@ km priv: 0,00</div>
       clearTimeout(autoSyncUploadTimer);
       autoSyncUploadTimer = null;
       autoSyncScheduledReason = '';
+      autoSyncScheduledForceFinalSync = false;
       autoSyncScheduledAt = 0;
       stopAutoSyncScheduledProgress();
       if(setIdle && isAutoSyncEnabled() && autoSyncIndicatorState === 'scheduled'){
@@ -11492,17 +11502,21 @@ km priv: 0,00</div>
       }
     }
     function scheduleAutoSyncUpload(reason, options={}){
-      if(!isAutoSyncEnabled()) return;
+      const forceFinalSync = shouldForceFinalSync(reason, options);
+      if(!isAutoSyncEnabled() && !forceFinalSync) return;
       if(pendingEndWorkExport) return;
       if(syncApplyInProgress) return;
       if(isDailyExportOverwriteBlocked()){
         setAutoSyncIndicatorState('frozen', 'Eksport dniówki czeka na ręczną decyzję o nadpisaniu danych w Arkuszu.');
         return;
       }
-      if(autoSyncIndicatorState === 'frozen' && !autoSyncFrozenAcknowledged) return;
-      if(!hasPendingDailyExport() && !hasUnuploadedLocalChanges() && !hasUnverifiedSharedDataChanges()) return;
-      const cfg = getAutoSyncConfig();
-      if(!cfg) return;
+      if(autoSyncIndicatorState === 'frozen' && !autoSyncFrozenAcknowledged && !forceFinalSync) return;
+      if(forceFinalSync){
+        if(isCurrentFinalSyncVerified() && !hasUnuploadedLocalChanges() && !hasUnverifiedSharedDataChanges()) return;
+      } else if(!hasPendingDailyExport() && !hasUnuploadedLocalChanges() && !hasUnverifiedSharedDataChanges()){
+        return;
+      }
+      if(!forceFinalSync && !getAutoSyncConfig()) return;
       const immediate = options.immediate === true;
       const activeWorkday = startWorkMinutes !== null && endWorkMinutes === null;
       const delayMs = immediate
@@ -11510,11 +11524,14 @@ km priv: 0,00</div>
         : (activeWorkday ? AUTO_SYNC_ACTIVE_WORK_DEBOUNCE_MS : AUTO_SYNC_DEFAULT_DEBOUNCE_MS);
       clearTimeout(autoSyncUploadTimer);
       autoSyncScheduledReason = reason || 'state_change';
+      autoSyncScheduledForceFinalSync = forceFinalSync;
+      if(forceFinalSync) autoSyncForcedFinalSyncActive = true;
       autoSyncScheduledAt = Date.now();
       setAutoSyncIndicatorState('scheduled');
       startAutoSyncScheduledProgress(delayMs);
+      const scheduledForceFinalSync = forceFinalSync;
       autoSyncUploadTimer = setTimeout(()=>{
-        performScheduledAutoSyncUpload(autoSyncScheduledReason || 'debounced', false);
+        performScheduledAutoSyncUpload(autoSyncScheduledReason || 'debounced', false, { forceFinalSync:scheduledForceFinalSync });
       }, delayMs);
     }
     function markAutoSyncOverlayDirty(reason){
@@ -12287,20 +12304,51 @@ km priv: 0,00</div>
       }
     }
 
-    async function performScheduledAutoSyncUpload(reason, keepalive){
+    async function performScheduledAutoSyncUpload(reason, keepalive, options={}){
+      const forceFinalSync = shouldForceFinalSync(reason, options);
       clearAutoSyncSchedule(false);
-      if(!isAutoSyncEnabled()) return;
-      if(pendingEndWorkExport) return;
-      if(autoSyncBusy){
-        if(document.visibilityState === 'visible') scheduleAutoSyncUpload(reason || 'busy_retry');
+      if(forceFinalSync) autoSyncForcedFinalSyncActive = true;
+      if(!isAutoSyncEnabled() && !forceFinalSync) return;
+      if(pendingEndWorkExport){
+        if(forceFinalSync) autoSyncForcedFinalSyncActive = false;
         return;
       }
-      const cfg = getAutoSyncConfig();
-      if(!cfg) return;
-      if(!await ensureAppsScriptCompatibility(cfg.url, { notify:false })) return;
+      if(autoSyncBusy){
+        if(document.visibilityState === 'visible') scheduleAutoSyncUpload(reason || 'busy_retry', {
+          immediate:forceFinalSync,
+          forceFinalSync
+        });
+        else if(forceFinalSync) autoSyncForcedFinalSyncActive = false;
+        return;
+      }
+      const cfg = forceFinalSync
+        ? getSyncConfig(true, { pinMessage:'PIN synchronizacji jest wymagany do koncowej synchronizacji dniowki.' })
+        : getAutoSyncConfig();
+      if(!cfg){
+        if(forceFinalSync){
+          setPostWorkVerificationState('sync', 'error', {
+            message:'Brak konfiguracji lub PIN-u koncowej synchronizacji.'
+          });
+          autoSyncForcedFinalSyncActive = false;
+          if(!isAutoSyncEnabled()) setAutoSyncIndicatorState('off');
+        }
+        return;
+      }
+      if(!await ensureAppsScriptCompatibility(cfg.url, { notify:false })){
+        if(forceFinalSync){
+          setPostWorkVerificationState('sync', 'error', {
+            message:'Nie udalo sie potwierdzic zgodnosci Apps Script dla koncowej synchronizacji.'
+          });
+          autoSyncForcedFinalSyncActive = false;
+          if(!isAutoSyncEnabled()) setAutoSyncIndicatorState('off');
+        }
+        return;
+      }
       const pendingDailyExportBeforeUpload = hasPendingDailyExport();
-      if(!pendingDailyExportBeforeUpload && !hasUnuploadedLocalChanges() && !hasUnverifiedSharedDataChanges()){
-        setAutoSyncIndicatorState('on');
+      if(!pendingDailyExportBeforeUpload && !hasUnuploadedLocalChanges() && !hasUnverifiedSharedDataChanges() &&
+          (!forceFinalSync || isCurrentFinalSyncVerified())){
+        if(forceFinalSync) autoSyncForcedFinalSyncActive = false;
+        setAutoSyncIndicatorState(isAutoSyncEnabled() ? 'on' : 'off');
         return;
       }
       autoSyncBusy = true;
@@ -12314,11 +12362,21 @@ km priv: 0,00</div>
             const cloudChange = Number(candidate.lastLocalChangeAt || candidate.savedAtMs || 0);
             if(cloudChange > getLastLocalChangeAt()){
               markCloudSeen(candidate);
+              if(forceFinalSync){
+                setPostWorkVerificationState('sync', 'error', {
+                  message:'Koncowa synchronizacja zatrzymana: w chmurze jest nowszy stan z innego telefonu.'
+                });
+              }
               setAutoSyncIndicatorState('frozen', 'W chmurze jest nowszy stan z innego telefonu. Automatyczna wysylka zostala zatrzymana, zeby nie nadpisac danych.');
               showToast('Auto Sync zatrzymany - nowszy stan w chmurze.', 'err');
               return;
             }
             if(autoSyncConflictWithCloud(candidate)){
+              if(forceFinalSync){
+                setPostWorkVerificationState('sync', 'error', {
+                  message:'Koncowa synchronizacja zatrzymana przez ryzyko konfliktu z chmura.'
+                });
+              }
               setAutoSyncIndicatorState('frozen', 'Wykryto ryzyko konfliktu: inny telefon zapisal stan, a ten telefon ma niewyslane zmiany.');
               showToast('Konflikt synchronizacji - uzyj recznej synchronizacji.', 'err');
               return;
@@ -12342,25 +12400,48 @@ km priv: 0,00</div>
         markVerifiedSyncUpload(snapshot);
         handleSuccessfulOutgoingSyncForEarlyMonth(cfg, snapshot, 'auto_sync_upload');
         playSyncSuccessSound();
-        setAutoSyncIndicatorState('on');
+        setAutoSyncIndicatorState(isAutoSyncEnabled() ? 'on' : 'off');
       }catch(e){
         if(e && e.sharedDataConflict){
+          if(forceFinalSync){
+            setPostWorkVerificationState('sync', 'error', {
+              message:'Koncowa synchronizacja zatrzymana przez konflikt notatek.'
+            });
+          }
           setAutoSyncIndicatorState('frozen', 'Notatki wymagają decyzji: telefon, Arkusz albo obie wersje.');
         } else if(e && e.sharedDataRetryable){
-          setAutoSyncIndicatorState('on');
-          scheduleAutoSyncUpload('shared_data_retry');
+          if(forceFinalSync){
+            setPostWorkVerificationState('sync', 'error', {
+              message:'Nie udalo sie zapisac notatek lub emotikon podczas koncowej synchronizacji.'
+            });
+            setAutoSyncIndicatorState('frozen', 'Nie udalo sie zapisac notatek lub emotikon. Uzyj synchronizacji recznej.');
+          } else {
+            setAutoSyncIndicatorState('on');
+            scheduleAutoSyncUpload('shared_data_retry');
+          }
         } else {
+          if(forceFinalSync){
+            setPostWorkVerificationState('sync', 'error', {
+              message:'Koncowa synchronizacja nie powiodla sie.'
+            });
+          }
           setAutoSyncIndicatorState('frozen', 'Automatyczna wysylka synchronizacji nie powiodla sie. Sprawdz polaczenie albo uzyj synchronizacji recznej.');
         }
       }finally{
         autoSyncBusy = false;
+        if(forceFinalSync){
+          autoSyncForcedFinalSyncActive = false;
+          if(!isAutoSyncEnabled() && autoSyncIndicatorState === 'on'){
+            setAutoSyncIndicatorState('off');
+          }
+        }
       }
     }
 
     function flushScheduledAutoSync(reason){
-      if(!isAutoSyncEnabled()) return;
+      if(!isAutoSyncEnabled() && !autoSyncScheduledForceFinalSync) return;
       if(!autoSyncUploadTimer && !autoSyncScheduledReason) return;
-      performScheduledAutoSyncUpload(reason || autoSyncScheduledReason || 'flush', true);
+      performScheduledAutoSyncUpload(reason || autoSyncScheduledReason || 'flush', true, { forceFinalSync:autoSyncScheduledForceFinalSync });
     }
 
     async function autoSyncUploadOnHide(reason){
