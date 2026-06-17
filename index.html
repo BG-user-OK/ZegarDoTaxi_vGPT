@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.17.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.17.2: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -4272,7 +4272,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.17.1</div>
+    <div class="version">v6.17.2</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -4314,6 +4314,10 @@
       { key:'other',   label:'INNE',    bg:'#555555', fg:'#ffffff' },
       { key:'swinka',  label:'ŚWINKA',  bg:'#f7a7c7', fg:'#2b0715' }
     ];
+    const DISPLAY_TOTAL_EXCLUDED_PROVIDER_KEYS = new Set(['swinka']);
+    function isDisplayedRevenueProviderKey(key){
+      return !DISPLAY_TOTAL_EXCLUDED_PROVIDER_KEYS.has(String(key || ''));
+    }
 
     let startWorkMinutes = null;
     let endWorkMinutes = null;
@@ -7008,7 +7012,13 @@
       }
     }
 
-    function getTotalRevenueGroszy(){ let s=0; for(const p of PROVIDERS) s+=revenues[p.key]||0; return s; }
+    function getTotalRevenueGroszy(){
+      let s=0;
+      for(const p of PROVIDERS){
+        if(isDisplayedRevenueProviderKey(p.key)) s+=revenues[p.key]||0;
+      }
+      return s;
+    }
 
     function renderMoneyButton(){
       const controls=document.querySelector('.controls');
@@ -8407,7 +8417,7 @@
     }
     function moneyDraftTotal(){
       if(!moneyPanelDraft) return getTotalRevenueGroszy();
-      return PROVIDERS.reduce((sum,p)=>sum+(moneyPanelDraft.values[p.key]||0),0);
+      return PROVIDERS.reduce((sum,p)=>sum+(isDisplayedRevenueProviderKey(p.key) ? (moneyPanelDraft.values[p.key]||0) : 0),0);
     }
     function moneyDraftInputValue(){
       if(!moneyPanelDraft) return 0;
@@ -10546,7 +10556,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.17.1';
+      return el ? el.textContent.trim() : 'v6.17.2';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
