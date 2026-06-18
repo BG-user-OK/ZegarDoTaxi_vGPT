@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.17.3: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.17.4: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -4277,7 +4277,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.17.3</div>
+    <div class="version">v6.17.4</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -7784,7 +7784,6 @@
     }
 
     const DRIVING_FOCUS_VISIBLE_MS = 2 * 60 * 1000;
-    const DRIVING_FOCUS_RESTORE_TOUCH_LOCK_MS = 1000;
     let drivingFocusTimer = null;
     let drivingFocusFaded = false;
 
@@ -7870,7 +7869,6 @@
       setDrivingFocusInstantRestore(true);
       drivingFocusFaded = false;
       setDrivingFocusVisual(false);
-      lockViewTouch(DRIVING_FOCUS_RESTORE_TOUCH_LOCK_MS);
       const controls = document.querySelector('.controls');
       if(controls) void controls.offsetHeight;
       const startLine = document.querySelector('.date-work-start');
@@ -7889,20 +7887,37 @@
       }
     }
     let drivingFocusRestoredAt = 0;
-    let drivingFocusTouchLockedUntil = 0;
+    let drivingFocusRestoredPointerId = null;
+    let drivingFocusRestoredClickTarget = null;
+    function clearDrivingFocusRestoredTap(){
+      drivingFocusRestoredPointerId = null;
+      drivingFocusRestoredClickTarget = null;
+    }
     function interceptDrivingFocusFadedTarget(e){
       const target = e.currentTarget;
       if(drivingFocusFaded && target && target.classList.contains('driving-focus-faded')){
         e.preventDefault();
         e.stopImmediatePropagation();
         drivingFocusRestoredAt = Date.now();
-        drivingFocusTouchLockedUntil = drivingFocusRestoredAt + DRIVING_FOCUS_RESTORE_TOUCH_LOCK_MS;
+        drivingFocusRestoredPointerId = e.pointerId;
+        drivingFocusRestoredClickTarget = target;
+        if(e.pointerId !== undefined) blockedViewPointers.add(e.pointerId);
         restoreDrivingFocusFade(true);
         return;
       }
-      if(drivingFocusTouchLockedUntil && Date.now() < drivingFocusTouchLockedUntil){
+      if(e.type === 'pointerup' && target === drivingFocusRestoredClickTarget && e.pointerId === drivingFocusRestoredPointerId){
         e.preventDefault();
         e.stopImmediatePropagation();
+        return;
+      }
+      if(e.type === 'click' && target === drivingFocusRestoredClickTarget){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        clearDrivingFocusRestoredTap();
+        return;
+      }
+      if(e.type === 'pointerdown'){
+        clearDrivingFocusRestoredTap();
       }
     }
     function bindDrivingFocusRestoreTargets(){
@@ -10561,7 +10576,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.17.3';
+      return el ? el.textContent.trim() : 'v6.17.4';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
