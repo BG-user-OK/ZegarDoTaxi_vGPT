@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.17.4: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.17.5: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -2667,6 +2667,11 @@
       gap:12px;
       padding:16px 6px;
     }
+    .sync-menu-row{
+      display:grid;
+      grid-template-columns:2fr 1fr;
+      gap:10px;
+    }
     .sync-menu-btn,
     .sync-snapshot-btn{
       border:none;
@@ -2683,6 +2688,42 @@
     .sync-menu-btn.primary{
       background:linear-gradient(180deg,#1d4d2a,#0c2a14);
       color:#d8ffdf;
+    }
+    .sync-menu-btn.sync-wide{ min-width:0; }
+    .sync-menu-btn.sync-narrow{
+      min-width:0;
+      text-align:center;
+      padding-left:8px;
+      padding-right:8px;
+    }
+    .sync-menu-btn.sync-tall{
+      min-height:132px;
+      font-size:22px;
+    }
+    .sync-menu-btn.sync-send{
+      background:linear-gradient(180deg,#1d73b8,#0a3968);
+      color:#e4f4ff;
+    }
+    .sync-menu-btn.sync-load{
+      background:linear-gradient(180deg,#7a4c24,#331b0b);
+      color:#ffe1bf;
+    }
+    .sync-menu-btn.sync-edit{
+      background:linear-gradient(180deg,#f2d84d,#9a7a12);
+      color:#171000;
+    }
+    .sync-menu-btn.sync-auto-on{
+      background:linear-gradient(180deg,#22a64a,#0a5622);
+      color:#e6ffeb;
+    }
+    .sync-menu-btn.sync-auto-off{
+      background:linear-gradient(180deg,#b52a2a,#5d0c0c);
+      color:#ffe4e4;
+    }
+    .sync-menu-btn.sync-discard{
+      background:linear-gradient(180deg,#444,#171717);
+      color:#f0f0f0;
+      text-align:center;
     }
     .sync-menu.busy .sync-menu-btn{
       opacity:.58;
@@ -4277,7 +4318,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.17.4</div>
+    <div class="version">v6.17.5</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -9169,6 +9210,14 @@ km priv: 0,00</div>
       counterPanelDraft[`${field}Digits`]=String(Math.max(0,Math.trunc(value||0)));
       counterPanelDraft[`${field}Cleared`]=true;
     }
+    function setCounterDraftSuggestedValue(field,value){
+      if(!counterPanelDraft || !['start','end'].includes(field)) return;
+      counterPanelDraft[`${field}Base`]=Math.max(0,Math.trunc(value||0));
+      counterPanelDraft[`${field}Digits`]='';
+      counterPanelDraft[`${field}Cleared`]=false;
+      if(field==='start') counterPanelDraft.saveSuggestedStart=true;
+      if(field==='end') counterPanelDraft.saveSuggestedEnd=true;
+    }
     function applyAiPlanToDrafts(session){
       const moneyDraft=ensureAiMoneyDraft(session);
       Object.keys(session.plan.providers).forEach(key=>{
@@ -9188,7 +9237,7 @@ km priv: 0,00</div>
       if(!needsCounter) return false;
       const counterDraft=ensureAiCounterDraft(session);
       const endItem=session.plan.endOdometer;
-      if(endItem && endItem.action==='overwrite') setCounterDraftExactValue('end',endItem.ai);
+      if(endItem && endItem.action==='overwrite') setCounterDraftSuggestedValue('end',endItem.ai);
 
       const privItem=session.plan.privKm;
       if(privItem){
@@ -9499,6 +9548,7 @@ km priv: 0,00</div>
         originalEnd:counterEnd,
         originalPriv:privKmTotal,
         saveSuggestedStart:!!options.saveSuggestedStart,
+        saveSuggestedEnd:!!options.saveSuggestedEnd,
         startBase:startValue,
         endBase:endValue,
         privBase:privKmTotal,
@@ -9622,7 +9672,7 @@ km priv: 0,00</div>
       if(draft.originalStart!==null || counterDraftWasEdited('start') || draft.saveSuggestedStart){
         counterStart=counterDraftFieldValue('start');
       }
-      if(draft.originalEnd!==null || counterDraftWasEdited('end')){
+      if(draft.originalEnd!==null || counterDraftWasEdited('end') || draft.saveSuggestedEnd){
         counterEnd=counterDraftFieldValue('end');
       }
       privKmTotal=counterDraftFieldValue('priv');
@@ -10416,7 +10466,8 @@ km priv: 0,00</div>
       // Pełny reset bez eksportu - na potrzeby testowania / przypadkowego uruchomienia
       resetDayAfterExport();
       // Także garnek - jakby był aktywny
-      saveStateAndScheduleAutoSync('soft_reset');
+      saveState();
+      settleCurrentLocalSyncState();
       renderAll();
     }
 
@@ -10576,7 +10627,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.17.4';
+      return el ? el.textContent.trim() : 'v6.17.5';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -11874,6 +11925,28 @@ km priv: 0,00</div>
       localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
       localStorage.setItem(LS_LAST_VERIFIED_SYNC_HASH, comparable);
     }
+    function settleCurrentLocalSyncState(){
+      clearAutoSyncSchedule(true);
+      clearOverlayAutoSyncDirty();
+      const comparable = stableStringify(getCurrentComparableState());
+      const settledAt = Date.now();
+      localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
+      localStorage.setItem(LS_LAST_VERIFIED_SYNC_HASH, comparable);
+      localStorage.setItem(LS_LAST_LOCAL_CHANGE_AT, String(settledAt));
+      localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(settledAt));
+      autoSyncFrozenAcknowledged = true;
+      autoSyncFrozenReason = '';
+      if(['checking','scheduled','downloading','applied','frozen'].includes(autoSyncIndicatorState)){
+        autoSyncIndicatorState = isAutoSyncEnabled() ? 'on' : 'off';
+      }
+      updateAutoSyncIndicator();
+    }
+    function discardLocalSyncAttempt(){
+      saveState();
+      settleCurrentLocalSyncState();
+      showToast('Synchronizacja lokalnie porzucona.', 'ok');
+      openWorkMenu();
+    }
     function markCloudSeen(snapshot){
       if(!snapshot) return;
       const id = snapshot.syncId || snapshot.id || '';
@@ -12188,17 +12261,28 @@ km priv: 0,00</div>
       autoSyncFrozenReason = '';
       const dailyExportPending = hasManualDailyExportAction();
       const sharedConflictPending = loadSharedDataConflicts().length > 0;
+      const autoSyncOn = isAutoSyncEnabled();
+      const discardSyncAvailable =
+        autoSyncIndicatorState === 'frozen' &&
+        !dailyExportPending &&
+        !sharedConflictPending &&
+        hasUnuploadedLocalChanges();
       showOverlay(`
         <div class="big-panel">
           <h3>MENU START</h3>
           ${frozenReason ? `<div class="sync-warning" style="font-size:18px;line-height:1.22;padding:8px 6px 4px;">Auto Sync zatrzymany:<br>${escapeHtml(frozenReason)}</div>` : ''}
           <div class="sync-menu">
-            <button class="sync-menu-btn primary" type="button" data-sync-act="edit">Edytuj start / cel</button>
-            <button class="sync-menu-btn ${isAutoSyncEnabled()?'primary':''}" type="button" data-sync-act="auto">Auto Sync: ${isAutoSyncEnabled()?'ON':'OFF'}</button>
+            <div class="sync-menu-row">
+              <button class="sync-menu-btn sync-wide sync-tall sync-send" type="button" data-sync-act="send">Wy&#347;lij synchronizacj&#281;</button>
+              <button class="sync-menu-btn sync-narrow sync-tall sync-load" type="button" data-sync-act="load">Pobierz synchronizacj&#281;</button>
+            </div>
+            <div class="sync-menu-row">
+              <button class="sync-menu-btn sync-wide sync-edit" type="button" data-sync-act="edit">Edytuj start / cel</button>
+              <button class="sync-menu-btn sync-narrow ${autoSyncOn?'sync-auto-on':'sync-auto-off'}" type="button" data-sync-act="auto">Auto Sync:<br>${autoSyncOn?'ON':'OFF'}</button>
+            </div>
+            ${discardSyncAvailable ? '<button class="sync-menu-btn sync-discard" type="button" data-sync-act="discard">PORZU&#262; SYNCHRONIZACJ&#280;</button>' : ''}
             ${dailyExportPending ? '<button class="sync-menu-btn warn" type="button" data-sync-act="daily">Wy&#347;lij dniówk&#281;</button>' : ''}
             ${sharedConflictPending ? '<button class="sync-menu-btn warn" type="button" data-sync-act="sharedConflict">Rozwi&#261;&#380; konflikt notatek</button>' : ''}
-            <button class="sync-menu-btn" type="button" data-sync-act="send">Wy&#347;lij synchronizacj&#281;</button>
-            <button class="sync-menu-btn" type="button" data-sync-act="load">Pobierz synchronizacj&#281;</button>
           </div>
           <div style="flex:1;"></div>
           <div class="panel-actions">
@@ -12233,6 +12317,13 @@ km priv: 0,00</div>
           btn.addEventListener('click',(e)=>{
             e.stopPropagation();
             renderSharedDataConflict();
+          });
+          return;
+        }
+        if(a === 'discard'){
+          btn.addEventListener('click',(e)=>{
+            e.stopPropagation();
+            discardLocalSyncAttempt();
           });
           return;
         }
