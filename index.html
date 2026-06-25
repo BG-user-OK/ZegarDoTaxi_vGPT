@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.18.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.18.2: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -3540,9 +3540,12 @@
       text-transform:none;
     }
     .ai-paste-textarea{
-      flex:1 1 auto;
+      flex:0 0 auto;
       width:100%;
-      min-height:110px;
+      height:82px;
+      min-height:82px;
+      max-height:82px;
+      overflow:auto;
       resize:none;
       border:1px solid #3c3c3c;
       border-radius:8px;
@@ -3624,7 +3627,9 @@
         font-size:16px;
       }
       .ai-paste-textarea{
-        min-height:82px;
+        height:70px;
+        min-height:70px;
+        max-height:70px;
         padding:8px;
         font-size:15px;
       }
@@ -4579,7 +4584,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.18.1</div>
+    <div class="version">v6.18.2</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -9294,7 +9299,7 @@
             <button type="button" class="ai-paste-abandon" data-ai-act="abandon">ZREZYGNUJ</button>
             <button type="button" class="ai-paste-insert" data-ai-act="insert">WSTAW</button>
           </div>
-          <textarea class="ai-paste-textarea" id="aiPasteText" spellcheck="false" autocomplete="off"
+          <textarea class="ai-paste-textarea" id="aiPasteText" spellcheck="false" autocomplete="off" rows="3"
                     placeholder="Wklej tutaj dane przygotowane przez AI">${escapeHtml(session.text||'')}</textarea>
           <div class="ai-paste-error" id="aiPasteError">${escapeHtml(errorMessage)}</div>
           <div class="ai-paste-hint">Wymagane są etykiety pól. Kolejność wierszy jest dowolna.</div>
@@ -9449,7 +9454,8 @@ km priv: 0,00</div>
       counterPanelDraft=createCounterPanelDraft({
         activeField:'end',
         returnTarget:'money',
-        providerEntryMode:session.source==='endWork' ? 'endWork' : 'normal'
+        providerEntryMode:session.source==='endWork' ? 'endWork' : 'normal',
+        focusCounterLayout:session.source==='endWork'
       });
       if(moneyPanelDraft){
         const startManual=moneyPanelDraft.counterStartOriginal!==null || moneyPanelDraft.counterStartDigits.length>0;
@@ -9828,6 +9834,7 @@ km priv: 0,00</div>
         privDigits:'',
         startCleared:false,
         endCleared:false,
+        focusCounterLayout:!!options.focusCounterLayout || !!options.startWorkFocus,
         startWorkFocus:!!options.startWorkFocus
       };
     }
@@ -9990,7 +9997,7 @@ km priv: 0,00</div>
         return;
       }
       showOverlay(`
-        <div class="big-panel counter-inline-panel ${draft.startWorkFocus?'start-counter-focus-panel':''}">
+        <div class="big-panel counter-inline-panel ${draft.focusCounterLayout?'start-counter-focus-panel':''}">
           <h3>Licznik kilometrów</h3>
           <div class="counter-fields">
             <div class="counter-row ${draft.activeField==='start'?'active':''}" data-cnt="start" role="button" tabindex="0">
@@ -10017,7 +10024,7 @@ km priv: 0,00</div>
             <button class="key-cancel" data-counter-key="clear"><span>C</span></button>
             <button data-counter-key="0"><span>0</span></button>
             <button class="key-back" data-counter-key="back"><span>←</span></button>
-            ${draft.startWorkFocus?'<button class="key-ok" data-counter-key="enter"><span>Enter</span></button>':''}
+            ${draft.focusCounterLayout?'<button class="key-ok" data-counter-key="enter"><span>Enter</span></button>':''}
           </div>
           <div class="panel-actions">
             <button class="cancel-btn" data-act="back">✕</button>
@@ -10054,6 +10061,7 @@ km priv: 0,00</div>
         returnTarget:'main',
         saveSuggestedStart:true,
         mirrorStartToEnd:!!options.mirrorStartToEnd,
+        focusCounterLayout:true,
         startWorkFocus:true
       });
     }
@@ -10640,7 +10648,8 @@ km priv: 0,00</div>
       openCounterPanel({
         activeField:'end',
         returnTarget:'money',
-        providerEntryMode
+        providerEntryMode,
+        focusCounterLayout:true
       });
     }
     async function finishPendingEndWorkExport(options={}){
@@ -10908,7 +10917,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.18.1';
+      return el ? el.textContent.trim() : 'v6.18.2';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
