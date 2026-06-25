@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.17.5: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.18.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -675,6 +675,7 @@
     .auto-sync-indicator{
       --auto-sync-scheduled-orange:#ff7a00;
       --auto-sync-progress-angle:0deg;
+      --auto-sync-retry-angle:360deg;
       position:fixed;
       top:35px;
       right:20px;
@@ -744,6 +745,55 @@
       box-shadow:none;
       font-size:30px;
       text-shadow:0 0 8px rgba(120,220,255,.95), 0 0 14px rgba(255,255,255,.4);
+    }
+    .auto-sync-mini-spinner,
+    .auto-sync-retry-countdown{
+      position:absolute;
+      right:-8px;
+      bottom:-5px;
+      width:16px;
+      height:16px;
+      border-radius:50%;
+      pointer-events:none;
+    }
+    .auto-sync-mini-spinner{
+      border:2px solid rgba(255,255,255,.22);
+      border-top-color:#fff;
+      border-right-color:#fff;
+      box-shadow:0 0 8px rgba(255,255,255,.45);
+      animation:autoSyncMiniSpin .72s linear infinite;
+    }
+    .auto-sync-retry-countdown{
+      background:
+        conic-gradient(
+          from -90deg,
+          #ff7a00 0deg var(--auto-sync-retry-angle),
+          rgba(0,0,0,.88) var(--auto-sync-retry-angle) 360deg
+        );
+      box-shadow:0 0 0 1px rgba(255,154,31,.55), 0 0 8px rgba(255,122,0,.85);
+    }
+    .auto-sync-retry-countdown::after{
+      content:'';
+      position:absolute;
+      inset:4px;
+      border-radius:50%;
+      background:#050505;
+    }
+    .auto-sync-retry-label{
+      position:absolute;
+      left:50%;
+      bottom:-18px;
+      transform:translateX(-50%);
+      color:#ffb35c;
+      font-size:8px;
+      font-weight:900;
+      line-height:1;
+      text-shadow:0 0 6px rgba(255,122,0,.9);
+      white-space:nowrap;
+      pointer-events:none;
+    }
+    @keyframes autoSyncMiniSpin{
+      to{ transform:rotate(360deg); }
     }
     @keyframes autoSyncBlink{
       from{ opacity:.35; transform:scale(.9); }
@@ -3729,6 +3779,60 @@
       border-radius:9px;
       font-size:22px;
     }
+    .counter-inline-panel.start-counter-focus-panel .counter-row.active{
+      grid-template-columns:1fr;
+      justify-items:stretch;
+      min-height:clamp(108px, 18dvh, 152px);
+      padding:10px 12px 12px;
+      gap:5px;
+    }
+    .counter-inline-panel.start-counter-focus-panel .counter-row.active .counter-label{
+      width:100%;
+      font-size:clamp(16px, 4.4vw, 22px);
+      text-align:left;
+    }
+    .counter-inline-panel.start-counter-focus-panel .counter-row.active .counter-value{
+      width:100%;
+      min-width:0;
+      text-align:center;
+      font-size:clamp(48px, 17vw, 78px);
+      line-height:.98;
+      font-weight:1000;
+      letter-spacing:0;
+      text-shadow:0 0 10px rgba(255,255,255,.62), 0 0 20px rgba(125,255,146,.26);
+      overflow:hidden;
+    }
+    .counter-inline-panel.start-counter-focus-panel .counter-row.active .counter-value.suggested{
+      color:#b9b9b9;
+      text-shadow:0 0 8px rgba(255,255,255,.35);
+    }
+    .counter-inline-panel.start-counter-focus-panel .counter-inline-keypad{
+      flex:0 0 auto;
+      min-height:220px;
+      max-height:none;
+      grid-template-rows:repeat(5, minmax(0, 1fr));
+    }
+    .counter-inline-panel.start-counter-focus-panel .counter-inline-keypad button{
+      min-height:clamp(41px, 7.3dvh, 70px);
+      padding:8px 0;
+    }
+    .counter-inline-panel.start-counter-focus-panel .counter-inline-keypad .key-ok{
+      grid-column:1 / -1;
+    }
+    @media (max-height:700px){
+      .counter-inline-panel.start-counter-focus-panel .counter-row.active{
+        min-height:96px;
+      }
+      .counter-inline-panel.start-counter-focus-panel .counter-row.active .counter-value{
+        font-size:clamp(42px, 15vw, 64px);
+      }
+      .counter-inline-panel.start-counter-focus-panel .counter-inline-keypad{
+        min-height:190px;
+      }
+      .counter-inline-panel.start-counter-focus-panel .counter-inline-keypad button{
+        min-height:38px;
+      }
+    }
     .counter-inline-panel .panel-actions{
       flex:0 0 auto;
       padding-top:5px;
@@ -4318,7 +4422,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.17.5</div>
+    <div class="version">v6.18.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -8965,34 +9069,44 @@
     function currentAiProviderValue(key){
       return moneyPanelDraft ? (moneyPanelDraft.values[key]||0) : (revenues[key]||0);
     }
+    function aiValueIsZero(value){
+      return Number(value || 0) === 0;
+    }
+    function aiNonZeroConflictAction(current, incoming){
+      if(aiValueIsZero(incoming)) return 'skip';
+      if(aiValueIsZero(current)) return 'overwrite';
+      return null;
+    }
     function prepareAiPastePlan(parsed){
       const plan={ providers:{}, endOdometer:null, privKm:null };
       const conflicts=[];
       Object.keys(parsed.providers).forEach(key=>{
         const provider=PROVIDERS.find(item=>item.key===key);
         const current=currentAiProviderValue(key);
+        const ai=parsed.providers[key];
         const item={
           id:`provider:${key}`,
           kind:'provider',
           key,
           label:provider ? provider.label : key,
           current,
-          ai:parsed.providers[key],
-          action:current===0 ? 'overwrite' : null
+          ai,
+          action:aiNonZeroConflictAction(current, ai)
         };
         plan.providers[key]=item;
         if(!item.action) conflicts.push(item);
       });
       if(parsed.privKm!==null){
         const current=currentAiPrivateKm();
+        const ai=parsed.privKm;
         const item={
           id:'privKm',
           kind:'privKm',
           key:'privKm',
           label:'km PRIV',
           current,
-          ai:parsed.privKm,
-          action:current===0 ? 'overwrite' : null
+          ai,
+          action:aiNonZeroConflictAction(current, ai)
         };
         plan.privKm=item;
         if(!item.action) conflicts.push(item);
@@ -9556,7 +9670,8 @@ km priv: 0,00</div>
         endDigits:'',
         privDigits:'',
         startCleared:false,
-        endCleared:false
+        endCleared:false,
+        startWorkFocus:!!options.startWorkFocus
       };
     }
     function mirrorCounterStartDraftToEnd(){
@@ -9607,6 +9722,13 @@ km priv: 0,00</div>
       const draft=counterPanelDraft;
       if(!draft) return;
       const field=draft.activeField;
+      if(key==='enter'){
+        const order=['start','end','priv'];
+        const idx=order.indexOf(field);
+        draft.activeField=order[(idx+1+order.length)%order.length];
+        renderCounterPanel();
+        return;
+      }
       if(key==='clear'){
         if(field==='priv'){
           draft.privDigits='';
@@ -9711,7 +9833,7 @@ km priv: 0,00</div>
         return;
       }
       showOverlay(`
-        <div class="big-panel counter-inline-panel">
+        <div class="big-panel counter-inline-panel ${draft.startWorkFocus?'start-counter-focus-panel':''}">
           <h3>Licznik kilometrów</h3>
           <div class="counter-fields">
             <div class="counter-row ${draft.activeField==='start'?'active':''}" data-cnt="start" role="button" tabindex="0">
@@ -9738,6 +9860,7 @@ km priv: 0,00</div>
             <button class="key-cancel" data-counter-key="clear"><span>C</span></button>
             <button data-counter-key="0"><span>0</span></button>
             <button class="key-back" data-counter-key="back"><span>←</span></button>
+            ${draft.startWorkFocus?'<button class="key-ok" data-counter-key="enter"><span>Enter</span></button>':''}
           </div>
           <div class="panel-actions">
             <button class="cancel-btn" data-act="back">✕</button>
@@ -9773,7 +9896,8 @@ km priv: 0,00</div>
         activeField:'start',
         returnTarget:'main',
         saveSuggestedStart:true,
-        mirrorStartToEnd:!!options.mirrorStartToEnd
+        mirrorStartToEnd:!!options.mirrorStartToEnd,
+        startWorkFocus:true
       });
     }
 
@@ -10627,7 +10751,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.17.5';
+      return el ? el.textContent.trim() : 'v6.18.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -11361,9 +11485,117 @@ km priv: 0,00</div>
       if(autoSyncIndicatorState !== 'scheduled' || !autoSyncScheduledDelayMs) return;
       autoSyncScheduledAnimationFrame = requestAnimationFrame(renderAutoSyncScheduledProgress);
     }
+    function stopAutoSyncRetryProgress(reset=true){
+      if(autoSyncRetryAnimationFrame){
+        cancelAnimationFrame(autoSyncRetryAnimationFrame);
+        autoSyncRetryAnimationFrame = null;
+      }
+      if(reset){
+        const el = document.getElementById('autoSyncIndicator');
+        if(el) el.style.setProperty('--auto-sync-retry-angle', '360deg');
+      }
+    }
+    function renderAutoSyncRetryProgress(){
+      if(!autoSyncRetryWaiting || !autoSyncRetryStartedAt || !autoSyncRetryDeadlineAt){
+        stopAutoSyncRetryProgress();
+        return;
+      }
+      const el = document.getElementById('autoSyncIndicator');
+      if(!el){
+        stopAutoSyncRetryProgress();
+        return;
+      }
+      const remaining = Math.max(0, Math.min(AUTO_SYNC_RETRY_INTERVAL_MS, autoSyncRetryDeadlineAt - Date.now()));
+      const angle = Math.max(0, Math.min(360, (remaining / AUTO_SYNC_RETRY_INTERVAL_MS) * 360));
+      el.style.setProperty('--auto-sync-retry-angle', `${angle.toFixed(2)}deg`);
+      if(remaining > 0){
+        autoSyncRetryAnimationFrame = requestAnimationFrame(renderAutoSyncRetryProgress);
+      } else {
+        autoSyncRetryAnimationFrame = null;
+      }
+    }
+    function clearAutoSyncRetry(update=false){
+      clearTimeout(autoSyncRetryTimer);
+      autoSyncRetryTimer = null;
+      autoSyncRetryWaiting = false;
+      autoSyncRetryActive = false;
+      autoSyncRetryAttempt = 0;
+      autoSyncRetryReason = '';
+      autoSyncRetryForceFinalSync = false;
+      autoSyncRetrySignature = '';
+      autoSyncRetryStartedAt = 0;
+      autoSyncRetryDeadlineAt = 0;
+      stopAutoSyncRetryProgress();
+      if(update) updateAutoSyncIndicator();
+    }
+    function hasAutoSyncRetryPending(){
+      return autoSyncRetryWaiting || autoSyncRetryActive || !!autoSyncRetryTimer;
+    }
+    function autoSyncRetrySnapshotSignature(){
+      return stableStringify({
+        comparable:currentComparableStateString(),
+        shared:currentSharedDataComparableString(),
+        daily:normalizeDailyExportStatus(dailyExportStatus)
+      });
+    }
+    function autoSyncRetryableError(error){
+      if(!error) return true;
+      if(error.sharedDataConflict) return false;
+      if(error.sharedDataRetryable) return true;
+      if(isSyncPinAuthError(error)) return false;
+      const message=syncErrorText(error).toLocaleLowerCase('pl-PL');
+      if(!message) return true;
+      if(/konflikt|conflict|pin|nadpis|overwrite|decyz|decision|nowszy|newer|validation|invalid|wrong|nieprawid/.test(message)) return false;
+      return isSyncNetworkError(error) ||
+        /timeout|failed to fetch|network|brak połączenia|synclist failed|syncload failed|sync verification failed|receipt timeout|write status failed|daily export failed/.test(message);
+    }
+    function scheduleAutoSyncTechnicalRetry(reason, options={}, error=null){
+      const forceFinalSync = shouldForceFinalSync(reason, options);
+      if(!forceFinalSync && !isAutoSyncEnabled()) return false;
+      if(!autoSyncRetryableError(error)) return false;
+      const nextAttempt = options.fromRetry ? autoSyncRetryAttempt + 1 : 1;
+      if(nextAttempt > AUTO_SYNC_RETRY_MAX_ATTEMPTS){
+        clearAutoSyncRetry(false);
+        setAutoSyncIndicatorState('frozen', 'Auto Sync zatrzymany po 10 nieudanych próbach. Sprawdź połączenie albo użyj synchronizacji ręcznej.');
+        return false;
+      }
+      clearTimeout(autoSyncRetryTimer);
+      stopAutoSyncRetryProgress(false);
+      autoSyncRetryAttempt = nextAttempt;
+      autoSyncRetryReason = reason || 'auto_sync_retry';
+      autoSyncRetryForceFinalSync = forceFinalSync;
+      autoSyncRetrySignature = autoSyncRetrySnapshotSignature();
+      autoSyncRetryWaiting = true;
+      autoSyncRetryActive = false;
+      autoSyncRetryStartedAt = Date.now();
+      autoSyncRetryDeadlineAt = autoSyncRetryStartedAt + AUTO_SYNC_RETRY_INTERVAL_MS;
+      setAutoSyncIndicatorState('frozen', 'Auto Sync czeka na automatyczne ponowienie po chwilowym błędzie połączenia.');
+      autoSyncRetryTimer = setTimeout(()=>{
+        autoSyncRetryTimer = null;
+        if(autoSyncRetrySignature && autoSyncRetrySignature !== autoSyncRetrySnapshotSignature()){
+          const retryForceFinalSync = autoSyncRetryForceFinalSync;
+          clearAutoSyncRetry(false);
+          autoSyncFrozenAcknowledged = true;
+          scheduleAutoSyncUpload('auto_sync_retry_state_changed', { forceFinalSync:retryForceFinalSync });
+          return;
+        }
+        autoSyncRetryWaiting = false;
+        autoSyncRetryActive = true;
+        updateAutoSyncIndicator();
+        performScheduledAutoSyncUpload(autoSyncRetryReason || 'auto_sync_retry', false, {
+          forceFinalSync:autoSyncRetryForceFinalSync,
+          fromRetry:true,
+          retrySignature:autoSyncRetrySignature
+        });
+      }, AUTO_SYNC_RETRY_INTERVAL_MS);
+      autoSyncRetryAnimationFrame = requestAnimationFrame(renderAutoSyncRetryProgress);
+      updateAutoSyncIndicator();
+      return true;
+    }
     function setAutoSyncIndicatorState(state, reason){
       const previousState = autoSyncIndicatorState;
       autoSyncIndicatorState = state || 'off';
+      if(['on','off','applied'].includes(autoSyncIndicatorState)) clearAutoSyncRetry(false);
       if(autoSyncIndicatorState !== 'scheduled') stopAutoSyncScheduledProgress();
       const importantState = ['checking','scheduled','downloading','applied','frozen'].includes(autoSyncIndicatorState);
       if(importantState || (autoSyncIndicatorState === 'on' && previousState && previousState !== 'on')){
@@ -11398,13 +11630,24 @@ km priv: 0,00</div>
         armAutoSyncGreenFade();
       } else {
         clearAutoSyncGreenFade();
-        if(autoSyncIndicatorState === 'checking') el.classList.add('checking');
+        if(autoSyncIndicatorState === 'checking'){
+          el.classList.add('checking');
+          el.innerHTML = '<span class="auto-sync-mini-spinner" aria-hidden="true"></span>';
+        }
         else if(autoSyncIndicatorState === 'scheduled') el.classList.add('scheduled');
-        else if(autoSyncIndicatorState === 'downloading') el.classList.add('downloading');
+        else if(autoSyncIndicatorState === 'downloading'){
+          el.classList.add('downloading');
+          el.innerHTML = '<span class="auto-sync-mini-spinner" aria-hidden="true"></span>';
+        }
         else if(autoSyncIndicatorState === 'applied') el.classList.add('applied');
         else if(autoSyncIndicatorState === 'frozen'){
-        el.classList.add('frozen');
-        el.innerHTML = '&#129398;';
+          el.classList.add('frozen');
+          el.innerHTML = '&#129398;';
+          if(autoSyncRetryWaiting){
+            el.innerHTML += `<span class="auto-sync-retry-countdown" aria-hidden="true"></span><span class="auto-sync-retry-label">${autoSyncRetryAttempt}/${AUTO_SYNC_RETRY_MAX_ATTEMPTS}</span>`;
+          } else if(autoSyncRetryActive){
+            el.innerHTML += '<span class="auto-sync-mini-spinner" aria-hidden="true"></span>';
+          }
         }
       }
     }
@@ -11416,6 +11659,8 @@ km priv: 0,00</div>
     const AUTO_SYNC_DEFAULT_DEBOUNCE_MS = 15000;
     const AUTO_SYNC_ACTIVE_WORK_DEBOUNCE_MS = 60000;
     const AUTO_SYNC_GREEN_VISIBLE_MS = 60000;
+    const AUTO_SYNC_RETRY_INTERVAL_MS = 120000;
+    const AUTO_SYNC_RETRY_MAX_ATTEMPTS = 10;
     let autoSyncGreenFadeTimer = null;
     let autoSyncGreenFadeArmed = false;
     let autoSyncGreenFaded = false;
@@ -11427,6 +11672,16 @@ km priv: 0,00</div>
     let autoSyncScheduledDelayMs = 0;
     let autoSyncScheduledDeadlineAt = 0;
     let autoSyncScheduledAnimationFrame = null;
+    let autoSyncRetryTimer = null;
+    let autoSyncRetryAnimationFrame = null;
+    let autoSyncRetryWaiting = false;
+    let autoSyncRetryActive = false;
+    let autoSyncRetryAttempt = 0;
+    let autoSyncRetryReason = '';
+    let autoSyncRetryForceFinalSync = false;
+    let autoSyncRetrySignature = '';
+    let autoSyncRetryStartedAt = 0;
+    let autoSyncRetryDeadlineAt = 0;
     let autoSyncOverlayDirty = false;
     let autoSyncOverlayDirtyReason = '';
     let lastAutoSyncForegroundCheckAt = 0;
@@ -11831,6 +12086,7 @@ km priv: 0,00</div>
         verifiedHash === currentComparableStateString();
     }
     function markVerifiedSyncUpload(snapshot){
+      clearAutoSyncRetry(false);
       const changeAt = Number(snapshot && (snapshot.lastLocalChangeAt || snapshot.savedAtMs) || Date.now());
       const verifiedHash = comparableSnapshotState(snapshot);
       localStorage.setItem(LS_LAST_AUTO_UPLOAD_CHANGE_AT, String(changeAt));
@@ -11851,6 +12107,9 @@ km priv: 0,00</div>
     }
     function scheduleAutoSyncUpload(reason, options={}){
       const forceFinalSync = shouldForceFinalSync(reason, options);
+      const fromRetry = options.fromRetry === true;
+      const replacingRetry = !fromRetry && hasAutoSyncRetryPending();
+      if(replacingRetry) clearAutoSyncRetry(false);
       if(!isAutoSyncEnabled() && !forceFinalSync) return;
       if(pendingEndWorkExport) return;
       if(syncApplyInProgress) return;
@@ -11858,7 +12117,7 @@ km priv: 0,00</div>
         setAutoSyncIndicatorState('frozen', 'Eksport dniówki czeka na ręczną decyzję o nadpisaniu danych w Arkuszu.');
         return;
       }
-      if(autoSyncIndicatorState === 'frozen' && !autoSyncFrozenAcknowledged && !forceFinalSync) return;
+      if(autoSyncIndicatorState === 'frozen' && !autoSyncFrozenAcknowledged && !forceFinalSync && !replacingRetry) return;
       if(forceFinalSync){
         if(isCurrentFinalSyncVerified() && !hasUnuploadedLocalChanges() && !hasUnverifiedSharedDataChanges()) return;
       } else if(!hasPendingDailyExport() && !hasUnuploadedLocalChanges() && !hasUnverifiedSharedDataChanges()){
@@ -11916,6 +12175,7 @@ km priv: 0,00</div>
       }
     }
     function clearLocalSyncDirty(snapshot){
+      clearAutoSyncRetry(false);
       const changeAt = Number(snapshot && (snapshot.lastLocalChangeAt || snapshot.savedAtMs) || 0);
       if(changeAt){
         localStorage.setItem(LS_LAST_LOCAL_CHANGE_AT, String(changeAt));
@@ -11926,6 +12186,7 @@ km priv: 0,00</div>
       localStorage.setItem(LS_LAST_VERIFIED_SYNC_HASH, comparable);
     }
     function settleCurrentLocalSyncState(){
+      clearAutoSyncRetry(false);
       clearAutoSyncSchedule(true);
       clearOverlayAutoSyncDirty();
       const comparable = stableStringify(getCurrentComparableState());
@@ -12246,6 +12507,7 @@ km priv: 0,00</div>
       overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); openWorkMenu(); });
       overlay.querySelector('[data-act="ok"]').addEventListener('click',(e)=>{
         e.stopPropagation();
+        clearAutoSyncRetry(false);
         localStorage.removeItem(LS_SYNC_PIN);
         localStorage.removeItem(LS_SYNC_DEVICE);
         clearAppsScriptCompatibilityCache();
@@ -12581,6 +12843,7 @@ km priv: 0,00</div>
       }
     }
     function applySyncSnapshot(snapshot){
+      clearAutoSyncRetry(false);
       clearAutoSyncSchedule(false);
       const state = JSON.parse(JSON.stringify(snapshot.state || {}));
       const persist = JSON.parse(JSON.stringify(snapshot.persist || {}));
@@ -12697,6 +12960,12 @@ km priv: 0,00</div>
       clearAutoSyncSchedule(false);
       if(forceFinalSync) autoSyncForcedFinalSyncActive = true;
       if(!isAutoSyncEnabled() && !forceFinalSync) return;
+      if(options.fromRetry && options.retrySignature && options.retrySignature !== autoSyncRetrySnapshotSignature()){
+        clearAutoSyncRetry(false);
+        autoSyncFrozenAcknowledged = true;
+        scheduleAutoSyncUpload('auto_sync_retry_state_changed', { forceFinalSync });
+        return;
+      }
       if(pendingEndWorkExport){
         if(forceFinalSync) autoSyncForcedFinalSyncActive = false;
         return;
@@ -12779,6 +13048,14 @@ km priv: 0,00</div>
           return;
         }
         if(exportOk !== true){
+          const exportError = new Error('daily export failed');
+          if(scheduleAutoSyncTechnicalRetry(reason, {
+            forceFinalSync,
+            fromRetry:options.fromRetry === true
+          }, exportError)){
+            showToast('Auto Sync ponowi próbę za 2 minuty.', 'err');
+            return;
+          }
           setAutoSyncIndicatorState('frozen', 'Eksport zakonczonej dniowki nie powiodl sie. Automatyczna synchronizacja zostala wstrzymana.');
           showToast('Eksport dniowki nieudany.', 'err');
           return;
@@ -12798,16 +13075,37 @@ km priv: 0,00</div>
           }
           setAutoSyncIndicatorState('frozen', 'Notatki wymagają decyzji: telefon, Arkusz albo obie wersje.');
         } else if(e && e.sharedDataRetryable){
-          if(forceFinalSync){
+          if(scheduleAutoSyncTechnicalRetry(reason || 'shared_data_retry', {
+            forceFinalSync,
+            fromRetry:options.fromRetry === true
+          }, e)){
+            if(forceFinalSync){
+              setPostWorkVerificationState('sync', 'busy', {
+                message:'Chwilowy błąd synchronizacji danych wspólnych. Ponowię próbę automatycznie.'
+              });
+            }
+            showToast('Auto Sync ponowi próbę za 2 minuty.', 'err');
+          } else if(forceFinalSync){
             setPostWorkVerificationState('sync', 'error', {
               message:'Nie udalo sie zapisac notatek lub emotikon podczas koncowej synchronizacji.'
             });
             setAutoSyncIndicatorState('frozen', 'Nie udalo sie zapisac notatek lub emotikon. Uzyj synchronizacji recznej.');
           } else {
-            setAutoSyncIndicatorState('on');
-            scheduleAutoSyncUpload('shared_data_retry');
+            setAutoSyncIndicatorState('frozen', 'Nie udalo sie zapisac notatek lub emotikon. Uzyj synchronizacji recznej.');
           }
         } else {
+          if(scheduleAutoSyncTechnicalRetry(reason, {
+            forceFinalSync,
+            fromRetry:options.fromRetry === true
+          }, e)){
+            if(forceFinalSync){
+              setPostWorkVerificationState('sync', 'busy', {
+                message:'Chwilowy błąd połączenia. Ponowię końcową synchronizację automatycznie.'
+              });
+            }
+            showToast('Auto Sync ponowi próbę za 2 minuty.', 'err');
+            return;
+          }
           if(forceFinalSync){
             setPostWorkVerificationState('sync', 'error', {
               message:'Koncowa synchronizacja nie powiodla sie.'
@@ -12817,6 +13115,10 @@ km priv: 0,00</div>
         }
       }finally{
         autoSyncBusy = false;
+        if(options.fromRetry === true && !autoSyncRetryWaiting){
+          autoSyncRetryActive = false;
+          if(autoSyncIndicatorState === 'frozen') updateAutoSyncIndicator();
+        }
         if(forceFinalSync){
           autoSyncForcedFinalSyncActive = false;
           if(!isAutoSyncEnabled() && autoSyncIndicatorState === 'on'){
