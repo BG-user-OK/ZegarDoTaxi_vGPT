@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.19.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.19.2: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -4882,7 +4882,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.19.1</div>
+    <div class="version">v6.19.2</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -4931,15 +4931,15 @@
     }
     const PIGGY_SOUND_FILE = 'sounds/chrum.mp3';
     const PIGGY_DENOMINATIONS = [
-      { key:'500', label:'500 zł', zl:500, kind:'note', className:'note-500', file:'500zl.png', scale:1.12 },
-      { key:'200', label:'200 zł', zl:200, kind:'note', className:'note-200', file:'200zl.png', scale:1.04 },
-      { key:'100', label:'100 zł', zl:100, kind:'note', className:'note-100', file:'100zl.png', scale:.96 },
-      { key:'50',  label:'50 zł',  zl:50,  kind:'note', className:'note-50',  file:'50zl.png',  scale:.88 },
-      { key:'20',  label:'20 zł',  zl:20,  kind:'placeholder', className:'piggy-placeholder-20', scale:.82 },
-      { key:'10',  label:'10 zł',  zl:10,  kind:'placeholder', className:'piggy-placeholder-10', scale:.76 },
-      { key:'5',   label:'5 zł',   zl:5,   kind:'coin', className:'coin-5', file:'5zl.png', scale:.74 },
-      { key:'2',   label:'2 zł',   zl:2,   kind:'coin', className:'coin-2', file:'2zl.png', scale:.64 },
-      { key:'1',   label:'1 zł',   zl:1,   kind:'coin', className:'coin-1', file:'1zl.png', scale:.56 }
+      { key:'500', label:'500 zł', zl:500, kind:'note', className:'note-500', file:'500zl.png', scale:1.16 },
+      { key:'200', label:'200 zł', zl:200, kind:'note', className:'note-200', file:'200zl.png', scale:.90 },
+      { key:'100', label:'100 zł', zl:100, kind:'note', className:'note-100', file:'100zl.png', scale:.76 },
+      { key:'50',  label:'50 zł',  zl:50,  kind:'note', className:'note-50',  file:'50zl.png',  scale:.64 },
+      { key:'20',  label:'20 zł',  zl:20,  kind:'placeholder', className:'piggy-placeholder-20', scale:.54 },
+      { key:'10',  label:'10 zł',  zl:10,  kind:'placeholder', className:'piggy-placeholder-10', scale:.48 },
+      { key:'5',   label:'5 zł',   zl:5,   kind:'coin', className:'coin-5', file:'5zl.png', scale:.82 },
+      { key:'2',   label:'2 zł',   zl:2,   kind:'coin', className:'coin-2', file:'2zl.png', scale:.66 },
+      { key:'1',   label:'1 zł',   zl:1,   kind:'coin', className:'coin-1', file:'1zl.png', scale:.52 }
     ];
 
     let startWorkMinutes = null;
@@ -11425,7 +11425,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.19.1';
+      return el ? el.textContent.trim() : 'v6.19.2';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
