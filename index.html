@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.19.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.19.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -2986,13 +2986,98 @@
     .sync-menu{
       display:flex;
       flex-direction:column;
-      gap:12px;
-      padding:16px 6px;
+      gap:10px;
+      padding:6px 6px 12px;
+    }
+    .sync-cloud-stage{
+      position:relative;
+      width:100%;
+      min-height:clamp(118px, 18dvh, 168px);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .sync-cloud-large{
+      position:relative;
+      width:min(100%, 480px);
+      height:clamp(92px, 15dvh, 138px);
+      filter:
+        drop-shadow(0 0 14px rgba(255,255,255,.46))
+        drop-shadow(0 7px 16px rgba(0,0,0,.46));
+    }
+    .sync-cloud-large::before,
+    .sync-cloud-large::after{
+      content:'';
+      position:absolute;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,1), rgba(225,237,244,.98));
+    }
+    .sync-cloud-large::before{
+      left:3%;
+      right:3%;
+      bottom:8%;
+      height:48%;
+      border-radius:999px;
+    }
+    .sync-cloud-large::after{
+      left:15%;
+      bottom:31%;
+      width:27%;
+      height:55%;
+      border-radius:50%;
+      box-shadow:
+        clamp(52px, 18vw, 86px) clamp(-24px, -3.4vw, -14px) 0 9px rgba(244,250,255,.99),
+        clamp(104px, 34vw, 168px) clamp(-38px, -5.4vw, -24px) 0 21px rgba(244,250,255,.99),
+        clamp(164px, 52vw, 250px) clamp(-18px, -2.2vw, -8px) 0 7px rgba(244,250,255,.99),
+        clamp(212px, 67vw, 318px) clamp(10px, 2.2vw, 20px) 0 -7px rgba(244,250,255,.99);
+    }
+    .sync-cloud-spinner{
+      position:absolute;
+      left:50%;
+      top:55%;
+      width:clamp(54px, 13vw, 70px);
+      height:clamp(54px, 13vw, 70px);
+      border-radius:50%;
+      opacity:0;
+      transform:translate(-50%, -50%);
+      transition:opacity .18s ease;
+      z-index:3;
+      filter:drop-shadow(0 0 4px rgba(0,0,0,.42));
+    }
+    .sync-menu.busy .sync-cloud-spinner{
+      opacity:1;
+    }
+    .sync-cloud-spinner::before,
+    .sync-cloud-spinner::after{
+      content:'';
+      position:absolute;
+      border-radius:50%;
+      border-style:solid;
+      border-color:rgba(0,0,0,.88);
+    }
+    .sync-cloud-spinner::before{
+      inset:0;
+      border-width:7px;
+      border-right-color:transparent;
+      animation:syncSpin 1s linear infinite;
+    }
+    .sync-cloud-spinner::after{
+      inset:17px;
+      border-width:4px;
+      border-left-color:transparent;
+      animation:syncSpinReverse .72s linear infinite;
     }
     .sync-menu-row{
       display:grid;
-      grid-template-columns:2fr 1fr;
+      grid-template-columns:1fr 1fr;
       gap:10px;
+    }
+    .sync-menu-row.sync-auto-row{
+      display:block;
+    }
+    .sync-menu-row.sync-edit-row{
+      display:flex;
+      justify-content:flex-end;
     }
     .sync-menu-btn,
     .sync-snapshot-btn{
@@ -3018,56 +3103,32 @@
       padding-left:8px;
       padding-right:8px;
     }
-    .sync-menu-btn.sync-tall{
-      min-height:132px;
-      font-size:22px;
-    }
-    .sync-transfer-symbol{
+    .sync-menu-btn.sync-arrow-button{
+      min-height:clamp(100px, 15dvh, 130px);
       display:flex;
       align-items:center;
       justify-content:center;
-      gap:14px;
+      text-align:center;
+      padding:8px;
+    }
+    .sync-menu-btn.sync-auto-wide{
       width:100%;
-      min-height:108px;
-      pointer-events:none;
+      min-height:clamp(108px, 16dvh, 138px);
+      text-align:center;
+      font-size:clamp(25px, 6.2vw, 34px);
+      line-height:1.06;
+      letter-spacing:.8px;
     }
-    .sync-transfer-main{
+    .sync-menu-btn.sync-edit-square{
+      width:clamp(128px, 35vw, 156px);
+      min-height:clamp(108px, 15dvh, 140px);
+      text-align:center;
+      font-size:clamp(16px, 4.2vw, 22px);
+      line-height:1.05;
+      padding:8px;
       display:flex;
-      flex-direction:column;
       align-items:center;
       justify-content:center;
-      gap:0;
-      min-width:72px;
-    }
-    .sync-cloud-icon{
-      position:relative;
-      width:72px;
-      height:38px;
-      margin-bottom:-2px;
-      filter:drop-shadow(0 0 8px rgba(255,255,255,.38));
-    }
-    .sync-cloud-icon::before,
-    .sync-cloud-icon::after{
-      content:'';
-      position:absolute;
-      background:rgba(246,252,255,.96);
-    }
-    .sync-cloud-icon::before{
-      left:8px;
-      right:7px;
-      bottom:3px;
-      height:20px;
-      border-radius:18px;
-    }
-    .sync-cloud-icon::after{
-      left:16px;
-      bottom:11px;
-      width:24px;
-      height:24px;
-      border-radius:50%;
-      box-shadow:
-        18px -8px 0 5px rgba(246,252,255,.96),
-        36px 0 0 1px rgba(246,252,255,.96);
     }
     .sync-arrow-icon{
       --sync-arrow-color:#8fd9ff;
@@ -3120,64 +3181,29 @@
       border-right:21px solid transparent;
       border-top:27px solid var(--sync-arrow-color);
     }
-    .sync-button-spinner{
-      position:relative;
-      flex:0 0 42px;
-      width:42px;
-      height:42px;
-      border-radius:50%;
-      filter:drop-shadow(0 0 8px rgba(255,255,255,.34));
+    .sync-menu-btn.sync-arrow-button .sync-arrow-icon{
+      width:84px;
+      height:88px;
+      pointer-events:none;
     }
-    .sync-button-spinner::before,
-    .sync-button-spinner::after{
-      content:'';
-      position:absolute;
-      border-radius:50%;
-      border-style:solid;
-      border-color:rgba(255,255,255,.95);
+    .sync-menu-btn.sync-arrow-button .sync-arrow-icon::before{
+      width:16px;
+      height:56px;
+      border-radius:12px;
     }
-    .sync-button-spinner::before{
-      inset:0;
-      border-width:5px;
-      border-right-color:transparent;
-      animation:syncSpin 1s linear infinite;
+    .sync-menu-btn.sync-arrow-button .sync-arrow-up::before{ top:28px; }
+    .sync-menu-btn.sync-arrow-button .sync-arrow-up::after{
+      top:2px;
+      border-left-width:30px;
+      border-right-width:30px;
+      border-bottom-width:38px;
     }
-    .sync-button-spinner::after{
-      inset:12px;
-      border-width:3px;
-      border-left-color:transparent;
-      animation:syncSpinReverse .72s linear infinite;
-    }
-    .sync-menu-btn.sync-narrow .sync-transfer-symbol{
-      gap:8px;
-      min-height:108px;
-    }
-    .sync-menu-btn.sync-narrow .sync-transfer-main{
-      min-width:58px;
-    }
-    .sync-menu-btn.sync-narrow .sync-cloud-icon{
-      width:58px;
-      height:32px;
-      transform:scale(.92);
-      transform-origin:center bottom;
-    }
-    .sync-menu-btn.sync-narrow .sync-arrow-icon{
-      width:46px;
-      height:54px;
-      transform:scale(.9);
-      transform-origin:center top;
-    }
-    .sync-menu-btn.sync-narrow .sync-button-spinner{
-      flex-basis:34px;
-      width:34px;
-      height:34px;
-    }
-    .sync-menu-btn.sync-narrow .sync-button-spinner::before{
-      border-width:4px;
-    }
-    .sync-menu-btn.sync-narrow .sync-button-spinner::after{
-      inset:10px;
-      border-width:3px;
+    .sync-menu-btn.sync-arrow-button .sync-arrow-down::before{ top:2px; }
+    .sync-menu-btn.sync-arrow-button .sync-arrow-down::after{
+      bottom:2px;
+      border-left-width:30px;
+      border-right-width:30px;
+      border-top-width:38px;
     }
     .sync-menu-btn.sync-send{
       background:linear-gradient(180deg,#1d73b8,#0a3968);
@@ -4856,7 +4882,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.19.0</div>
+    <div class="version">v6.19.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -11399,7 +11425,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.19.0';
+      return el ? el.textContent.trim() : 'v6.19.1';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -12909,18 +12935,8 @@ km priv: 0,00</div>
         btn.disabled = true;
         btn.classList.toggle('sync-pressed', btn.dataset.syncAct === action);
       });
-      let busy = overlay.querySelector('.sync-working');
-      if(!busy && menu){
-        busy = document.createElement('div');
-        busy.className = 'sync-working';
-        menu.insertAdjacentElement('afterend', busy);
-      }
-      if(busy){
-        busy.innerHTML = `
-          <div class="sync-spinner" aria-hidden="true"></div>
-          <div>${escapeHtml(text || 'Pracuję online...')}</div>
-        `;
-      }
+      const cloudStage = overlay.querySelector('[data-sync-cloud-status]');
+      if(cloudStage) cloudStage.setAttribute('aria-label', text || 'Pracuję online...');
     }
     function clearSyncMenuBusy(){
       manualSyncBusy = false;
@@ -12930,8 +12946,8 @@ km priv: 0,00</div>
         btn.disabled = false;
         btn.classList.remove('sync-pressed');
       });
-      const busy = overlay.querySelector('.sync-working');
-      if(busy) busy.remove();
+      const cloudStage = overlay.querySelector('[data-sync-cloud-status]');
+      if(cloudStage) cloudStage.setAttribute('aria-label', 'Synchronizacja');
     }
     function sharedConflictRecordLabel(conflict, record){
       if(!record) return '(brak rekordu)';
@@ -13179,32 +13195,26 @@ km priv: 0,00</div>
         hasUnuploadedLocalChanges();
       showOverlay(`
         <div class="big-panel">
-          <h3>MENU START</h3>
           ${frozenReason ? `<div class="sync-warning" style="font-size:18px;line-height:1.22;padding:8px 6px 4px;">Auto Sync zatrzymany:<br>${escapeHtml(frozenReason)}</div>` : ''}
           <div class="sync-menu">
-            <div class="sync-menu-row">
-              <button class="sync-menu-btn sync-wide sync-tall sync-send" type="button" data-sync-act="send" aria-label="Wy&#347;lij synchronizacj&#281;">
-                <span class="sync-transfer-symbol sync-transfer-upload" aria-hidden="true">
-                  <span class="sync-transfer-main">
-                    <span class="sync-cloud-icon"></span>
-                    <span class="sync-arrow-icon sync-arrow-up"></span>
-                  </span>
-                  <span class="sync-button-spinner"></span>
-                </span>
+            <div class="sync-cloud-stage" data-sync-cloud-status aria-label="Synchronizacja">
+              <div class="sync-cloud-large" aria-hidden="true">
+                <div class="sync-cloud-spinner"></div>
+              </div>
+            </div>
+            <div class="sync-menu-row sync-transfer-row">
+              <button class="sync-menu-btn sync-arrow-button sync-send" type="button" data-sync-act="send" aria-label="Wy&#347;lij synchronizacj&#281;">
+                <span class="sync-arrow-icon sync-arrow-up" aria-hidden="true"></span>
               </button>
-              <button class="sync-menu-btn sync-narrow sync-tall sync-load" type="button" data-sync-act="load" aria-label="Pobierz synchronizacj&#281;">
-                <span class="sync-transfer-symbol sync-transfer-download" aria-hidden="true">
-                  <span class="sync-transfer-main">
-                    <span class="sync-cloud-icon"></span>
-                    <span class="sync-arrow-icon sync-arrow-down"></span>
-                  </span>
-                  <span class="sync-button-spinner"></span>
-                </span>
+              <button class="sync-menu-btn sync-arrow-button sync-load" type="button" data-sync-act="load" aria-label="Pobierz synchronizacj&#281;">
+                <span class="sync-arrow-icon sync-arrow-down" aria-hidden="true"></span>
               </button>
             </div>
-            <div class="sync-menu-row">
-              <button class="sync-menu-btn sync-wide sync-edit" type="button" data-sync-act="edit">Edytuj start / cel</button>
-              <button class="sync-menu-btn sync-narrow ${autoSyncOn?'sync-auto-on':'sync-auto-off'}" type="button" data-sync-act="auto">Auto Sync:<br>${autoSyncOn?'ON':'OFF'}</button>
+            <div class="sync-menu-row sync-auto-row">
+              <button class="sync-menu-btn sync-auto-wide ${autoSyncOn?'sync-auto-on':'sync-auto-off'}" type="button" data-sync-act="auto">Auto Sync:<br>${autoSyncOn?'ON':'OFF'}</button>
+            </div>
+            <div class="sync-menu-row sync-edit-row">
+              <button class="sync-menu-btn sync-edit sync-edit-square" type="button" data-sync-act="edit">EDYTUJ<br>START CEL</button>
             </div>
             ${discardSyncAvailable ? '<button class="sync-menu-btn sync-discard" type="button" data-sync-act="discard">PORZU&#262; SYNCHRONIZACJ&#280;</button>' : ''}
             ${dailyExportPending ? '<button class="sync-menu-btn warn" type="button" data-sync-act="daily">Wy&#347;lij dniówk&#281;</button>' : ''}
