@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.19.4: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.20.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -671,6 +671,66 @@
     .battery-indicator.low.charging::before{
       color:#2ecc71;
       text-shadow:0 0 8px rgba(46,204,113,.78);
+    }
+    .internet-indicator{
+      position:fixed;
+      top:7px;
+      right:82px;
+      z-index:20;
+      width:31px;
+      height:27px;
+      color:#2ecc71;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity 8s ease, color .18s ease, filter .18s ease, right .18s ease;
+      filter:drop-shadow(0 0 7px rgba(46,204,113,.72));
+    }
+    .internet-indicator.battery-charging{
+      right:104px;
+    }
+    .internet-indicator svg{
+      display:block;
+      width:100%;
+      height:100%;
+      overflow:visible;
+    }
+    .internet-indicator .wifi-line{
+      fill:none;
+      stroke:currentColor;
+      stroke-width:2.8;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+    .internet-indicator .wifi-dot{
+      fill:currentColor;
+    }
+    .internet-indicator .wifi-cross{
+      opacity:0;
+      transition:opacity .14s ease;
+    }
+    .internet-indicator.checking{
+      color:#6f6f6f;
+      opacity:.38;
+      filter:drop-shadow(0 0 4px rgba(255,255,255,.18));
+    }
+    .internet-indicator.online{
+      color:#2ecc71;
+      opacity:1;
+      filter:drop-shadow(0 0 7px rgba(46,204,113,.72));
+    }
+    .internet-indicator.online.faded{
+      opacity:0;
+      color:#050505;
+      filter:drop-shadow(0 0 0 rgba(0,0,0,0));
+    }
+    .internet-indicator.offline{
+      color:#ff3838;
+      opacity:1;
+      filter:drop-shadow(0 0 8px rgba(255,56,56,.86));
+      transition:opacity .12s ease, color .12s ease, filter .12s ease, right .18s ease;
+    }
+    .internet-indicator.offline .wifi-cross{
+      opacity:1;
     }
     .auto-sync-indicator{
       --auto-sync-scheduled-orange:#ff7a00;
@@ -4740,6 +4800,15 @@
 </head>
 <body>
   <div class="app">
+    <div class="internet-indicator checking" id="internetIndicator" role="img" aria-label="Sprawdzam internet">
+      <svg viewBox="0 0 36 30" aria-hidden="true" focusable="false">
+        <path class="wifi-line" d="M5 10.5c7.2-6.5 18.8-6.5 26 0"></path>
+        <path class="wifi-line" d="M10 16c4.5-4 11.5-4 16 0"></path>
+        <path class="wifi-line" d="M14.7 21c2-1.8 4.6-1.8 6.6 0"></path>
+        <circle class="wifi-dot" cx="18" cy="25.2" r="2.4"></circle>
+        <path class="wifi-line wifi-cross" d="M27.5 5.5l6 6m0-6l-6 6"></path>
+      </svg>
+    </div>
     <div class="battery-indicator" id="batteryIndicator">—</div>
     <button class="auto-sync-indicator" id="autoSyncIndicator" type="button" aria-label="Auto Sync"></button>
     <div class="notes-bar" id="notesBar"></div>
@@ -4923,7 +4992,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.19.4</div>
+    <div class="version">v6.20.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -8182,6 +8251,7 @@
         el.textContent='—';
         el.classList.remove('low','charging');
         el.style.visibility='visible';
+        setInternetIndicatorBatteryCharging(false);
         return;
       }
       const pct = Math.round(batteryObj.level * 100);
@@ -8189,6 +8259,7 @@
       el.textContent = pct + '%';
       el.classList.toggle('low', pct <= 30);
       el.classList.toggle('charging', charging);
+      setInternetIndicatorBatteryCharging(charging);
       // Miganie: gdy low i bez ladowania, ukrywaj co sekunde.
       if(pct <= 30 && !charging && !blinkState){
         el.style.visibility='hidden';
@@ -8203,6 +8274,143 @@
         b.addEventListener('chargingchange', renderBattery);
         renderBattery();
       }).catch(()=>{});
+    }
+
+    const INTERNET_ONLINE_FADE_MS = 2 * 60 * 1000;
+    const INTERNET_ONLINE_RECHECK_THROTTLE_MS = 15000;
+    const INTERNET_OFFLINE_RECHECK_THROTTLE_MS = 4000;
+    const INTERNET_CHECK_TIMEOUT_MS = 4500;
+    let internetStatus = 'checking';
+    let internetCheckRunning = false;
+    let internetCheckQueued = false;
+    let internetLastCheckStartedAt = 0;
+    let internetCheckTimer = null;
+    let internetFadeTimer = null;
+
+    function setInternetIndicatorBatteryCharging(charging){
+      const el = document.getElementById('internetIndicator');
+      if(el) el.classList.toggle('battery-charging', !!charging);
+    }
+    function setInternetIndicatorState(state){
+      const el = document.getElementById('internetIndicator');
+      if(!el) return;
+      internetStatus = state;
+      clearTimeout(internetFadeTimer);
+      internetFadeTimer = null;
+      el.classList.remove('checking','online','offline','faded');
+      if(state === 'online'){
+        el.classList.add('online');
+        el.setAttribute('aria-label', 'Internet działa');
+        internetFadeTimer = setTimeout(()=>{
+          if(internetStatus === 'online') el.classList.add('faded');
+        }, INTERNET_ONLINE_FADE_MS);
+      } else if(state === 'offline'){
+        el.classList.add('offline');
+        el.setAttribute('aria-label', 'Brak internetu');
+      } else {
+        el.classList.add('checking');
+        el.setAttribute('aria-label', 'Sprawdzam internet');
+      }
+    }
+    function buildInternetProbeUrl(){
+      const url = new URL('manifest.json', window.location.href);
+      url.searchParams.set('internetCheck', String(Date.now()));
+      return url.toString();
+    }
+    function fetchWithTimeout(url, options, timeoutMs){
+      const controller = new AbortController();
+      const timer = setTimeout(()=>controller.abort(), timeoutMs);
+      return fetch(url, Object.assign({}, options || {}, { signal:controller.signal }))
+        .finally(()=>clearTimeout(timer));
+    }
+    async function probeInternetConnectivity(){
+      const url = buildInternetProbeUrl();
+      try{
+        const response = await fetchWithTimeout(url, {
+          method:'HEAD',
+          cache:'no-store',
+          headers:{ 'Cache-Control':'no-cache' }
+        }, INTERNET_CHECK_TIMEOUT_MS);
+        return !!(response && response.ok);
+      } catch(err){
+        try{
+          const response = await fetchWithTimeout(url, {
+            method:'GET',
+            cache:'no-store',
+            headers:{ 'Cache-Control':'no-cache' }
+          }, INTERNET_CHECK_TIMEOUT_MS);
+          return !!(response && response.ok);
+        } catch(err2){
+          return false;
+        }
+      }
+    }
+    function requestInternetConnectivityCheck(reason, options={}){
+      const force = options.force === true;
+      const now = Date.now();
+      const throttleMs = internetStatus === 'offline'
+        ? INTERNET_OFFLINE_RECHECK_THROTTLE_MS
+        : INTERNET_ONLINE_RECHECK_THROTTLE_MS;
+      if(internetCheckRunning){
+        internetCheckQueued = true;
+        return;
+      }
+      clearTimeout(internetCheckTimer);
+      internetCheckTimer = null;
+      if(!force && internetLastCheckStartedAt && now - internetLastCheckStartedAt < throttleMs){
+        internetCheckTimer = setTimeout(()=>{
+          internetCheckTimer = null;
+          runInternetConnectivityCheck(reason);
+        }, Math.max(250, throttleMs - (now - internetLastCheckStartedAt)));
+        return;
+      }
+      runInternetConnectivityCheck(reason);
+    }
+    async function runInternetConnectivityCheck(reason){
+      if(internetCheckRunning){
+        internetCheckQueued = true;
+        return;
+      }
+      internetCheckRunning = true;
+      internetLastCheckStartedAt = Date.now();
+      if(internetStatus === 'checking') setInternetIndicatorState('checking');
+      try{
+        const online = await probeInternetConnectivity();
+        setInternetIndicatorState(online ? 'online' : 'offline');
+      } finally {
+        internetCheckRunning = false;
+        if(internetCheckQueued){
+          internetCheckQueued = false;
+          requestInternetConnectivityCheck('queued-' + (reason || 'check'));
+        }
+      }
+    }
+    function initializeInternetConnectivityIndicator(){
+      setInternetIndicatorState('checking');
+      requestInternetConnectivityCheck('startup', { force:true });
+      document.addEventListener('pointerdown', ()=>{
+        requestInternetConnectivityCheck('activity');
+      }, { passive:true, capture:true });
+      document.addEventListener('visibilitychange', ()=>{
+        if(document.visibilityState === 'visible'){
+          requestInternetConnectivityCheck('visible', { force:true });
+        }
+      });
+      window.addEventListener('pageshow', ()=>{
+        requestInternetConnectivityCheck('pageshow', { force:true });
+      });
+      window.addEventListener('focus', ()=>{
+        requestInternetConnectivityCheck('focus', { force:true });
+      });
+      window.addEventListener('online', ()=>{
+        requestInternetConnectivityCheck('browser-online', { force:true });
+      });
+      window.addEventListener('offline', ()=>{
+        clearTimeout(internetCheckTimer);
+        internetCheckTimer = null;
+        internetCheckQueued = false;
+        setInternetIndicatorState('offline');
+      });
     }
 
     // ===== overlay =====
@@ -11466,7 +11674,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.19.4';
+      return el ? el.textContent.trim() : 'v6.20.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -14470,6 +14678,7 @@ km priv: 0,00</div>
     loadPostWorkVerification();
     initializeDailyExportStatus();
     initializeSyncTracking();
+    initializeInternetConnectivityIndicator();
     if(startWorkMinutes!==null && endWorkMinutes===null){
       document.getElementById('workBtn').classList.add('on');
     }
