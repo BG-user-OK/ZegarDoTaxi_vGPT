@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.21.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.21.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5084,7 +5084,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.21.0</div>
+    <div class="version">v6.21.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -12061,7 +12061,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.21.0';
+      return el ? el.textContent.trim() : 'v6.21.1';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -13495,6 +13495,27 @@ km priv: 0,00</div>
       localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
       localStorage.setItem(LS_LAST_VERIFIED_SYNC_HASH, comparable);
     }
+    function markDownloadedSyncSnapshotClean(snapshot){
+      clearAutoSyncRetry(false);
+      clearAutoSyncSchedule(false);
+      clearOverlayAutoSyncDirty();
+      clearLocalSyncDirty(snapshot);
+      const workStatus = String(snapshot && snapshot.workStatus || '').toLowerCase();
+      const snapshotDate = String(snapshot && (snapshot.workDate || snapshot.state && snapshot.state.workDate) || '');
+      if(workStatus === 'ended' && hasEndedWorkdayForExport()){
+        const identity = currentPostWorkIdentity();
+        if(identity && (!snapshotDate || snapshotDate === identity.workDate)){
+          setPostWorkVerificationState('sync', 'ok', {
+            syncId:String(snapshot.syncId || snapshot.id || ''),
+            message:'Koncowa synchronizacja pobrana z chmury.'
+          });
+        }
+      }
+    }
+    function setDownloadedSyncIndicatorClean(){
+      clearAutoSyncGreenFade();
+      setAutoSyncIndicatorState(isAutoSyncEnabled() ? 'on' : 'off');
+    }
     function settleCurrentLocalSyncState(){
       clearAutoSyncRetry(false);
       clearAutoSyncSchedule(true);
@@ -14137,7 +14158,7 @@ km priv: 0,00</div>
         markCloudSeen(data.snapshot);
         playSyncSuccessSound();
         playSyncStandbySound();
-        setAutoSyncIndicatorState('on');
+        setDownloadedSyncIndicatorClean();
         hideOverlay();
         showToast('Synchronizacja pobrana.', 'ok');
       }catch(e){
@@ -14182,7 +14203,7 @@ km priv: 0,00</div>
         state.currentBreakStart = null;
       }
       applyStateObjects(state, persist, { preserveSharedData:true });
-      clearLocalSyncDirty(snapshot);
+      markDownloadedSyncSnapshotClean(snapshot);
       renderAll();
       syncWorkWakeLock();
     }
@@ -14263,7 +14284,12 @@ km priv: 0,00</div>
         }
         applySyncSnapshot(loaded.snapshot);
         playSyncSuccessSound();
-        setAutoSyncIndicatorState('applied');
+        if(String(loaded.snapshot.workStatus || '').toLowerCase() === 'ended'){
+          setDownloadedSyncIndicatorClean();
+          playSyncStandbySound();
+        } else {
+          setAutoSyncIndicatorState('applied');
+        }
       }catch(e){
         if(e && e.sharedDataConflict){
           setAutoSyncIndicatorState('frozen', 'Notatki wymagają decyzji: telefon, Arkusz albo obie wersje.');
