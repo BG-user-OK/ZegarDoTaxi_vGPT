@@ -1,0 +1,53 @@
+name: Deploy static PWA to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare static PWA artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf pages-dist
+          mkdir -p pages-dist
+          cp index.html pages-dist/
+          cp sw.js pages-dist/
+          cp manifest.json pages-dist/
+          cp icon-192.png pages-dist/
+          cp icon-512.png pages-dist/
+          cp icon-512-maskable.png pages-dist/
+          cp .nojekyll pages-dist/
+          cp -R Photos pages-dist/Photos
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

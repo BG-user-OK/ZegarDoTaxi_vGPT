@@ -3,6 +3,9 @@
 
 !/.gitignore
 !/.nojekyll
+!/.github/
+!/.github/workflows/
+!/.github/workflows/**
 !/index.html
 !/sw.js
 !/manifest.json
