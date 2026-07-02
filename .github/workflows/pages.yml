@@ -67,7 +67,7 @@ jobs:
           echo "Expecting ${expected} at ${url}"
           for attempt in {1..18}; do
             body="$(curl --connect-timeout 10 --max-time 20 -fsSL "${url}?pagesVerify=${GITHUB_RUN_ID}-${attempt}-$(date +%s)" || true)"
-            if printf '%s' "$body" | grep -q "$expected"; then
+            if [[ "$body" == *"$expected"* ]]; then
               echo "Published ${expected} confirmed."
               exit 0
             fi
