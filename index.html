@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.20.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.21.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -2276,6 +2276,98 @@
       padding:10px;
     }
     .overlay.keypad-overlay.keypad-left{ justify-content:flex-start; }
+    .rain-lights-panel{
+      height:min(96vh, 820px);
+      max-width:560px;
+      padding:14px 14px 16px;
+      gap:14px;
+      justify-content:space-between;
+      overflow:hidden;
+      background:#030303;
+      border-color:#1f1f1f;
+      box-shadow:0 0 34px rgba(0,0,0,.82), inset 0 0 0 1px rgba(255,255,255,.035);
+    }
+    .rain-lights-title{
+      text-align:center;
+      color:#f4f4f4;
+      font-size:clamp(26px, 7vw, 40px);
+      font-weight:1000;
+      line-height:1.05;
+      letter-spacing:0;
+      text-shadow:0 0 18px rgba(255,255,255,.18);
+    }
+    .rain-lights-visual{
+      flex:1 1 auto;
+      min-height:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:100%;
+      background:#000;
+      border-radius:14px;
+      overflow:hidden;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.07), 0 0 30px rgba(0,0,0,.72);
+    }
+    .rain-lights-img{
+      display:block;
+      width:100%;
+      height:100%;
+      max-width:100%;
+      max-height:100%;
+      object-fit:contain;
+    }
+    .rain-lights-fallback{
+      display:none;
+      width:100%;
+      text-align:center;
+      color:#62b7ff;
+      font-size:clamp(58px, 18vw, 124px);
+      font-weight:1000;
+      letter-spacing:0;
+      text-shadow:0 0 22px rgba(98,183,255,.65), 0 0 42px rgba(98,183,255,.32);
+    }
+    .rain-lights-actions{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+      width:100%;
+      flex:0 0 auto;
+    }
+    .rain-lights-actions button{
+      width:100%;
+      min-height:78px;
+      border:none;
+      border-radius:18px;
+      color:#fff;
+      font-size:clamp(24px, 6.4vw, 34px);
+      font-weight:1000;
+      line-height:1.05;
+      letter-spacing:0;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.10), 0 0 22px rgba(0,0,0,.65);
+      touch-action:manipulation;
+    }
+    .rain-lights-ok{
+      background:linear-gradient(180deg,#27cf5d,#0d7b30);
+      text-shadow:0 0 12px rgba(0,0,0,.38);
+    }
+    .rain-lights-later{
+      background:linear-gradient(180deg,#ffe04f,#b89000);
+      color:#221700 !important;
+      text-shadow:0 1px 0 rgba(255,255,255,.24);
+    }
+    @media (orientation:landscape) and (max-height:560px){
+      .rain-lights-panel{
+        max-width:min(760px, 96vw);
+        height:min(96vh, 500px);
+        display:grid;
+        grid-template-columns:1.1fr .9fr;
+        grid-template-rows:auto 1fr;
+        align-items:stretch;
+      }
+      .rain-lights-title{ grid-column:1 / -1; font-size:clamp(22px, 5vh, 34px); }
+      .rain-lights-actions{ align-self:center; }
+      .rain-lights-actions button{ min-height:82px; font-size:clamp(22px, 5.7vh, 32px); }
+    }
 
     .editor{
       width:min(96vw, 520px);
@@ -4992,7 +5084,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.20.0</div>
+    <div class="version">v6.21.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -8468,9 +8560,300 @@
       overlay.innerHTML='';
       lockViewTouch();
     }
+    // ===== rain/headlights reminder =====
+    const LS_RAIN_LIGHTS = 'tarcza_rain_lights_v1';
+    const RAIN_LIGHTS_CHECK_INTERVAL_MS = 30 * 60 * 1000;
+    const RAIN_LIGHTS_POSTPONE_MS = 30 * 60 * 1000;
+    const RAIN_LIGHTS_LOCATION_MAX_AGE_MS = 15 * 60 * 1000;
+    const RAIN_LIGHTS_LOCATION_TIMEOUT_MS = 8000;
+    const RAIN_LIGHTS_FETCH_TIMEOUT_MS = 9000;
+    const RAIN_LIGHTS_NEAR_HOURS = 2;
+    const RAIN_LIGHTS_PRECIP_PROBABILITY = 25;
+    const RAIN_LIGHTS_MOVE_KM = 15;
+    const RAIN_LIGHTS_RAIN_CODES = new Set([51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99]);
+    let rainLightsState = createRainLightsState();
+    let rainLightsTimer = null;
+    let rainLightsInFlight = false;
+    let rainLightsAlertVisible = false;
+
+    function createRainLightsState(){
+      return {
+        workDate:null,
+        lastCheckAt:0,
+        lastRiskPresent:false,
+        decision:'',
+        decisionAt:0,
+        decisionRiskLevel:0,
+        postponedUntil:0,
+        returnSignalAt:0,
+        lastAlertAt:0,
+        currentRiskLevel:0,
+        lastLat:null,
+        lastLon:null
+      };
+    }
+    function normalizeRainLightsState(raw){
+      const base = createRainLightsState();
+      if(!raw || typeof raw !== 'object') return base;
+      Object.keys(base).forEach(key=>{
+        if(typeof raw[key] !== 'undefined') base[key] = raw[key];
+      });
+      base.lastCheckAt = Number(base.lastCheckAt) || 0;
+      base.decisionAt = Number(base.decisionAt) || 0;
+      base.decisionRiskLevel = Number(base.decisionRiskLevel) || 0;
+      base.postponedUntil = Number(base.postponedUntil) || 0;
+      base.returnSignalAt = Number(base.returnSignalAt) || 0;
+      base.lastAlertAt = Number(base.lastAlertAt) || 0;
+      base.currentRiskLevel = Number(base.currentRiskLevel) || 0;
+      base.lastRiskPresent = !!base.lastRiskPresent;
+      base.lastLat = Number.isFinite(Number(base.lastLat)) ? Number(base.lastLat) : null;
+      base.lastLon = Number.isFinite(Number(base.lastLon)) ? Number(base.lastLon) : null;
+      if(base.decision !== 'ok' && base.decision !== 'postpone') base.decision = '';
+      return base;
+    }
+    function saveRainLightsState(){
+      try{ localStorage.setItem(LS_RAIN_LIGHTS, JSON.stringify(rainLightsState)); }catch(e){}
+    }
+    function loadRainLightsState(){
+      try{ rainLightsState = normalizeRainLightsState(JSON.parse(localStorage.getItem(LS_RAIN_LIGHTS) || 'null')); }
+      catch(e){ rainLightsState = createRainLightsState(); }
+      syncRainLightsWorkdayScope(false);
+    }
+    function isRainLightsActiveWorkday(){
+      return startWorkMinutes !== null && endWorkMinutes === null;
+    }
+    function syncRainLightsWorkdayScope(save=true){
+      if(!isRainLightsActiveWorkday()){
+        rainLightsState = createRainLightsState();
+        try{ localStorage.removeItem(LS_RAIN_LIGHTS); }catch(e){}
+        clearTimeout(rainLightsTimer);
+        rainLightsTimer = null;
+        if(rainLightsAlertVisible && overlay.dataset.lockClose === 'rainLights'){
+          rainLightsAlertVisible = false;
+          hideOverlay();
+          renderAll();
+        }
+        return false;
+      }
+      const dateKey = workDate || todayISO();
+      if(rainLightsState.workDate !== dateKey){
+        rainLightsState = createRainLightsState();
+        rainLightsState.workDate = dateKey;
+        if(save) saveRainLightsState();
+      }
+      return true;
+    }
+    function startRainLightsWorkday(reason='work_start'){
+      if(!syncRainLightsWorkdayScope(true)) return;
+      scheduleRainLightsCheck(reason, 4500, true);
+    }
+    function clearRainLightsWorkday(reason='work_end'){
+      syncRainLightsWorkdayScope(false);
+    }
+    function noteRainLightsReturnSignal(reason){
+      if(!syncRainLightsWorkdayScope(true)) return;
+      rainLightsState.returnSignalAt = Date.now();
+      saveRainLightsState();
+      scheduleRainLightsCheck(reason || 'return', 1500, true);
+    }
+    function initializeRainLightsReminder(){
+      loadRainLightsState();
+      if(isRainLightsActiveWorkday()) scheduleRainLightsCheck('startup', 7000, true);
+      setInterval(()=>{
+        if(!syncRainLightsWorkdayScope(true)) return;
+        if(Date.now() - (rainLightsState.lastCheckAt || 0) >= RAIN_LIGHTS_CHECK_INTERVAL_MS){
+          scheduleRainLightsCheck('periodic', 0, false);
+        }
+      }, 60000);
+    }
+    function scheduleRainLightsCheck(reason='scheduled', delayMs=0, force=false){
+      if(!syncRainLightsWorkdayScope(true)) return;
+      if(!force && Date.now() - (rainLightsState.lastCheckAt || 0) < RAIN_LIGHTS_CHECK_INTERVAL_MS) return;
+      clearTimeout(rainLightsTimer);
+      rainLightsTimer = setTimeout(()=>checkRainLightsForecast(reason, force), Math.max(0, delayMs || 0));
+    }
+    function getRainLightsPosition(){
+      return new Promise((resolve, reject)=>{
+        if(!navigator.geolocation || !window.isSecureContext){ reject(new Error('geolocation_unavailable')); return; }
+        navigator.geolocation.getCurrentPosition(
+          pos=>resolve(pos.coords),
+          err=>reject(err),
+          { enableHighAccuracy:false, maximumAge:RAIN_LIGHTS_LOCATION_MAX_AGE_MS, timeout:RAIN_LIGHTS_LOCATION_TIMEOUT_MS }
+        );
+      });
+    }
+    function roundRainLightsCoord(value){
+      return Math.round(Number(value) * 20) / 20;
+    }
+    function rainLightsDistanceKm(aLat, aLon, bLat, bLon){
+      if(!Number.isFinite(aLat) || !Number.isFinite(aLon) || !Number.isFinite(bLat) || !Number.isFinite(bLon)) return 0;
+      const toRad = deg => deg * Math.PI / 180;
+      const r = 6371;
+      const dLat = toRad(bLat - aLat);
+      const dLon = toRad(bLon - aLon);
+      const p1 = toRad(aLat);
+      const p2 = toRad(bLat);
+      const h = Math.sin(dLat/2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dLon/2) ** 2;
+      return 2 * r * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+    }
+    async function fetchRainLightsForecast(lat, lon){
+      const url = new URL('https://api.open-meteo.com/v1/forecast');
+      url.searchParams.set('latitude', String(Number(lat).toFixed(4)));
+      url.searchParams.set('longitude', String(Number(lon).toFixed(4)));
+      url.searchParams.set('hourly', 'weather_code,precipitation_probability,precipitation,rain,showers');
+      url.searchParams.set('forecast_days', '1');
+      url.searchParams.set('timezone', 'auto');
+      const controller = new AbortController();
+      const timer = setTimeout(()=>controller.abort(), RAIN_LIGHTS_FETCH_TIMEOUT_MS);
+      try{
+        const response = await fetch(url.toString(), { cache:'no-store', signal:controller.signal });
+        if(!response.ok) return null;
+        return await response.json();
+      }catch(e){
+        return null;
+      }finally{
+        clearTimeout(timer);
+      }
+    }
+    function evaluateRainLightsRisk(forecast){
+      const hourly = forecast && forecast.hourly;
+      if(!hourly || !Array.isArray(hourly.time)) return null;
+      const nowMs = Date.now();
+      const endMs = nowMs + RAIN_LIGHTS_NEAR_HOURS * 60 * 60 * 1000;
+      const codes = hourly.weather_code || [];
+      const probability = hourly.precipitation_probability || [];
+      const precipitation = hourly.precipitation || [];
+      const rain = hourly.rain || [];
+      const showers = hourly.showers || [];
+      const risky = [];
+      hourly.time.forEach((time, i)=>{
+        const t = Date.parse(time);
+        if(!Number.isFinite(t) || t < nowMs - 45 * 60 * 1000 || t > endMs) return;
+        const code = Number(codes[i]);
+        const prob = Number(probability[i]) || 0;
+        const amount = Math.max(Number(precipitation[i]) || 0, Number(rain[i]) || 0, Number(showers[i]) || 0);
+        const codeRisk = RAIN_LIGHTS_RAIN_CODES.has(code);
+        const amountRisk = amount > 0;
+        const probabilityRisk = prob >= RAIN_LIGHTS_PRECIP_PROBABILITY;
+        if(codeRisk || amountRisk || probabilityRisk){
+          const level = Math.max(prob, codeRisk ? 70 : 0, amountRisk ? 85 : 0);
+          risky.push({ time, code, prob, amount, level });
+        }
+      });
+      if(!risky.length) return null;
+      const first = risky[0];
+      const maxLevel = risky.reduce((max, item)=>Math.max(max, item.level), 0);
+      const maxProbability = risky.reduce((max, item)=>Math.max(max, item.prob), 0);
+      const maxAmount = risky.reduce((max, item)=>Math.max(max, item.amount), 0);
+      return {
+        firstTime:first.time,
+        level:maxLevel,
+        probability:maxProbability,
+        amount:maxAmount
+      };
+    }
+    function clearRainLightsDecisionAfterNoRisk(){
+      rainLightsState.lastRiskPresent = false;
+      rainLightsState.currentRiskLevel = 0;
+      rainLightsState.decision = '';
+      rainLightsState.decisionAt = 0;
+      rainLightsState.decisionRiskLevel = 0;
+      rainLightsState.postponedUntil = 0;
+    }
+    function shouldShowRainLightsReminder(risk){
+      if(!risk || rainLightsAlertVisible) return false;
+      const now = Date.now();
+      const returnedAfterDecision = rainLightsState.returnSignalAt > rainLightsState.decisionAt;
+      const worsened = Number(risk.level || 0) >= Number(rainLightsState.decisionRiskLevel || 0) + 15;
+      if(rainLightsState.decision === 'ok' && !returnedAfterDecision && !worsened) return false;
+      if(rainLightsState.decision === 'postpone' && rainLightsState.postponedUntil > now && !returnedAfterDecision && !worsened) return false;
+      return true;
+    }
+    async function checkRainLightsForecast(reason='scheduled', force=false){
+      if(rainLightsInFlight) return;
+      if(!syncRainLightsWorkdayScope(true)) return;
+      if(!force && Date.now() - (rainLightsState.lastCheckAt || 0) < RAIN_LIGHTS_CHECK_INTERVAL_MS) return;
+      rainLightsInFlight = true;
+      try{
+        const coords = await getRainLightsPosition();
+        if(!syncRainLightsWorkdayScope(true)) return;
+        const roundedLat = roundRainLightsCoord(coords.latitude);
+        const roundedLon = roundRainLightsCoord(coords.longitude);
+        const previousLat = rainLightsState.lastLat;
+        const previousLon = rainLightsState.lastLon;
+        if(previousLat !== null && previousLon !== null){
+          const moved = rainLightsDistanceKm(previousLat, previousLon, roundedLat, roundedLon);
+          if(moved >= RAIN_LIGHTS_MOVE_KM){
+            rainLightsState.returnSignalAt = Date.now();
+            rainLightsState.decision = '';
+            rainLightsState.postponedUntil = 0;
+          }
+        }
+        rainLightsState.lastLat = roundedLat;
+        rainLightsState.lastLon = roundedLon;
+        rainLightsState.lastCheckAt = Date.now();
+        const forecast = await fetchRainLightsForecast(coords.latitude, coords.longitude);
+        if(!forecast){ saveRainLightsState(); return; }
+        const risk = evaluateRainLightsRisk(forecast);
+        if(!risk){
+          clearRainLightsDecisionAfterNoRisk();
+          saveRainLightsState();
+          return;
+        }
+        rainLightsState.lastRiskPresent = true;
+        rainLightsState.currentRiskLevel = risk.level;
+        saveRainLightsState();
+        if(shouldShowRainLightsReminder(risk)) showRainLightsReminder(risk, reason);
+      }catch(e){
+        rainLightsState.lastCheckAt = Date.now();
+        saveRainLightsState();
+      }finally{
+        rainLightsInFlight = false;
+      }
+    }
+    function showRainLightsReminder(risk, reason){
+      if(rainLightsAlertVisible || !isRainLightsActiveWorkday()) return;
+      rainLightsAlertVisible = true;
+      rainLightsState.lastAlertAt = Date.now();
+      rainLightsState.currentRiskLevel = risk && risk.level ? risk.level : 0;
+      saveRainLightsState();
+      showOverlay(`
+        <div class="big-panel rain-lights-panel">
+          <div class="rain-lights-title">W&#321;&#260;CZ &#346;WIAT&#321;A</div>
+          <div class="rain-lights-visual">
+            <img src="Photos/deszcz.png" alt="Deszcz" class="rain-lights-img" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+            <div class="rain-lights-fallback">DESZCZ</div>
+          </div>
+          <div class="rain-lights-actions">
+            <button class="rain-lights-ok" id="rainLightsOkBtn" type="button">OK, W&#321;&#260;CZY&#321;EM</button>
+            <button class="rain-lights-later" id="rainLightsLaterBtn" type="button">NA RAZIE NIE TRZEBA</button>
+          </div>
+        </div>
+      `);
+      overlay.dataset.lockClose = 'rainLights';
+      const okBtn = document.getElementById('rainLightsOkBtn');
+      const laterBtn = document.getElementById('rainLightsLaterBtn');
+      if(okBtn) okBtn.addEventListener('click', ()=>finishRainLightsReminder('ok'));
+      if(laterBtn) laterBtn.addEventListener('click', ()=>finishRainLightsReminder('postpone'));
+    }
+    function finishRainLightsReminder(decision){
+      if(!rainLightsAlertVisible) return;
+      const now = Date.now();
+      rainLightsAlertVisible = false;
+      rainLightsState.decision = decision === 'ok' ? 'ok' : 'postpone';
+      rainLightsState.decisionAt = now;
+      rainLightsState.decisionRiskLevel = Number(rainLightsState.currentRiskLevel || 0);
+      rainLightsState.postponedUntil = decision === 'postpone' ? now + RAIN_LIGHTS_POSTPONE_MS : 0;
+      saveRainLightsState();
+      if(overlay.dataset.lockClose === 'rainLights'){
+        hideOverlay();
+        renderAll();
+      }
+      scheduleRainLightsCheck('decision_' + rainLightsState.decision, RAIN_LIGHTS_CHECK_INTERVAL_MS, false);
+    }
     overlay.addEventListener('click',(e)=>{
       if(e.target!==overlay) return;
-      if(overlay.dataset.lockClose === 'tomorrowPreview' || overlay.dataset.lockClose === 'aiPaste' || overlay.dataset.lockClose === 'piggyCounter') return;
+      if(overlay.dataset.lockClose === 'tomorrowPreview' || overlay.dataset.lockClose === 'aiPaste' || overlay.dataset.lockClose === 'piggyCounter' || overlay.dataset.lockClose === 'rainLights') return;
       moneyPanelDraft=null;
       counterPanelDraft=null;
       if(pendingEndWorkExport) abortPendingEndWorkReview();
@@ -11319,6 +11702,7 @@ km priv: 0,00</div>
       workDate = todayISO();
       if(!fromEdit) restoreDuePostponedNotes(workDate);
       saveStateAndScheduleAutoSync(fromEdit ? 'work_start_edit' : 'work_start');
+      startRainLightsWorkday(fromEdit ? 'work_start_edit' : 'work_start');
       renderAll();
       syncWorkWakeLock();
       if(!fromEdit){
@@ -11359,6 +11743,7 @@ km priv: 0,00</div>
       renderAll();
       restartDrivingFocusTimerForActiveWork();
       syncWorkWakeLock();
+      startRainLightsWorkday('work_continue');
     }
     function providerIncomeEntered(){
       return PROVIDERS.some(p => (revenues[p.key] || 0) !== 0);
@@ -11462,6 +11847,7 @@ km priv: 0,00</div>
         breakSegments.push({ start:currentBreakStart, end:endWorkMinutes });
       }
       breakActive=false; currentBreakStart=null;
+      clearRainLightsWorkday('work_end');
       pendingEndWorkExport = true;
       applyFinalBreakCorrectionIfNoWorkAfterBreak({ notify:true });
       document.getElementById('workBtn').classList.remove('on');
@@ -11504,6 +11890,7 @@ km priv: 0,00</div>
       PROVIDERS.forEach(p=>revenues[p.key]=0);
       counterStart=null; counterEnd=null; privKmTotal=0;
       clearPotStateForDay();
+      clearRainLightsWorkday('day_reset');
       // Reset garnka - nawet jeśli był w trakcie grzania albo alarmu z wczoraj
       // Punkt 7: cel godzinowy wraca do domyślnych 8h
       workTargetMinutes=480;
@@ -11674,7 +12061,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.20.0';
+      return el ? el.textContent.trim() : 'v6.21.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -14174,6 +14561,7 @@ km priv: 0,00</div>
         syncWorkWakeLock();
         reevaluateEarlyMonthPromptWatch();
         autoSyncCheckOnForeground('visible');
+        noteRainLightsReturnSignal('visible');
       } else if(document.visibilityState === 'hidden'){
         earlyMonthAreaFreeSince = 0;
         clearEarlyMonthAreaTimer();
@@ -14187,10 +14575,12 @@ km priv: 0,00</div>
       autoSyncHiddenUploaded = false;
       reevaluateEarlyMonthPromptWatch();
       autoSyncCheckOnForeground('pageshow');
+      noteRainLightsReturnSignal('pageshow');
     });
     window.addEventListener('focus', ()=>{
       reevaluateEarlyMonthPromptWatch();
       autoSyncCheckOnForeground('focus');
+      noteRainLightsReturnSignal('focus');
     });
 
     // ===== event listeners =====
@@ -14462,12 +14852,14 @@ km priv: 0,00</div>
       ()=>{
         if(startWorkMinutes===null || endWorkMinutes!==null) return;
         const now=nowMinutes();
+        const wasBreakActive = breakActive;
         if(!breakActive){ breakActive=true; currentBreakStart=now; }
         else {
           breakActive=false;
           if(currentBreakStart!==null) breakSegments.push({ start:currentBreakStart, end:now });
           currentBreakStart=null;
         }
+        if(wasBreakActive && !breakActive) noteRainLightsReturnSignal('break_end');
         saveStateAndScheduleAutoSync(breakActive ? 'break_start' : 'break_end');
         renderAll();
       },
@@ -14679,6 +15071,7 @@ km priv: 0,00</div>
     initializeDailyExportStatus();
     initializeSyncTracking();
     initializeInternetConnectivityIndicator();
+    initializeRainLightsReminder();
     if(startWorkMinutes!==null && endWorkMinutes===null){
       document.getElementById('workBtn').classList.add('on');
     }

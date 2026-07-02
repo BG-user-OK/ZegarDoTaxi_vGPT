@@ -1,7 +1,7 @@
 // Service Worker dla Tarczy czasu pracy
 // WAŻNE: przy każdej nowej wersji aplikacji zmień nazwę cache - stare wersje automatycznie się usuną.
-// v6.20.0: based on a previously developed v:1.28 version created by another AI.
-const CACHE_NAME = 'tarcza-v6.20.0';
+// v6.21.0: based on a previously developed v:1.28 version created by another AI.
+const CACHE_NAME = 'tarcza-v6.21.0';
 
 const FILES_TO_CACHE = [
   './',
@@ -11,6 +11,7 @@ const FILES_TO_CACHE = [
   './icon-512.png',
   './icon-512-maskable.png',
   './Photos/sakwa.png',
+  './Photos/deszcz.png',
   './Photos/oko_otwarte_v2.png',
   './Photos/blink_normal_v2.gif',
   './Photos/blink_fast_v2.gif',
