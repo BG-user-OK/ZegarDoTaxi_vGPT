@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.19.3: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.19.4: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -3002,6 +3002,7 @@
       display:flex;
       align-items:center;
       justify-content:center;
+      z-index:1;
     }
     .sync-cloud-large{
       position:relative;
@@ -3038,20 +3039,26 @@
         clamp(212px, 67vw, 318px) clamp(10px, 2.2vw, 20px) 0 -7px rgba(244,250,255,.99);
     }
     .sync-cloud-spinner{
+      --sync-spinner-primary:#8fd9ff;
+      --sync-spinner-secondary:#1d73b8;
       position:absolute;
-      left:50%;
-      top:55%;
-      width:clamp(54px, 13vw, 70px);
-      height:clamp(54px, 13vw, 70px);
+      left:39%;
+      top:59%;
+      width:clamp(40px, 9vw, 54px);
+      height:clamp(40px, 9vw, 54px);
       border-radius:50%;
-      opacity:0;
+      opacity:1;
       transform:translate(-50%, -50%);
       transition:opacity .18s ease;
       z-index:3;
-      filter:drop-shadow(0 0 4px rgba(0,0,0,.42));
+      filter:
+        drop-shadow(0 0 4px rgba(0,0,0,.42))
+        drop-shadow(0 0 8px rgba(255,255,255,.34));
     }
-    .sync-menu.busy .sync-cloud-spinner{
-      opacity:1;
+    .sync-cloud-spinner-download{
+      --sync-spinner-primary:#ffd84d;
+      --sync-spinner-secondary:#7a4c24;
+      left:61%;
     }
     .sync-cloud-spinner::before,
     .sync-cloud-spinner::after{
@@ -3059,24 +3066,35 @@
       position:absolute;
       border-radius:50%;
       border-style:solid;
-      border-color:rgba(0,0,0,.88);
+      border-color:var(--sync-spinner-primary) var(--sync-spinner-secondary) var(--sync-spinner-primary) transparent;
     }
     .sync-cloud-spinner::before{
       inset:0;
-      border-width:7px;
-      border-right-color:transparent;
+      border-width:6px;
       animation:syncSpin 1s linear infinite;
     }
     .sync-cloud-spinner::after{
-      inset:17px;
-      border-width:4px;
-      border-left-color:transparent;
+      inset:13px;
+      border-width:3px;
+      border-color:var(--sync-spinner-secondary) transparent var(--sync-spinner-primary) var(--sync-spinner-secondary);
       animation:syncSpinReverse .72s linear infinite;
+    }
+    .sync-menu.sync-busy-send .sync-cloud-spinner-download::before,
+    .sync-menu.sync-busy-send .sync-cloud-spinner-download::after,
+    .sync-menu.sync-busy-load .sync-cloud-spinner-upload::before,
+    .sync-menu.sync-busy-load .sync-cloud-spinner-upload::after{
+      animation-play-state:paused;
     }
     .sync-menu-row{
       display:grid;
       grid-template-columns:1fr 1fr;
       gap:10px;
+    }
+    .sync-menu-row.sync-transfer-row{
+      position:relative;
+      z-index:4;
+      margin-top:clamp(-30px, -3.6dvh, -16px);
+      padding:0 clamp(4px, 1.8vw, 14px);
     }
     .sync-menu-row.sync-auto-row{
       display:block;
@@ -3097,6 +3115,8 @@
       font-weight:900;
       text-align:left;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.08), 0 4px 12px rgba(0,0,0,.34);
+      transition:transform .08s ease, filter .08s ease, box-shadow .08s ease, background .08s ease;
+      touch-action:manipulation;
     }
     .sync-menu-btn.primary{
       background:linear-gradient(180deg,#1d4d2a,#0c2a14);
@@ -3110,12 +3130,18 @@
       padding-right:8px;
     }
     .sync-menu-btn.sync-arrow-button{
-      min-height:clamp(100px, 15dvh, 130px);
+      width:min(100%, clamp(90px, 34vw, 117px));
+      height:clamp(90px, 13.5dvh, 117px);
+      min-height:0;
+      aspect-ratio:1/1;
       display:flex;
       align-items:center;
       justify-content:center;
+      justify-self:center;
       text-align:center;
-      padding:8px;
+      padding:7px;
+      position:relative;
+      z-index:5;
     }
     .sync-menu-btn.sync-auto-wide{
       width:100%;
@@ -3188,28 +3214,28 @@
       border-top:27px solid var(--sync-arrow-color);
     }
     .sync-menu-btn.sync-arrow-button .sync-arrow-icon{
-      width:84px;
-      height:88px;
+      width:76px;
+      height:80px;
       pointer-events:none;
     }
     .sync-menu-btn.sync-arrow-button .sync-arrow-icon::before{
-      width:16px;
-      height:56px;
+      width:14px;
+      height:50px;
       border-radius:12px;
     }
-    .sync-menu-btn.sync-arrow-button .sync-arrow-up::before{ top:28px; }
+    .sync-menu-btn.sync-arrow-button .sync-arrow-up::before{ top:26px; }
     .sync-menu-btn.sync-arrow-button .sync-arrow-up::after{
       top:2px;
-      border-left-width:30px;
-      border-right-width:30px;
-      border-bottom-width:38px;
+      border-left-width:27px;
+      border-right-width:27px;
+      border-bottom-width:34px;
     }
     .sync-menu-btn.sync-arrow-button .sync-arrow-down::before{ top:2px; }
     .sync-menu-btn.sync-arrow-button .sync-arrow-down::after{
       bottom:2px;
-      border-left-width:30px;
-      border-right-width:30px;
-      border-top-width:38px;
+      border-left-width:27px;
+      border-right-width:27px;
+      border-top-width:34px;
     }
     .sync-menu-btn.sync-send{
       background:linear-gradient(180deg,#1d73b8,#0a3968);
@@ -3240,8 +3266,17 @@
       opacity:.58;
       pointer-events:none;
     }
+    .sync-menu-btn:active:not(:disabled),
+    .sync-menu-btn.sync-touch-pressed:not(:disabled){
+      transform:translateY(3px) scale(.97);
+      filter:brightness(.68);
+      box-shadow:
+        inset 0 5px 14px rgba(0,0,0,.9),
+        inset 0 0 0 1px rgba(255,255,255,.05),
+        0 1px 4px rgba(0,0,0,.35);
+    }
     .sync-menu-btn.sync-pressed{
-      transform:translateY(2px) scale(.985);
+      transform:translateY(3px) scale(.97);
       background:linear-gradient(180deg,#090909,#030303);
       color:#bdbdbd;
       box-shadow:
@@ -4888,7 +4923,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.19.3</div>
+    <div class="version">v6.19.4</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -11431,7 +11466,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.19.3';
+      return el ? el.textContent.trim() : 'v6.19.4';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -12936,10 +12971,15 @@ km priv: 0,00</div>
     function setSyncMenuBusy(action, text){
       manualSyncBusy = true;
       const menu = overlay.querySelector('.sync-menu');
-      if(menu) menu.classList.add('busy');
+      if(menu){
+        menu.classList.add('busy');
+        menu.classList.toggle('sync-busy-send', action === 'send');
+        menu.classList.toggle('sync-busy-load', action === 'load');
+      }
       overlay.querySelectorAll('.sync-menu-btn').forEach(btn=>{
         btn.disabled = true;
         btn.classList.toggle('sync-pressed', btn.dataset.syncAct === action);
+        btn.classList.remove('sync-touch-pressed');
       });
       const cloudStage = overlay.querySelector('[data-sync-cloud-status]');
       if(cloudStage) cloudStage.setAttribute('aria-label', text || 'Pracuję online...');
@@ -12947,10 +12987,10 @@ km priv: 0,00</div>
     function clearSyncMenuBusy(){
       manualSyncBusy = false;
       const menu = overlay.querySelector('.sync-menu');
-      if(menu) menu.classList.remove('busy');
+      if(menu) menu.classList.remove('busy', 'sync-busy-send', 'sync-busy-load');
       overlay.querySelectorAll('.sync-menu-btn').forEach(btn=>{
         btn.disabled = false;
-        btn.classList.remove('sync-pressed');
+        btn.classList.remove('sync-pressed', 'sync-touch-pressed');
       });
       const cloudStage = overlay.querySelector('[data-sync-cloud-status]');
       if(cloudStage) cloudStage.setAttribute('aria-label', 'Synchronizacja');
@@ -13205,7 +13245,8 @@ km priv: 0,00</div>
           <div class="sync-menu">
             <div class="sync-cloud-stage" data-sync-cloud-status aria-label="Synchronizacja">
               <div class="sync-cloud-large" aria-hidden="true">
-                <div class="sync-cloud-spinner"></div>
+                <div class="sync-cloud-spinner sync-cloud-spinner-upload"></div>
+                <div class="sync-cloud-spinner sync-cloud-spinner-download"></div>
               </div>
             </div>
             <div class="sync-menu-row sync-transfer-row">
@@ -13234,6 +13275,12 @@ km priv: 0,00</div>
       `);
       overlay.querySelector('[data-act="cancel"]').addEventListener('click',(e)=>{ e.stopPropagation(); hideOverlay(); });
       overlay.querySelectorAll('[data-sync-act]').forEach(btn=>{
+        btn.addEventListener('pointerdown', ()=>{
+          if(!btn.disabled) btn.classList.add('sync-touch-pressed');
+        });
+        ['pointerup','pointercancel','pointerleave','blur'].forEach(type=>{
+          btn.addEventListener(type, ()=>btn.classList.remove('sync-touch-pressed'));
+        });
         const a = btn.dataset.syncAct;
         if(a === 'edit'){
           btn.addEventListener('click',(e)=>{ e.stopPropagation(); openTimeEditor('start'); });
