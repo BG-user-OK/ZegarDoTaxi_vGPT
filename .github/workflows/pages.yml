@@ -50,8 +50,28 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
+        continue-on-error: true
         uses: actions/deploy-pages@v5
         with:
           timeout: 600000
           error_count: 60
           reporting_interval: 10000
+
+      - name: Verify public GitHub Pages version
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' index.html | head -n 1)"
+          url="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html"
+          echo "Expecting ${expected} at ${url}"
+          for attempt in {1..36}; do
+            body="$(curl -fsSL "${url}?pagesVerify=${GITHUB_RUN_ID}-${attempt}-$(date +%s)" || true)"
+            if printf '%s' "$body" | grep -q "$expected"; then
+              echo "Published ${expected} confirmed."
+              exit 0
+            fi
+            echo "Attempt ${attempt}: ${expected} not visible yet."
+            sleep 10
+          done
+          echo "Expected ${expected} was not visible at ${url}."
+          exit 1
