@@ -2,6 +2,7 @@
 /*
 
 !/.gitignore
+!/.nojekyll
 !/index.html
 !/sw.js
 !/manifest.json
