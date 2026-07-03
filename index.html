@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.21.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.21.2: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -287,6 +287,72 @@
       pointer-events:none;
       z-index:0;
     }
+    .weather-status-icon{
+      position:absolute;
+      top:calc(100% + 3px);
+      right:clamp(2px, 2.4vw, 14px);
+      width:clamp(42px, 11vw, 58px);
+      height:clamp(42px, 11vw, 58px);
+      border:none;
+      border-radius:50%;
+      padding:0;
+      margin:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#000;
+      color:#d9e8ff;
+      opacity:0;
+      transform:scale(.94);
+      filter:brightness(0) drop-shadow(0 0 0 rgba(0,0,0,0));
+      pointer-events:none;
+      z-index:22;
+      transition:opacity 2.4s ease, transform 2.4s ease, filter 2.4s ease, color .22s ease;
+      touch-action:manipulation;
+      appearance:none;
+      -webkit-appearance:none;
+    }
+    .weather-status-icon.visible{
+      opacity:1;
+      transform:scale(1);
+      filter:brightness(1) drop-shadow(0 0 10px currentColor);
+      pointer-events:auto;
+    }
+    .weather-status-icon svg{
+      width:82%;
+      height:82%;
+      display:block;
+      overflow:visible;
+    }
+    .weather-status-icon .weather-stroke{
+      fill:none;
+      stroke:currentColor;
+      stroke-width:6;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+    .weather-status-icon .weather-fill{
+      fill:currentColor;
+    }
+    .weather-status-icon .weather-soft{
+      opacity:.46;
+    }
+    .weather-status-icon .weather-label{
+      font-size:54px;
+      font-weight:1000;
+      fill:currentColor;
+      text-anchor:middle;
+      dominant-baseline:middle;
+      font-family:Arial, Helvetica, sans-serif;
+    }
+    .weather-status-icon.weather-sun{ color:#ffd447; }
+    .weather-status-icon.weather-cloud{ color:#d8dde5; }
+    .weather-status-icon.weather-rain{ color:#66c8ff; }
+    .weather-status-icon.weather-drizzle{ color:#82d7ff; }
+    .weather-status-icon.weather-thunder{ color:#ffd43b; }
+    .weather-status-icon.weather-snow{ color:#f2fbff; }
+    .weather-status-icon.weather-fog{ color:#bcc4cc; }
+    .weather-status-icon.weather-unknown{ color:#9aa3ad; }
     .uber-reminder-zone{
       position:absolute;
       left:0;
@@ -601,6 +667,13 @@
       }
       .controls.results-ended .coin-cell-text{
         font-size:clamp(24px, 5.6vw, 38px);
+      }
+      .weather-status-icon{
+        top:auto;
+        right:clamp(-4px, 1.4vh, 8px);
+        bottom:clamp(4px, 1.8vh, 10px);
+        width:clamp(34px, 10vh, 50px);
+        height:clamp(34px, 10vh, 50px);
       }
     }
 
@@ -4960,6 +5033,7 @@
         <g id="hourArrow"></g>
         <g id="minuteDot"></g>
       </svg>
+      <button class="weather-status-icon weather-unknown" id="weatherStatusIcon" type="button" aria-label="Pogoda" title="Pogoda"></button>
     </div>
 
     <button class="uber-reminder-zone" id="uberReminderZone" type="button" aria-label="Uzbrój przypomnienie Uber">
@@ -5084,7 +5158,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.21.1</div>
+    <div class="version">v6.21.2</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -8267,6 +8341,7 @@
       updateDrivingFocusFade();
       renderBattery();
       renderUberReminder();
+      renderWeatherStatusIcon();
       reevaluateEarlyMonthPromptWatch();
     }
 
@@ -8575,6 +8650,206 @@
     let rainLightsTimer = null;
     let rainLightsInFlight = false;
     let rainLightsAlertVisible = false;
+    const WEATHER_STATUS_VISIBLE_MS = 2 * 60 * 1000;
+    const WEATHER_STATUS_STALE_MS = 6 * 60 * 60 * 1000;
+    let weatherStatusFadeTimer = null;
+    let weatherStatusRenderSignature = '';
+
+    function normalizeWeatherIconKind(kind){
+      const text = String(kind || '').trim().toLowerCase();
+      return ['sun','cloud','rain','drizzle','thunder','snow','fog','unknown'].includes(text) ? text : 'unknown';
+    }
+    function weatherIconSvg(kind){
+      switch(normalizeWeatherIconKind(kind)){
+        case 'sun':
+          return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+            <circle class="weather-stroke" cx="50" cy="50" r="18"></circle>
+            <path class="weather-stroke" d="M50 8v12M50 80v12M8 50h12M80 50h12M20 20l9 9M71 71l9 9M80 20l-9 9M29 71l-9 9"></path>
+          </svg>`;
+        case 'cloud':
+          return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+            <path class="weather-stroke" d="M25 66h44a17 17 0 0 0 1-34 24 24 0 0 0-45-7A20 20 0 0 0 25 66Z"></path>
+          </svg>`;
+        case 'rain':
+          return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+            <path class="weather-stroke" d="M25 55h44a17 17 0 0 0 1-34 24 24 0 0 0-45-7A20 20 0 0 0 25 55Z"></path>
+            <path class="weather-stroke" d="M33 68l-6 13M52 68l-6 13M71 68l-6 13"></path>
+          </svg>`;
+        case 'drizzle':
+          return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+            <path class="weather-stroke" d="M25 55h44a17 17 0 0 0 1-34 24 24 0 0 0-45-7A20 20 0 0 0 25 55Z"></path>
+            <path class="weather-stroke weather-soft" d="M31 70v8M50 70v8M69 70v8"></path>
+          </svg>`;
+        case 'thunder':
+          return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+            <path class="weather-stroke" d="M25 55h44a17 17 0 0 0 1-34 24 24 0 0 0-45-7A20 20 0 0 0 25 55Z"></path>
+            <path class="weather-fill" d="M51 58 38 84h14l-5 13 20-28H53l7-11Z"></path>
+          </svg>`;
+        case 'snow':
+          return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+            <path class="weather-stroke" d="M25 55h44a17 17 0 0 0 1-34 24 24 0 0 0-45-7A20 20 0 0 0 25 55Z"></path>
+            <path class="weather-stroke" d="M34 72v14M27 79h14M29 74l10 10M39 74 29 84M66 72v14M59 79h14M61 74l10 10M71 74 61 84"></path>
+          </svg>`;
+        case 'fog':
+          return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+            <path class="weather-stroke weather-soft" d="M25 47h44a17 17 0 0 0 1-34 24 24 0 0 0-45-7A20 20 0 0 0 25 47Z"></path>
+            <path class="weather-stroke" d="M18 61h64M25 74h50M18 87h64"></path>
+          </svg>`;
+        default:
+          return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+            <path class="weather-stroke weather-soft" d="M25 66h44a17 17 0 0 0 1-34 24 24 0 0 0-45-7A20 20 0 0 0 25 66Z"></path>
+            <text class="weather-label" x="50" y="52">?</text>
+          </svg>`;
+      }
+    }
+    function weatherStatusHasKnownState(){
+      return !!(rainLightsState && Number(rainLightsState.currentWeatherAt || 0));
+    }
+    function weatherStatusIsStale(){
+      return !weatherStatusHasKnownState() || Date.now() - Number(rainLightsState.currentWeatherAt || 0) > WEATHER_STATUS_STALE_MS;
+    }
+    function renderWeatherStatusIcon(){
+      const el = document.getElementById('weatherStatusIcon');
+      if(!el) return;
+      const kind = weatherStatusIsStale() ? 'unknown' : normalizeWeatherIconKind(rainLightsState.currentWeatherKind);
+      const label = weatherStatusIsStale()
+        ? 'Pogoda: brak aktualnych danych'
+        : String(rainLightsState.currentWeatherLabel || 'Pogoda');
+      const signature = `${kind}|${label}`;
+      if(signature !== weatherStatusRenderSignature){
+        weatherStatusRenderSignature = signature;
+        el.innerHTML = weatherIconSvg(kind);
+        el.classList.remove('weather-sun','weather-cloud','weather-rain','weather-drizzle','weather-thunder','weather-snow','weather-fog','weather-unknown');
+        el.classList.add('weather-' + kind);
+        el.setAttribute('aria-label', label);
+        el.title = label;
+      }
+    }
+    function hideWeatherStatusIcon(immediate=false){
+      clearTimeout(weatherStatusFadeTimer);
+      weatherStatusFadeTimer = null;
+      const el = document.getElementById('weatherStatusIcon');
+      if(!el) return;
+      if(immediate){
+        el.style.transition = 'none';
+        el.classList.remove('visible');
+        void el.offsetHeight;
+        el.style.removeProperty('transition');
+      } else {
+        el.classList.remove('visible');
+      }
+    }
+    function showWeatherStatusIcon(){
+      if(!weatherStatusHasKnownState()) return;
+      const el = document.getElementById('weatherStatusIcon');
+      if(!el) return;
+      renderWeatherStatusIcon();
+      clearTimeout(weatherStatusFadeTimer);
+      el.classList.add('visible');
+      weatherStatusFadeTimer = setTimeout(()=>hideWeatherStatusIcon(false), WEATHER_STATUS_VISIBLE_MS);
+    }
+    function showWeatherStatusIconAfterActivity(){
+      if(weatherStatusHasKnownState()) showWeatherStatusIcon();
+    }
+    function buildWeatherStatusPublicUrl(){
+      const lat = Number(rainLightsState && rainLightsState.currentWeatherLat);
+      const lon = Number(rainLightsState && rainLightsState.currentWeatherLon);
+      const url = new URL('https://open-meteo.com/en/forecast');
+      if(Number.isFinite(lat) && Number.isFinite(lon)){
+        url.searchParams.set('latitude', String(lat.toFixed(4)));
+        url.searchParams.set('longitude', String(lon.toFixed(4)));
+      }
+      return url.toString();
+    }
+    function openWeatherStatusPage(){
+      showWeatherStatusIcon();
+      const url = buildWeatherStatusPublicUrl();
+      try{
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }catch(e){
+        window.location.href = url;
+      }
+    }
+    function weatherDescriptorFromCode(code, prob=0, amount=0){
+      const c = Number(code);
+      if([95,96,99].includes(c)) return { kind:'thunder', label:'Pogoda: burza' };
+      if([71,73,75,77,85,86].includes(c)) return { kind:'snow', label:'Pogoda: śnieg' };
+      if([61,63,65,66,67,80,81,82].includes(c)) return { kind:'rain', label:'Pogoda: deszcz' };
+      if([51,53,55,56,57].includes(c)) return { kind:'drizzle', label:'Pogoda: mżawka' };
+      if([45,48].includes(c)) return { kind:'fog', label:'Pogoda: mgła' };
+      if(c === 0) return { kind:'sun', label:'Pogoda: słońce' };
+      if([1,2].includes(c)) return { kind:'cloud', label:'Pogoda: częściowe zachmurzenie' };
+      if(c === 3) return { kind:'cloud', label:'Pogoda: pochmurno' };
+      if(Number(amount) > 0) return { kind:'rain', label:'Pogoda: opad' };
+      if(Number(prob) >= RAIN_LIGHTS_PRECIP_PROBABILITY) return { kind:'cloud', label:'Pogoda: możliwy opad' };
+      return { kind:'unknown', label:'Pogoda: brak rozpoznania' };
+    }
+    function extractCurrentWeatherFromForecast(forecast){
+      const hourly = forecast && forecast.hourly;
+      if(!hourly || !Array.isArray(hourly.time) || !hourly.time.length) return null;
+      const now = Date.now();
+      let bestIndex = -1;
+      let bestDistance = Infinity;
+      hourly.time.forEach((time, index)=>{
+        const t = Date.parse(time);
+        if(!Number.isFinite(t)) return;
+        const distance = Math.abs(t - now);
+        if(distance < bestDistance){
+          bestDistance = distance;
+          bestIndex = index;
+        }
+      });
+      if(bestIndex < 0 || bestDistance > 90 * 60 * 1000) return null;
+      const code = Number((hourly.weather_code || [])[bestIndex]);
+      const prob = Number((hourly.precipitation_probability || [])[bestIndex]) || 0;
+      const amount = Math.max(
+        Number((hourly.precipitation || [])[bestIndex]) || 0,
+        Number((hourly.rain || [])[bestIndex]) || 0,
+        Number((hourly.showers || [])[bestIndex]) || 0
+      );
+      const descriptor = weatherDescriptorFromCode(code, prob, amount);
+      return {
+        kind:descriptor.kind,
+        label:descriptor.label,
+        code:Number.isFinite(code) ? code : null
+      };
+    }
+    function updateRainLightsCurrentWeather(forecast, lat, lon){
+      const current = extractCurrentWeatherFromForecast(forecast) || { kind:'unknown', label:'Pogoda: brak rozpoznania', code:null };
+      rainLightsState.currentWeatherKind = normalizeWeatherIconKind(current.kind);
+      rainLightsState.currentWeatherCode = current.code;
+      rainLightsState.currentWeatherLabel = current.label;
+      rainLightsState.currentWeatherAt = Date.now();
+      rainLightsState.currentWeatherLat = Number.isFinite(Number(lat)) ? Number(lat) : null;
+      rainLightsState.currentWeatherLon = Number.isFinite(Number(lon)) ? Number(lon) : null;
+      renderWeatherStatusIcon();
+      showWeatherStatusIcon();
+    }
+    function updateRainLightsWeatherNoData(lat=null, lon=null){
+      rainLightsState.currentWeatherKind = 'unknown';
+      rainLightsState.currentWeatherCode = null;
+      rainLightsState.currentWeatherLabel = 'Pogoda: brak danych';
+      rainLightsState.currentWeatherAt = Date.now();
+      rainLightsState.currentWeatherLat = Number.isFinite(Number(lat)) ? Number(lat) : rainLightsState.lastLat;
+      rainLightsState.currentWeatherLon = Number.isFinite(Number(lon)) ? Number(lon) : rainLightsState.lastLon;
+      renderWeatherStatusIcon();
+      showWeatherStatusIcon();
+    }
+    function initializeWeatherStatusIcon(){
+      const el = document.getElementById('weatherStatusIcon');
+      if(el){
+        renderWeatherStatusIcon();
+        el.addEventListener('click', (e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          openWeatherStatusPage();
+        });
+      }
+      document.addEventListener('pointerdown', (e)=>{
+        if(e.target && e.target.closest && e.target.closest('#weatherStatusIcon')) return;
+        showWeatherStatusIconAfterActivity();
+      }, { passive:true, capture:true });
+    }
 
     function createRainLightsState(){
       return {
@@ -8589,7 +8864,13 @@
         lastAlertAt:0,
         currentRiskLevel:0,
         lastLat:null,
-        lastLon:null
+        lastLon:null,
+        currentWeatherKind:'unknown',
+        currentWeatherCode:null,
+        currentWeatherLabel:'',
+        currentWeatherAt:0,
+        currentWeatherLat:null,
+        currentWeatherLon:null
       };
     }
     function normalizeRainLightsState(raw){
@@ -8608,6 +8889,12 @@
       base.lastRiskPresent = !!base.lastRiskPresent;
       base.lastLat = Number.isFinite(Number(base.lastLat)) ? Number(base.lastLat) : null;
       base.lastLon = Number.isFinite(Number(base.lastLon)) ? Number(base.lastLon) : null;
+      base.currentWeatherCode = Number.isFinite(Number(base.currentWeatherCode)) ? Number(base.currentWeatherCode) : null;
+      base.currentWeatherAt = Number(base.currentWeatherAt) || 0;
+      base.currentWeatherLat = Number.isFinite(Number(base.currentWeatherLat)) ? Number(base.currentWeatherLat) : null;
+      base.currentWeatherLon = Number.isFinite(Number(base.currentWeatherLon)) ? Number(base.currentWeatherLon) : null;
+      base.currentWeatherKind = normalizeWeatherIconKind(base.currentWeatherKind);
+      base.currentWeatherLabel = String(base.currentWeatherLabel || '');
       if(base.decision !== 'ok' && base.decision !== 'postpone') base.decision = '';
       return base;
     }
@@ -8628,6 +8915,7 @@
         try{ localStorage.removeItem(LS_RAIN_LIGHTS); }catch(e){}
         clearTimeout(rainLightsTimer);
         rainLightsTimer = null;
+        hideWeatherStatusIcon(true);
         if(rainLightsAlertVisible && overlay.dataset.lockClose === 'rainLights'){
           rainLightsAlertVisible = false;
           hideOverlay();
@@ -8793,7 +9081,12 @@
         rainLightsState.lastLon = roundedLon;
         rainLightsState.lastCheckAt = Date.now();
         const forecast = await fetchRainLightsForecast(coords.latitude, coords.longitude);
-        if(!forecast){ saveRainLightsState(); return; }
+        if(!forecast){
+          updateRainLightsWeatherNoData(roundedLat, roundedLon);
+          saveRainLightsState();
+          return;
+        }
+        updateRainLightsCurrentWeather(forecast, roundedLat, roundedLon);
         const risk = evaluateRainLightsRisk(forecast);
         if(!risk){
           clearRainLightsDecisionAfterNoRisk();
@@ -8806,6 +9099,7 @@
         if(shouldShowRainLightsReminder(risk)) showRainLightsReminder(risk, reason);
       }catch(e){
         rainLightsState.lastCheckAt = Date.now();
+        updateRainLightsWeatherNoData();
         saveRainLightsState();
       }finally{
         rainLightsInFlight = false;
@@ -12061,7 +12355,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.21.1';
+      return el ? el.textContent.trim() : 'v6.21.2';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -15097,6 +15391,7 @@ km priv: 0,00</div>
     initializeDailyExportStatus();
     initializeSyncTracking();
     initializeInternetConnectivityIndicator();
+    initializeWeatherStatusIcon();
     initializeRainLightsReminder();
     if(startWorkMinutes!==null && endWorkMinutes===null){
       document.getElementById('workBtn').classList.add('on');
