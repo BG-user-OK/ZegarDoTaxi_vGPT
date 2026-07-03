@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.21.2: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.21.3: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5158,7 +5158,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.21.2</div>
+    <div class="version">v6.21.3</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -8652,6 +8652,7 @@
     let rainLightsAlertVisible = false;
     const WEATHER_STATUS_VISIBLE_MS = 2 * 60 * 1000;
     const WEATHER_STATUS_STALE_MS = 6 * 60 * 60 * 1000;
+    const WEATHER_STATUS_PUBLIC_MAP_URL = 'https://www.meteoblue.com/en/weather/maps/index';
     let weatherStatusFadeTimer = null;
     let weatherStatusRenderSignature = '';
 
@@ -8754,16 +8755,26 @@
     function buildWeatherStatusPublicUrl(){
       const lat = Number(rainLightsState && rainLightsState.currentWeatherLat);
       const lon = Number(rainLightsState && rainLightsState.currentWeatherLon);
-      const url = new URL('https://open-meteo.com/en/forecast');
+      const url = new URL(WEATHER_STATUS_PUBLIC_MAP_URL);
       if(Number.isFinite(lat) && Number.isFinite(lon)){
-        url.searchParams.set('latitude', String(lat.toFixed(4)));
-        url.searchParams.set('longitude', String(lon.toFixed(4)));
+        url.hash = `coords=11/${lat.toFixed(4)}/${lon.toFixed(4)}`;
       }
       return url.toString();
+    }
+    function isSafeWeatherStatusPublicUrl(url){
+      try{
+        const parsed = new URL(String(url || ''));
+        return parsed.protocol === 'https:' &&
+          parsed.hostname === 'www.meteoblue.com' &&
+          parsed.pathname === '/en/weather/maps/index';
+      }catch(e){
+        return false;
+      }
     }
     function openWeatherStatusPage(){
       showWeatherStatusIcon();
       const url = buildWeatherStatusPublicUrl();
+      if(!isSafeWeatherStatusPublicUrl(url)) return;
       try{
         window.open(url, '_blank', 'noopener,noreferrer');
       }catch(e){
@@ -12355,7 +12366,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.21.2';
+      return el ? el.textContent.trim() : 'v6.21.3';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
