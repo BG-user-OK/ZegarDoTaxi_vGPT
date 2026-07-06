@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.21.3: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.21.4: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -289,10 +289,10 @@
     }
     .weather-status-icon{
       position:absolute;
-      top:calc(100% + 3px);
+      top:calc(100% - clamp(20px, 5.2vw, 28px));
       right:clamp(2px, 2.4vw, 14px);
-      width:clamp(42px, 11vw, 58px);
-      height:clamp(42px, 11vw, 58px);
+      width:clamp(55px, 14.3vw, 75px);
+      height:clamp(55px, 14.3vw, 75px);
       border:none;
       border-radius:50%;
       padding:0;
@@ -670,10 +670,10 @@
       }
       .weather-status-icon{
         top:auto;
-        right:clamp(-4px, 1.4vh, 8px);
-        bottom:clamp(4px, 1.8vh, 10px);
-        width:clamp(34px, 10vh, 50px);
-        height:clamp(34px, 10vh, 50px);
+        right:clamp(-2px, 1.8vh, 10px);
+        bottom:clamp(18px, 5.2vh, 30px);
+        width:clamp(44px, 13vh, 65px);
+        height:clamp(44px, 13vh, 65px);
       }
     }
 
@@ -2350,28 +2350,20 @@
     }
     .overlay.keypad-overlay.keypad-left{ justify-content:flex-start; }
     .rain-lights-panel{
-      height:min(96vh, 820px);
-      max-width:560px;
-      padding:14px 14px 16px;
-      gap:14px;
-      justify-content:space-between;
+      width:min(96vw, 560px);
+      height:min(calc(100dvh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom))), 820px);
+      max-height:calc(100dvh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom)));
+      padding:clamp(8px, 1.8dvh, 14px);
+      gap:clamp(8px, 1.7dvh, 14px);
+      justify-content:stretch;
       overflow:hidden;
       background:#030303;
       border-color:#1f1f1f;
       box-shadow:0 0 34px rgba(0,0,0,.82), inset 0 0 0 1px rgba(255,255,255,.035);
     }
-    .rain-lights-title{
-      text-align:center;
-      color:#f4f4f4;
-      font-size:clamp(26px, 7vw, 40px);
-      font-weight:1000;
-      line-height:1.05;
-      letter-spacing:0;
-      text-shadow:0 0 18px rgba(255,255,255,.18);
-    }
     .rain-lights-visual{
       flex:1 1 auto;
-      min-height:0;
+      min-height:110px;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -2380,6 +2372,7 @@
       border-radius:14px;
       overflow:hidden;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.07), 0 0 30px rgba(0,0,0,.72);
+      transition:opacity .56s ease, filter .56s ease;
     }
     .rain-lights-img{
       display:block;
@@ -2399,15 +2392,9 @@
       letter-spacing:0;
       text-shadow:0 0 22px rgba(98,183,255,.65), 0 0 42px rgba(98,183,255,.32);
     }
-    .rain-lights-actions{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:10px;
+    .rain-lights-action{
       width:100%;
-      flex:0 0 auto;
-    }
-    .rain-lights-actions button{
-      width:100%;
+      flex:0 1 min(42vw, 21dvh, 172px);
       min-height:78px;
       border:none;
       border-radius:18px;
@@ -2418,28 +2405,53 @@
       letter-spacing:0;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.10), 0 0 22px rgba(0,0,0,.65);
       touch-action:manipulation;
+      transition:opacity .44s ease, filter .44s ease, transform .18s ease;
+    }
+    .rain-lights-action:disabled{
+      opacity:1;
     }
     .rain-lights-ok{
+      flex-shrink:1.35;
       background:linear-gradient(180deg,#27cf5d,#0d7b30);
       text-shadow:0 0 12px rgba(0,0,0,.38);
     }
     .rain-lights-later{
+      flex-shrink:.8;
       background:linear-gradient(180deg,#ffe04f,#b89000);
       color:#221700 !important;
       text-shadow:0 1px 0 rgba(255,255,255,.24);
     }
+    .rain-lights-panel.rain-lights-closing{
+      pointer-events:none;
+    }
+    .rain-lights-panel.rain-lights-closing > :not(.rain-lights-selected){
+      animation:rainLightsFadeRest .58s ease forwards;
+    }
+    .rain-lights-panel.rain-lights-closing.rain-lights-selected-fade > .rain-lights-selected{
+      animation:rainLightsFadeSelected .44s ease forwards;
+    }
+    @keyframes rainLightsFadeRest{
+      to{ opacity:0; filter:brightness(0); }
+    }
+    @keyframes rainLightsFadeSelected{
+      to{ opacity:0; filter:brightness(0); transform:scale(.985); }
+    }
+    @media (max-height:720px){
+      .rain-lights-panel{ gap:clamp(7px, 1.45dvh, 11px); }
+      .rain-lights-action{ flex-basis:clamp(70px, 16dvh, 118px); font-size:clamp(22px, 5.9vw, 30px); }
+      .rain-lights-later{ flex-basis:clamp(78px, 18dvh, 128px); }
+      .rain-lights-visual{ min-height:82px; }
+    }
     @media (orientation:landscape) and (max-height:560px){
       .rain-lights-panel{
+        width:min(760px, 96vw);
         max-width:min(760px, 96vw);
-        height:min(96vh, 500px);
-        display:grid;
-        grid-template-columns:1.1fr .9fr;
-        grid-template-rows:auto 1fr;
-        align-items:stretch;
+        height:calc(100dvh - max(10px, env(safe-area-inset-top)) - max(10px, env(safe-area-inset-bottom)));
+        padding:clamp(7px, 1.8vh, 10px);
+        gap:clamp(7px, 1.8vh, 10px);
       }
-      .rain-lights-title{ grid-column:1 / -1; font-size:clamp(22px, 5vh, 34px); }
-      .rain-lights-actions{ align-self:center; }
-      .rain-lights-actions button{ min-height:82px; font-size:clamp(22px, 5.7vh, 32px); }
+      .rain-lights-action{ flex-basis:clamp(62px, 21dvh, 118px); min-height:58px; font-size:clamp(21px, 5.6vh, 30px); }
+      .rain-lights-visual{ min-height:0; }
     }
 
     .editor{
@@ -5158,7 +5170,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.21.3</div>
+    <div class="version">v6.21.4</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -8649,7 +8661,9 @@
     let rainLightsState = createRainLightsState();
     let rainLightsTimer = null;
     let rainLightsInFlight = false;
+    let rainLightsForcePending = false;
     let rainLightsAlertVisible = false;
+    let rainLightsDecisionLocked = false;
     const WEATHER_STATUS_VISIBLE_MS = 2 * 60 * 1000;
     const WEATHER_STATUS_STALE_MS = 6 * 60 * 60 * 1000;
     const WEATHER_STATUS_PUBLIC_MAP_URL = 'https://www.meteoblue.com/en/weather/maps/index';
@@ -9069,7 +9083,10 @@
       return true;
     }
     async function checkRainLightsForecast(reason='scheduled', force=false){
-      if(rainLightsInFlight) return;
+      if(rainLightsInFlight){
+        if(force) rainLightsForcePending = true;
+        return;
+      }
       if(!syncRainLightsWorkdayScope(true)) return;
       if(!force && Date.now() - (rainLightsState.lastCheckAt || 0) < RAIN_LIGHTS_CHECK_INTERVAL_MS) return;
       rainLightsInFlight = true;
@@ -9114,6 +9131,10 @@
         saveRainLightsState();
       }finally{
         rainLightsInFlight = false;
+        if(rainLightsForcePending){
+          rainLightsForcePending = false;
+          scheduleRainLightsCheck(reason + '_pending', 1200, true);
+        }
       }
     }
     function showRainLightsReminder(risk, reason){
@@ -9122,39 +9143,60 @@
       rainLightsState.lastAlertAt = Date.now();
       rainLightsState.currentRiskLevel = risk && risk.level ? risk.level : 0;
       saveRainLightsState();
+      rainLightsDecisionLocked = false;
       showOverlay(`
         <div class="big-panel rain-lights-panel">
-          <div class="rain-lights-title">W&#321;&#260;CZ &#346;WIAT&#321;A</div>
+          <button class="rain-lights-action rain-lights-ok" id="rainLightsOkBtn" type="button">OK, W&#321;&#260;CZY&#321;EM</button>
           <div class="rain-lights-visual">
             <img src="Photos/deszcz.png" alt="Deszcz" class="rain-lights-img" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
             <div class="rain-lights-fallback">DESZCZ</div>
           </div>
-          <div class="rain-lights-actions">
-            <button class="rain-lights-ok" id="rainLightsOkBtn" type="button">OK, W&#321;&#260;CZY&#321;EM</button>
-            <button class="rain-lights-later" id="rainLightsLaterBtn" type="button">NA RAZIE NIE TRZEBA</button>
-          </div>
+          <button class="rain-lights-action rain-lights-later" id="rainLightsLaterBtn" type="button">NA RAZIE NIE TRZEBA</button>
         </div>
       `);
       overlay.dataset.lockClose = 'rainLights';
       const okBtn = document.getElementById('rainLightsOkBtn');
       const laterBtn = document.getElementById('rainLightsLaterBtn');
-      if(okBtn) okBtn.addEventListener('click', ()=>finishRainLightsReminder('ok'));
-      if(laterBtn) laterBtn.addEventListener('click', ()=>finishRainLightsReminder('postpone'));
+      if(okBtn) okBtn.addEventListener('click', (event)=>finishRainLightsReminder('ok', event.currentTarget));
+      if(laterBtn) laterBtn.addEventListener('click', (event)=>finishRainLightsReminder('postpone', event.currentTarget));
     }
-    function finishRainLightsReminder(decision){
-      if(!rainLightsAlertVisible) return;
+    function finishRainLightsReminder(decision, selectedButton){
+      if(!rainLightsAlertVisible || rainLightsDecisionLocked) return;
+      rainLightsDecisionLocked = true;
       const now = Date.now();
-      rainLightsAlertVisible = false;
-      rainLightsState.decision = decision === 'ok' ? 'ok' : 'postpone';
+      const finalDecision = decision === 'ok' ? 'ok' : 'postpone';
+      rainLightsState.decision = finalDecision;
       rainLightsState.decisionAt = now;
       rainLightsState.decisionRiskLevel = Number(rainLightsState.currentRiskLevel || 0);
-      rainLightsState.postponedUntil = decision === 'postpone' ? now + RAIN_LIGHTS_POSTPONE_MS : 0;
+      rainLightsState.postponedUntil = finalDecision === 'postpone' ? now + RAIN_LIGHTS_POSTPONE_MS : 0;
       saveRainLightsState();
-      if(overlay.dataset.lockClose === 'rainLights'){
-        hideOverlay();
-        renderAll();
+
+      const completeRainLightsClose = ()=>{
+        rainLightsAlertVisible = false;
+        rainLightsDecisionLocked = false;
+        if(overlay.dataset.lockClose === 'rainLights'){
+          hideOverlay();
+          renderAll();
+        }
+        scheduleRainLightsCheck('decision_' + finalDecision, RAIN_LIGHTS_CHECK_INTERVAL_MS, false);
+      };
+
+      const panel = overlay.querySelector('.rain-lights-panel');
+      if(!panel || overlay.dataset.lockClose !== 'rainLights'){
+        completeRainLightsClose();
+        return;
       }
-      scheduleRainLightsCheck('decision_' + rainLightsState.decision, RAIN_LIGHTS_CHECK_INTERVAL_MS, false);
+      const selected = selectedButton || document.getElementById(finalDecision === 'ok' ? 'rainLightsOkBtn' : 'rainLightsLaterBtn');
+      panel.querySelectorAll('button').forEach(btn=>{
+        btn.disabled = true;
+        btn.setAttribute('aria-disabled', 'true');
+      });
+      if(selected) selected.classList.add('rain-lights-selected');
+      panel.classList.add('rain-lights-closing');
+      window.setTimeout(()=>{
+        panel.classList.add('rain-lights-selected-fade');
+        window.setTimeout(completeRainLightsClose, 460);
+      }, 600);
     }
     overlay.addEventListener('click',(e)=>{
       if(e.target!==overlay) return;
@@ -12366,7 +12408,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.21.3';
+      return el ? el.textContent.trim() : 'v6.21.4';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -15174,6 +15216,7 @@ km priv: 0,00</div>
       saveStateAndScheduleAutoSync('exercise_done');
       // Uruchom animację przywracania koła
       startWheelRestore(restoreFromAngle);
+      noteRainLightsReturnSignal('exercise_done');
     });
 
     // === BREAK ===
