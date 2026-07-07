@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.21.5: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.21.6: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -2351,19 +2351,21 @@
     .overlay.keypad-overlay.keypad-left{ justify-content:flex-start; }
     .rain-lights-panel{
       width:min(96vw, 560px);
-      height:min(calc(100dvh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom))), 820px);
+      height:auto;
       max-height:calc(100dvh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom)));
-      padding:clamp(8px, 1.8dvh, 14px);
-      gap:clamp(8px, 1.7dvh, 14px);
-      justify-content:stretch;
+      padding:clamp(8px, 1.35dvh, 12px);
+      gap:clamp(5px, .9dvh, 8px);
+      justify-content:flex-start;
       overflow:hidden;
+      transform:translateY(-3dvh);
       background:#030303;
       border-color:#1f1f1f;
       box-shadow:0 0 34px rgba(0,0,0,.82), inset 0 0 0 1px rgba(255,255,255,.035);
     }
     .rain-lights-visual{
-      flex:1 1 auto;
-      min-height:110px;
+      flex:0 0 auto;
+      height:clamp(170px, 62vw, 350px);
+      max-height:46dvh;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -2393,13 +2395,19 @@
       text-shadow:0 0 22px rgba(98,183,255,.65), 0 0 42px rgba(98,183,255,.32);
     }
     .rain-lights-action{
+      position:relative;
+      overflow:hidden;
       width:100%;
-      flex:0 1 min(42vw, 21dvh, 172px);
-      min-height:78px;
+      flex:0 0 clamp(82px, 12.5dvh, 118px);
+      min-height:76px;
       border:none;
       border-radius:18px;
       color:#fff;
-      font-size:clamp(24px, 6.4vw, 34px);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:8px 12px;
+      font-size:clamp(23px, 6.1vw, 33px);
       font-weight:1000;
       line-height:1.05;
       letter-spacing:0;
@@ -2407,19 +2415,42 @@
       touch-action:manipulation;
       transition:opacity .44s ease, filter .44s ease, transform .18s ease;
     }
+    .rain-lights-action::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      opacity:.72;
+    }
+    .rain-lights-action > span{ position:relative; z-index:1; }
     .rain-lights-action:disabled{
       opacity:1;
     }
     .rain-lights-ok{
-      flex-shrink:1.35;
-      background:linear-gradient(180deg,#27cf5d,#0d7b30);
-      text-shadow:0 0 12px rgba(0,0,0,.38);
+      background:
+        radial-gradient(circle at 18% 18%, rgba(160,198,230,.22), transparent 22%),
+        linear-gradient(180deg,#263a4b 0%, #111c27 52%, #050b11 100%);
+      color:#edf7ff;
+      text-shadow:0 2px 4px rgba(0,0,0,.9), 0 0 16px rgba(100,182,255,.32);
+      box-shadow:inset 0 0 0 1px rgba(185,218,255,.14), inset 0 -18px 28px rgba(0,0,0,.38), 0 0 24px rgba(61,123,170,.18);
+    }
+    .rain-lights-ok::before{
+      background:
+        repeating-linear-gradient(105deg, rgba(210,235,255,.18) 0 1px, transparent 1px 15px),
+        radial-gradient(ellipse at 68% 24%, rgba(85,112,135,.35), transparent 34%);
+      mix-blend-mode:screen;
     }
     .rain-lights-later{
-      flex-shrink:.8;
-      background:linear-gradient(180deg,#ffe04f,#b89000);
-      color:#221700 !important;
-      text-shadow:0 1px 0 rgba(255,255,255,.24);
+      background:
+        radial-gradient(circle at 19% 28%, rgba(255,255,235,.95) 0 7%, transparent 8%),
+        repeating-conic-gradient(from 0deg at 19% 28%, rgba(255,255,255,.30) 0deg 8deg, transparent 8deg 20deg),
+        linear-gradient(135deg,#fff284 0%, #ffd033 48%, #f39a12 100%);
+      color:#1d1300 !important;
+      text-shadow:0 1px 0 rgba(255,255,255,.46), 0 0 10px rgba(255,232,104,.32);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.35), inset 0 -16px 26px rgba(150,82,0,.20), 0 0 24px rgba(255,190,35,.22);
+    }
+    .rain-lights-later::before{
+      background:linear-gradient(100deg, transparent 0 45%, rgba(255,255,255,.22) 50%, transparent 56% 100%);
     }
     .rain-lights-panel.rain-lights-closing{
       pointer-events:none;
@@ -2437,21 +2468,20 @@
       to{ opacity:0; filter:brightness(0); transform:scale(.985); }
     }
     @media (max-height:720px){
-      .rain-lights-panel{ gap:clamp(7px, 1.45dvh, 11px); }
-      .rain-lights-action{ flex-basis:clamp(70px, 16dvh, 118px); font-size:clamp(22px, 5.9vw, 30px); }
-      .rain-lights-later{ flex-basis:clamp(78px, 18dvh, 128px); }
-      .rain-lights-visual{ min-height:82px; }
+      .rain-lights-panel{ gap:clamp(4px, .75dvh, 7px); padding:clamp(7px, 1.15dvh, 10px); transform:translateY(-2dvh); }
+      .rain-lights-action{ flex-basis:clamp(70px, 12dvh, 96px); min-height:66px; font-size:clamp(21px, 5.8vw, 29px); }
+      .rain-lights-visual{ height:clamp(132px, 56vw, 270px); max-height:42dvh; }
     }
     @media (orientation:landscape) and (max-height:560px){
       .rain-lights-panel{
         width:min(760px, 96vw);
         max-width:min(760px, 96vw);
-        height:calc(100dvh - max(10px, env(safe-area-inset-top)) - max(10px, env(safe-area-inset-bottom)));
-        padding:clamp(7px, 1.8vh, 10px);
-        gap:clamp(7px, 1.8vh, 10px);
+        padding:clamp(6px, 1.4vh, 9px);
+        gap:clamp(4px, 1.1vh, 7px);
+        transform:translateY(-1dvh);
       }
-      .rain-lights-action{ flex-basis:clamp(62px, 21dvh, 118px); min-height:58px; font-size:clamp(21px, 5.6vh, 30px); }
-      .rain-lights-visual{ min-height:0; }
+      .rain-lights-action{ flex-basis:clamp(56px, 17dvh, 86px); min-height:54px; font-size:clamp(20px, 5.2vh, 28px); }
+      .rain-lights-visual{ height:clamp(82px, 31dvh, 170px); max-height:38dvh; }
     }
 
     .editor{
@@ -5299,7 +5329,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.21.5</div>
+    <div class="version">v6.21.6</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -9284,12 +9314,12 @@
       rainLightsDecisionLocked = false;
       showOverlay(`
         <div class="big-panel rain-lights-panel">
-          <button class="rain-lights-action rain-lights-ok" id="rainLightsOkBtn" type="button">OK, W&#321;&#260;CZY&#321;EM</button>
+          <button class="rain-lights-action rain-lights-ok" id="rainLightsOkBtn" type="button"><span>OK, W&#321;&#260;CZY&#321;EM</span></button>
           <div class="rain-lights-visual">
             <img src="Photos/deszcz.png" alt="Deszcz" class="rain-lights-img" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
             <div class="rain-lights-fallback">DESZCZ</div>
           </div>
-          <button class="rain-lights-action rain-lights-later" id="rainLightsLaterBtn" type="button">NA RAZIE NIE TRZEBA</button>
+          <button class="rain-lights-action rain-lights-later" id="rainLightsLaterBtn" type="button"><span>NA RAZIE NIE TRZEBA</span></button>
         </div>
       `);
       overlay.dataset.lockClose = 'rainLights';
@@ -12653,7 +12683,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.21.5';
+      return el ? el.textContent.trim() : 'v6.21.6';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
