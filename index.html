@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.21.4: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.21.5: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -2481,6 +2481,135 @@
       font-size:15px;
       height:42px;
       width:auto;
+    }
+    .break-total-editor{
+      justify-content:flex-start;
+      gap:8px;
+      padding:12px 12px 86px;
+      overflow:hidden;
+    }
+    .break-total-title{
+      text-align:center;
+      color:#e8e8e8;
+      font-size:clamp(18px, 5vw, 25px);
+      line-height:1;
+      font-weight:1000;
+      letter-spacing:0;
+      text-transform:uppercase;
+      padding:2px 0 4px;
+    }
+    .break-total-summary,
+    .break-total-preview{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:12px;
+      background:#101010;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+      color:#aaa;
+      font-size:clamp(13px, 3.5vw, 17px);
+      font-weight:900;
+      line-height:1.08;
+    }
+    .break-total-preview{
+      background:#071409;
+      color:#bfeccc;
+      box-shadow:inset 0 0 0 1px rgba(71,215,104,.18), 0 0 14px rgba(37,170,70,.08);
+    }
+    .break-total-summary strong,
+    .break-total-preview strong{
+      color:#fff;
+      font-size:1.12em;
+      text-align:right;
+      white-space:nowrap;
+    }
+    .break-total-preview strong{ color:#65ff8f; }
+    .break-total-adjust-grid,
+    .break-total-quick-grid,
+    .break-total-keypad{
+      display:grid;
+      gap:6px;
+    }
+    .break-total-adjust-grid{ grid-template-columns:repeat(4, 1fr); }
+    .break-total-quick-grid{ grid-template-columns:repeat(2, 1fr); }
+    .break-total-keypad{ grid-template-columns:repeat(3, 1fr); }
+    .break-total-editor button{
+      border:none;
+      border-radius:12px;
+      min-height:38px;
+      font-size:clamp(16px, 4.2vw, 22px);
+      font-weight:1000;
+      line-height:1;
+      touch-action:manipulation;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.08), 0 3px 10px rgba(0,0,0,.28);
+    }
+    .break-total-delta{ background:#181818; color:#e9e9e9; }
+    .break-total-delta.minus{ color:#ff8b8b; }
+    .break-total-delta.plus{ color:#72ff96; }
+    .break-total-quick{
+      background:#172817;
+      color:#75ff95;
+      font-size:clamp(14px, 3.8vw, 19px) !important;
+    }
+    .break-total-input-label{
+      text-align:center;
+      color:#aaa;
+      font-size:13px;
+      font-weight:900;
+      margin-top:1px;
+      text-transform:uppercase;
+    }
+    .break-total-input-display{
+      min-height:48px;
+      border-radius:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#050505;
+      color:#fff;
+      font-size:clamp(30px, 9vw, 46px);
+      font-weight:1000;
+      line-height:1;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.09);
+      font-variant-numeric:tabular-nums;
+    }
+    .break-total-input-display span{
+      color:#555;
+      font-size:clamp(18px, 4.8vw, 25px);
+      letter-spacing:0;
+    }
+    .break-total-key{ background:#111; color:#efefef; }
+    .break-total-key.control{
+      background:#242424;
+      color:#ddd;
+      font-size:clamp(13px, 3.5vw, 18px) !important;
+    }
+    .break-total-warning{
+      min-height:32px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      color:#ffb347;
+      font-size:clamp(12px, 3.2vw, 15px);
+      font-weight:900;
+      line-height:1.12;
+      opacity:0;
+    }
+    .break-total-warning.show{ opacity:1; }
+    .break-total-actions .ok-btn.warn{
+      background:linear-gradient(180deg,#f0b331,#9b5a00);
+      color:#150d00;
+    }
+    @media (max-height:720px){
+      .break-total-editor{ gap:6px; padding-top:10px; }
+      .break-total-summary,
+      .break-total-preview{ padding:6px 8px; font-size:clamp(12px, 3.2vw, 15px); }
+      .break-total-editor button{ min-height:34px; }
+      .break-total-input-display{ min-height:42px; }
+      .break-total-warning{ min-height:26px; font-size:12px; }
     }
     .time-col{ display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; }
     .arrow-btn{
@@ -5170,7 +5299,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.21.4</div>
+    <div class="version">v6.21.5</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -5286,6 +5415,7 @@
     let moneyPanelDraft = null;
     let piggyCounterDraft = null;
     let piggyCounterSnapshot = null;
+    let breakTotalEditorDraft = null;
     let aiPasteSession = null;
 
     const cx=200, cy=200, radius=200;
@@ -6435,6 +6565,12 @@
     function formatCompact(m){ m=Math.max(0,m); const h=Math.floor(m/60), mm=m%60; return h<=0?String(mm):`${h}:${pad(mm)}`; }
     function formatCompactSigned(m){ const s=m<0?'-':''; const a=Math.abs(m); const h=Math.floor(a/60), mm=a%60; return h<=0?s+String(mm):`${s}${h}:${pad(mm)}`; }
     function minutesToHHMM(m){ m=Math.max(0,m); return pad(Math.floor(m/60))+':'+pad(m%60); }
+    function formatBreakDurationLong(m){
+      const total = Math.max(0, Math.floor(Number(m) || 0));
+      const h = Math.floor(total / 60);
+      const mm = total % 60;
+      return h<=0 ? `${mm} min` : `${h} h ${pad(mm)} min`;
+    }
     function diffMinutes(f,t){ let d=t-f; if(d<0) d+=1440; return d; }
     function applyFinalBreakCorrectionIfNoWorkAfterBreak(options={}){
       if(startWorkMinutes===null || endWorkMinutes===null || !Array.isArray(breakSegments) || breakSegments.length===0) return null;
@@ -6737,6 +6873,8 @@
     function getClosedBreakMinutes(){ let s=0; for(const seg of breakSegments) s+=diffMinutes(seg.start,seg.end); return s; }
     function getActiveBreakMinutes(){ return (breakActive&&currentBreakStart!==null)?diffMinutes(currentBreakStart,effectiveNow()):0; }
     function getTotalBreakMinutes(a=true){ let s=getClosedBreakMinutes()+breakAdjustMinutes; if(a) s+=getActiveBreakMinutes(); return s; }
+    function getStoredBreakTotalMinutes(){ return Math.max(0, getClosedBreakMinutes() + breakAdjustMinutes); }
+    function getBreakEditorWorkdayDuration(){ return startWorkMinutes===null ? 0 : diffMinutes(startWorkMinutes, effectiveNow()); }
     function getNetWorkMinutes(){ if(startWorkMinutes===null) return 0; return diffMinutes(startWorkMinutes,effectiveNow()) - getTotalBreakMinutes(true); }
     function getTimelineBreakSegmentsAbs(nowAbs, includeActive=true){
       if(startWorkMinutes===null) return [];
@@ -9771,6 +9909,113 @@
         });
       }
     }
+    function openBreakTotalEditor(){
+      if(startWorkMinutes===null){ showToast('Najpierw rozpocznij prace.', 'err'); return; }
+      if(breakActive){ showToast('Najpierw zakoncz aktywna przerwe.', 'err'); return; }
+      const current = getStoredBreakTotalMinutes();
+      breakTotalEditorDraft = { current, value:current, raw:'', warnArmed:false };
+      renderBreakTotalEditor();
+    }
+    function setBreakTotalEditorValue(value, clearRaw=true){
+      if(!breakTotalEditorDraft) return;
+      breakTotalEditorDraft.value = Math.max(0, Math.min(24 * 60, Math.floor(Number(value) || 0)));
+      if(clearRaw) breakTotalEditorDraft.raw = '';
+      breakTotalEditorDraft.warnArmed = false;
+      renderBreakTotalEditor();
+    }
+    function setBreakTotalEditorRaw(raw){
+      if(!breakTotalEditorDraft) return;
+      const cleaned = String(raw || '').replace(/\D/g, '').slice(0, 4);
+      breakTotalEditorDraft.raw = cleaned;
+      breakTotalEditorDraft.value = cleaned ? Math.min(24 * 60, parseInt(cleaned, 10) || 0) : 0;
+      breakTotalEditorDraft.warnArmed = false;
+      renderBreakTotalEditor();
+    }
+    function applyBreakTotalCorrection(){
+      if(!breakTotalEditorDraft) return;
+      const value = Math.max(0, Math.floor(Number(breakTotalEditorDraft.value) || 0));
+      const workdayDuration = getBreakEditorWorkdayDuration();
+      if(value > workdayDuration && !breakTotalEditorDraft.warnArmed){
+        breakTotalEditorDraft.warnArmed = true;
+        renderBreakTotalEditor();
+        return;
+      }
+      breakSegments = [];
+      breakAdjustMinutes = value;
+      breakActive = false;
+      currentBreakStart = null;
+      breakTotalEditorDraft = null;
+      hideOverlay();
+      saveStateAndScheduleAutoSync('break_total_adjust');
+      renderAll();
+      showToast('Przerwa ustawiona: ' + formatBreakDurationLong(value), 'ok');
+    }
+    function renderBreakTotalEditor(){
+      const draft = breakTotalEditorDraft;
+      if(!draft) return;
+      const currentLabel = formatBreakDurationLong(draft.current);
+      const newLabel = formatBreakDurationLong(draft.value);
+      const workdayDuration = getBreakEditorWorkdayDuration();
+      const tooLarge = draft.value > workdayDuration;
+      const warningText = tooLarge
+        ? `Nowa przerwa jest wieksza niz czas od startu pracy (${formatBreakDurationLong(workdayDuration)}). Kliknij zatwierdzenie drugi raz, jesli to celowe.`
+        : '';
+      const deltaButtons = [-60,-30,-15,-5,5,15,30,60].map(delta=>{
+        const label = `${delta>0?'+':''}${delta}`;
+        const cls = delta<0 ? 'minus' : 'plus';
+        return `<button class="break-total-delta ${cls}" type="button" data-bt-delta="${delta}">${label}</button>`;
+      }).join('');
+      const keyButtons = ['1','2','3','4','5','6','7','8','9','C','0','DEL'].map(key=>{
+        const cls = key==='C' || key==='DEL' ? 'break-total-key control' : 'break-total-key';
+        return `<button class="${cls}" type="button" data-bt-key="${key}">${key}</button>`;
+      }).join('');
+      showOverlay(`
+        <div class="editor break-total-editor">
+          <div class="break-total-title">KOREKTA PRZERWY</div>
+          <div class="break-total-summary"><span>AKTUALNA PRZERWA:</span><strong>${escapeHtml(currentLabel)}</strong></div>
+          <div class="break-total-preview"><span>NOWA PRZERWA:</span><strong>${escapeHtml(newLabel)}</strong></div>
+          <div class="break-total-adjust-grid">${deltaButtons}</div>
+          <div class="break-total-quick-grid">
+            <button class="break-total-quick" type="button" data-bt-set="0">USTAW 0</button>
+            <button class="break-total-quick" type="button" data-bt-set="30">USTAW 30 MIN</button>
+          </div>
+          <div class="break-total-input-label">WPISZ MINUTY</div>
+          <div class="break-total-input-display">${draft.raw ? escapeHtml(draft.raw) : '<span>MINUTY</span>'}</div>
+          <div class="break-total-keypad">${keyButtons}</div>
+          <div class="break-total-warning ${tooLarge ? 'show' : ''}">${escapeHtml(warningText)}</div>
+          <div class="editor-actions break-total-actions">
+            <button class="cancel-btn" type="button" data-bt-action="cancel">X</button>
+            <button class="ok-btn ${tooLarge && draft.warnArmed ? 'warn' : ''}" type="button" data-bt-action="ok">${tooLarge && draft.warnArmed ? 'POTWIERDZ' : 'ZATWIERDZ'}</button>
+          </div>
+        </div>
+      `);
+      overlay.querySelectorAll('[data-bt-delta]').forEach(btn=>{
+        btn.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          setBreakTotalEditorValue((breakTotalEditorDraft ? breakTotalEditorDraft.value : 0) + parseInt(btn.dataset.btDelta, 10));
+        });
+      });
+      overlay.querySelectorAll('[data-bt-set]').forEach(btn=>{
+        btn.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          setBreakTotalEditorValue(parseInt(btn.dataset.btSet, 10));
+        });
+      });
+      overlay.querySelectorAll('[data-bt-key]').forEach(btn=>{
+        btn.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          if(!breakTotalEditorDraft) return;
+          const key = btn.dataset.btKey;
+          if(key === 'C') setBreakTotalEditorRaw('');
+          else if(key === 'DEL') setBreakTotalEditorRaw(breakTotalEditorDraft.raw.slice(0, -1));
+          else setBreakTotalEditorRaw((breakTotalEditorDraft.raw || '') + key);
+        });
+      });
+      const cancel = overlay.querySelector('[data-bt-action="cancel"]');
+      if(cancel) cancel.addEventListener('click',(e)=>{ e.stopPropagation(); breakTotalEditorDraft=null; hideOverlay(); });
+      const ok = overlay.querySelector('[data-bt-action="ok"]');
+      if(ok) ok.addEventListener('click',(e)=>{ e.stopPropagation(); applyBreakTotalCorrection(); });
+    }
     function renderTimeEditor(){
       let hT, mT, lab='';
       if(editMode==='start'){
@@ -12408,7 +12653,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.21.4';
+      return el ? el.textContent.trim() : 'v6.21.5';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -15237,8 +15482,8 @@ km priv: 0,00</div>
         saveStateAndScheduleAutoSync(breakActive ? 'break_start' : 'break_end');
         renderAll();
       },
-      // długi klik = korekta sumy przerw
-      ()=> openTimeEditor('breakAdjust')
+      // długi klik = korekta całkowitej sumy przerw
+      ()=> openBreakTotalEditor()
     );
 
     // === POT ===
