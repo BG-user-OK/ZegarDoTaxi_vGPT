@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.21.6: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.21.7: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5329,7 +5329,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.21.6</div>
+    <div class="version">v6.21.7</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -5737,6 +5737,23 @@
       active.forEach(record=>{
         if(record.rememberedText) recentNoteTextBySymbol[record.emoji] = record.rememberedText;
       });
+    }
+    function cloneSharedDataForSyncSnapshot(){
+      return JSON.parse(JSON.stringify({
+        notes:Array.isArray(notes) ? notes : [],
+        recentNoteSymbols:Array.isArray(recentNoteSymbols) ? recentNoteSymbols.slice(0,50) : [],
+        recentNoteTextBySymbol:(recentNoteTextBySymbol && typeof recentNoteTextBySymbol === 'object' && !Array.isArray(recentNoteTextBySymbol)) ? recentNoteTextBySymbol : {},
+        emojiRecords:Array.isArray(emojiRecords) ? emojiRecords : []
+      }));
+    }
+    function attachSharedDataBackupToSnapshot(snapshot, backup){
+      if(!snapshot || !backup) return snapshot;
+      if(!snapshot.persist || typeof snapshot.persist !== 'object') snapshot.persist = {};
+      snapshot.persist.notes = Array.isArray(backup.notes) ? backup.notes : [];
+      snapshot.persist.recentNoteSymbols = Array.isArray(backup.recentNoteSymbols) ? backup.recentNoteSymbols.slice(0,50) : [];
+      snapshot.persist.recentNoteTextBySymbol = (backup.recentNoteTextBySymbol && typeof backup.recentNoteTextBySymbol === 'object' && !Array.isArray(backup.recentNoteTextBySymbol)) ? backup.recentNoteTextBySymbol : {};
+      snapshot.persist.emojiRecords = Array.isArray(backup.emojiRecords) ? backup.emojiRecords : [];
+      return snapshot;
     }
     function migrateSharedRecords(){
       let changed = false;
@@ -12683,7 +12700,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.21.6';
+      return el ? el.textContent.trim() : 'v6.21.7';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -14386,8 +14403,9 @@ km priv: 0,00</div>
           showToast('Najpierw niech powiedzie sie eksport dniowki.', 'err');
           return;
         }
+        const sharedSnapshotBackup = cloneSharedDataForSyncSnapshot();
         await syncSharedData(cfg);
-        const snapshot = buildSyncSnapshot(cfg.device);
+        const snapshot = attachSharedDataBackupToSnapshot(buildSyncSnapshot(cfg.device), sharedSnapshotBackup);
         await sendAndVerifySyncSnapshot(cfg, snapshot, false);
         markVerifiedSyncUpload(snapshot);
         handleSuccessfulOutgoingSyncForEarlyMonth(cfg, snapshot, 'manual_sync');
@@ -14981,6 +14999,7 @@ km priv: 0,00</div>
       autoSyncBusy = true;
       setAutoSyncIndicatorState('checking');
       try{
+        const sharedSnapshotBackup = cloneSharedDataForSyncSnapshot();
         await syncSharedData(cfg);
         const list = await fetchSyncList(cfg);
         if(list && list.ok){
@@ -15030,7 +15049,7 @@ km priv: 0,00</div>
           showToast('Eksport dniowki nieudany.', 'err');
           return;
         }
-        const snapshot = buildSyncSnapshot(cfg.device);
+        const snapshot = attachSharedDataBackupToSnapshot(buildSyncSnapshot(cfg.device), sharedSnapshotBackup);
         await sendAndVerifySyncSnapshotWithFallback(cfg, snapshot, !!keepalive);
         markVerifiedSyncUpload(snapshot);
         handleSuccessfulOutgoingSyncForEarlyMonth(cfg, snapshot, 'auto_sync_upload');
@@ -15114,6 +15133,7 @@ km priv: 0,00</div>
       autoSyncBusy = true;
       playSyncStartedSound();
       try{
+        const sharedSnapshotBackup = cloneSharedDataForSyncSnapshot();
         await syncSharedData(cfg);
         const list = await fetchSyncList(cfg);
         if(list && list.ok){
@@ -15143,7 +15163,7 @@ km priv: 0,00</div>
           showToast('Eksport dniowki nieudany.', 'err');
           return;
         }
-        const snapshot = buildSyncSnapshot(cfg.device);
+        const snapshot = attachSharedDataBackupToSnapshot(buildSyncSnapshot(cfg.device), sharedSnapshotBackup);
         await sendAndVerifySyncSnapshotWithFallback(cfg, snapshot, true);
         markVerifiedSyncUpload(snapshot);
         handleSuccessfulOutgoingSyncForEarlyMonth(cfg, snapshot, 'auto_sync_hide');
