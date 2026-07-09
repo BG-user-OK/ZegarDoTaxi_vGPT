@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.21.7: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.21.8: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -105,7 +105,7 @@
     .note-sticker{
       flex:0 0 auto;
       width:var(--note-size, 68px);
-      height:var(--note-size, 60px);
+      height:calc(var(--note-size, 60px) * 1.1);
       padding:0 4px;
       border-radius:8px 8px 14px 8px;
       display:inline-flex; align-items:center; justify-content:center;
@@ -127,11 +127,11 @@
       pointer-events:none;
       color:inherit;
       font:inherit;
-      line-height:inherit;
+      line-height:1.04;
       border-radius:8px 8px 14px 8px;
       padding:0 4px;
       box-shadow:0 2px 4px rgba(0,0,0,.5);
-      background:#f4d847;
+      background:#e8dda0;
     }
     .note-sticker.note-postpone-warning,
     .note-sticker.note-postpone-committed,
@@ -228,7 +228,7 @@
     }
     .note-sticker.with-time{
       width:var(--note-size, 68px);
-      height:calc(var(--note-size, 60px) * 1.22);
+      height:calc(var(--note-size, 60px) * 1.342);
       flex-direction:column;
       justify-content:flex-start;
       gap:2px;
@@ -253,7 +253,7 @@
       overflow:hidden;
       text-overflow:clip;
       white-space:nowrap;
-      line-height:.92;
+      line-height:1.04;
     }
     .note-time-mini{
       flex:0 0 auto;
@@ -5329,7 +5329,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.21.7</div>
+    <div class="version">v6.21.8</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -8831,6 +8831,7 @@
       overlay.classList.remove('show','keypad-overlay','keypad-left','keypad-right');
       overlay.innerHTML='';
       lockViewTouch();
+      schedulePendingRainLightsReminderCheck(500);
     }
     // ===== rain/headlights reminder =====
     const LS_RAIN_LIGHTS = 'tarcza_rain_lights_v1';
@@ -8849,6 +8850,7 @@
     let rainLightsForcePending = false;
     let rainLightsAlertVisible = false;
     let rainLightsDecisionLocked = false;
+    let rainLightsPendingTimer = null;
     const WEATHER_STATUS_VISIBLE_MS = 2 * 60 * 1000;
     const WEATHER_STATUS_STALE_MS = 6 * 60 * 60 * 1000;
     const WEATHER_STATUS_PUBLIC_MAP_URL = 'https://www.meteoblue.com/en/weather/maps/index';
@@ -9072,6 +9074,8 @@
         postponedUntil:0,
         returnSignalAt:0,
         lastAlertAt:0,
+        pendingAlert:false,
+        pendingReason:'',
         currentRiskLevel:0,
         lastLat:null,
         lastLon:null,
@@ -9095,6 +9099,8 @@
       base.postponedUntil = Number(base.postponedUntil) || 0;
       base.returnSignalAt = Number(base.returnSignalAt) || 0;
       base.lastAlertAt = Number(base.lastAlertAt) || 0;
+      base.pendingAlert = !!base.pendingAlert;
+      base.pendingReason = String(base.pendingReason || '');
       base.currentRiskLevel = Number(base.currentRiskLevel) || 0;
       base.lastRiskPresent = !!base.lastRiskPresent;
       base.lastLat = Number.isFinite(Number(base.lastLat)) ? Number(base.lastLat) : null;
@@ -9125,6 +9131,8 @@
         try{ localStorage.removeItem(LS_RAIN_LIGHTS); }catch(e){}
         clearTimeout(rainLightsTimer);
         rainLightsTimer = null;
+        clearTimeout(rainLightsPendingTimer);
+        rainLightsPendingTimer = null;
         hideWeatherStatusIcon(true);
         if(rainLightsAlertVisible && overlay.dataset.lockClose === 'rainLights'){
           rainLightsAlertVisible = false;
@@ -9156,7 +9164,10 @@
     }
     function initializeRainLightsReminder(){
       loadRainLightsState();
-      if(isRainLightsActiveWorkday()) scheduleRainLightsCheck('startup', 7000, true);
+      if(isRainLightsActiveWorkday()){
+        scheduleRainLightsCheck('startup', 7000, true);
+        if(rainLightsState.pendingAlert) schedulePendingRainLightsReminderCheck(1200);
+      }
       setInterval(()=>{
         if(!syncRainLightsWorkdayScope(true)) return;
         if(Date.now() - (rainLightsState.lastCheckAt || 0) >= RAIN_LIGHTS_CHECK_INTERVAL_MS){
@@ -9257,6 +9268,83 @@
       rainLightsState.decisionAt = 0;
       rainLightsState.decisionRiskLevel = 0;
       rainLightsState.postponedUntil = 0;
+      rainLightsState.pendingAlert = false;
+      rainLightsState.pendingReason = '';
+      clearTimeout(rainLightsPendingTimer);
+      rainLightsPendingTimer = null;
+    }
+    function isRainLightsSyncBusy(){
+      return !!(
+        syncApplyInProgress ||
+        manualSyncBusy ||
+        autoSyncBusy ||
+        autoSyncUploadTimer ||
+        autoSyncScheduledReason ||
+        autoSyncRetryWaiting ||
+        autoSyncRetryActive ||
+        autoSyncRetryTimer
+      );
+    }
+    function isRainLightsMainFunctionBusy(){
+      const potPhase = typeof getPotPhase === 'function' ? getPotPhase() : 'idle';
+      return breakActive ||
+             potPhase === 'heating' ||
+             potPhase === 'waiting' ||
+             (typeof uberReminderState !== 'undefined' && uberReminderState !== 'idle');
+    }
+    function canShowRainReminderNow(){
+      const endOverlay = document.getElementById('endConfirmOverlay');
+      return isRainLightsActiveWorkday() &&
+             document.visibilityState === 'visible' &&
+             !overlay.classList.contains('show') &&
+             (!endOverlay || endOverlay.classList.contains('hidden')) &&
+             !endConfirmActive &&
+             !pendingEndWorkExport &&
+             !isRainLightsSyncBusy() &&
+             !isRainLightsMainFunctionBusy() &&
+             activeViewPointers.size === 0 &&
+             !(viewTouchLockedUntil && Date.now() < viewTouchLockedUntil);
+    }
+    function schedulePendingRainLightsReminderCheck(delayMs=700){
+      clearTimeout(rainLightsPendingTimer);
+      rainLightsPendingTimer = null;
+      if(!rainLightsState || !rainLightsState.pendingAlert || !isRainLightsActiveWorkday()) return;
+      rainLightsPendingTimer = setTimeout(()=>{
+        rainLightsPendingTimer = null;
+        flushPendingRainLightsReminder();
+      }, Math.max(200, Number(delayMs) || 700));
+    }
+    function queueRainLightsReminder(risk, reason){
+      if(!isRainLightsActiveWorkday()) return;
+      rainLightsState.pendingAlert = true;
+      rainLightsState.pendingReason = String(reason || 'queued');
+      rainLightsState.currentRiskLevel = Number(risk && risk.level || rainLightsState.currentRiskLevel || 0);
+      saveRainLightsState();
+      schedulePendingRainLightsReminderCheck();
+    }
+    function flushPendingRainLightsReminder(){
+      if(!syncRainLightsWorkdayScope(true)) return;
+      if(!rainLightsState.pendingAlert || !rainLightsState.lastRiskPresent) return;
+      if(Date.now() - Number(rainLightsState.lastCheckAt || 0) >= RAIN_LIGHTS_CHECK_INTERVAL_MS){
+        scheduleRainLightsCheck('queued_refresh', 0, true);
+        return;
+      }
+      const risk = { level:Number(rainLightsState.currentRiskLevel || 0) };
+      if(!shouldShowRainLightsReminder(risk)){
+        rainLightsState.pendingAlert = false;
+        rainLightsState.pendingReason = '';
+        saveRainLightsState();
+        return;
+      }
+      if(!canShowRainReminderNow()){
+        schedulePendingRainLightsReminderCheck(1000);
+        return;
+      }
+      const reason = rainLightsState.pendingReason || 'queued';
+      rainLightsState.pendingAlert = false;
+      rainLightsState.pendingReason = '';
+      saveRainLightsState();
+      showRainLightsReminder(risk, reason);
     }
     function shouldShowRainLightsReminder(risk){
       if(!risk || rainLightsAlertVisible) return false;
@@ -9309,7 +9397,10 @@
         rainLightsState.lastRiskPresent = true;
         rainLightsState.currentRiskLevel = risk.level;
         saveRainLightsState();
-        if(shouldShowRainLightsReminder(risk)) showRainLightsReminder(risk, reason);
+        if(shouldShowRainLightsReminder(risk)){
+          if(canShowRainReminderNow()) showRainLightsReminder(risk, reason);
+          else queueRainLightsReminder(risk, reason);
+        }
       }catch(e){
         rainLightsState.lastCheckAt = Date.now();
         updateRainLightsWeatherNoData();
@@ -9324,7 +9415,13 @@
     }
     function showRainLightsReminder(risk, reason){
       if(rainLightsAlertVisible || !isRainLightsActiveWorkday()) return;
+      if(!canShowRainReminderNow()){
+        queueRainLightsReminder(risk, reason);
+        return;
+      }
       rainLightsAlertVisible = true;
+      rainLightsState.pendingAlert = false;
+      rainLightsState.pendingReason = '';
       rainLightsState.lastAlertAt = Date.now();
       rainLightsState.currentRiskLevel = risk && risk.level ? risk.level : 0;
       saveRainLightsState();
@@ -9354,6 +9451,8 @@
       rainLightsState.decisionAt = now;
       rainLightsState.decisionRiskLevel = Number(rainLightsState.currentRiskLevel || 0);
       rainLightsState.postponedUntil = finalDecision === 'postpone' ? now + RAIN_LIGHTS_POSTPONE_MS : 0;
+      rainLightsState.pendingAlert = false;
+      rainLightsState.pendingReason = '';
       saveRainLightsState();
 
       const completeRainLightsClose = ()=>{
@@ -10469,6 +10568,7 @@
       PROVIDERS.forEach(p=>values[p.key]=revenues[p.key]||0);
       const firstProvider=PROVIDERS[0].key;
       const entryMode=options.entryMode==='endWork'?'endWork':'normal';
+      const workdayInProgress=startWorkMinutes!==null && endWorkMinutes===null;
       const suggestedStart=counterStart!==null ? counterStart : (lastCounterEnd!==null ? lastCounterEnd : 0);
       const suggestedEnd=counterEnd!==null ? counterEnd : Math.max(suggestedStart,highestKnownCounterValue());
       let counterTarget=options.counterTarget;
@@ -10478,11 +10578,11 @@
         else if(endWorkMinutes===null) counterTarget='priv';
         else counterTarget='end';
       }
-      return {
+      const draft = {
         entryMode,
         values,
-        activeProvider:firstProvider,
-        editBase:values[firstProvider],
+        activeProvider:workdayInProgress?'__counter':firstProvider,
+        editBase:workdayInProgress?privKmTotal:values[firstProvider],
         inputRaw:'',
         negative:false,
         explicitClear:false,
@@ -10498,6 +10598,8 @@
         privKmDigits:'',
         privKmDirty:false
       };
+      if(workdayInProgress) draft.counterTarget='priv';
+      return draft;
     }
     function moneyDraftTotal(){
       if(!moneyPanelDraft) return getTotalRevenueGroszy();
@@ -12700,7 +12802,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.21.7';
+      return el ? el.textContent.trim() : 'v6.21.8';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
