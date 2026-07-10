@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.22.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.23.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -1713,6 +1713,149 @@
     @keyframes zwReminderPulse{
       0%,100%{ transform:scale(.96); opacity:.52; filter:brightness(.75); }
       48%{ transform:scale(1.04); opacity:1; filter:brightness(1.75); }
+    }
+    .zw-session-layer{
+      position:absolute;
+      inset:0;
+      z-index:7;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#000;
+      opacity:0;
+      pointer-events:none;
+      overflow:hidden;
+      transition:opacity .3s ease, filter .75s ease;
+      --zw-mode-color:#2dff80;
+    }
+    .zw-session-bars{
+      position:absolute;
+      inset:0;
+      display:grid;
+      grid-template-columns:repeat(3, 1fr);
+      gap:2px;
+      opacity:1;
+    }
+    .zw-session-bar{
+      position:relative;
+      overflow:hidden;
+      background:rgba(255,255,255,.035);
+      border-left:1px solid rgba(255,255,255,.08);
+      border-right:1px solid rgba(255,255,255,.04);
+    }
+    .zw-session-bar-fill{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      height:0%;
+      background:linear-gradient(180deg, rgba(255,255,255,.38), var(--zw-mode-color));
+      box-shadow:0 0 18px color-mix(in srgb, var(--zw-mode-color) 68%, transparent), inset 0 0 18px rgba(255,255,255,.16);
+      transition:height .12s linear;
+    }
+    .zw-session-thumb,
+    .zw-session-label{
+      position:relative;
+      z-index:2;
+      opacity:0;
+      transition:opacity .32s ease, transform .32s ease, filter .32s ease;
+      font-weight:1000;
+      line-height:1;
+      text-shadow:0 0 14px rgba(0,0,0,.88), 0 0 26px rgba(255,255,255,.28);
+    }
+    .zw-session-thumb{
+      font-size:clamp(54px, 15vw, 104px);
+      color:#071006;
+      filter:drop-shadow(0 0 12px rgba(255,255,255,.42));
+    }
+    .zw-session-label{
+      font-size:clamp(44px, 13vw, 90px);
+      color:var(--zw-mode-color);
+      text-shadow:0 0 12px color-mix(in srgb, var(--zw-mode-color) 80%, transparent), 0 0 28px rgba(0,0,0,.9);
+    }
+    .coin-btn.zw-session-active,
+    .coin-btn.zw-session-complete,
+    .coin-btn.zw-session-redcheck{
+      background:#000 !important;
+      box-shadow:0 0 18px rgba(255,255,255,.18) !important;
+      outline:none !important;
+    }
+    .coin-btn.zw-session-active .coin-cell,
+    .coin-btn.zw-session-complete .coin-cell,
+    .coin-btn.zw-session-redcheck .coin-cell{
+      opacity:0;
+      filter:brightness(0) saturate(0);
+    }
+    .coin-btn.zw-session-active .zw-session-layer,
+    .coin-btn.zw-session-complete .zw-session-layer,
+    .coin-btn.zw-session-redcheck .zw-session-layer{
+      opacity:1;
+    }
+    .coin-btn.zw-session-complete .zw-session-bars{
+      opacity:.95;
+      filter:brightness(1.15);
+    }
+    .coin-btn.zw-session-complete .zw-session-thumb{
+      opacity:1;
+      transform:scale(1);
+    }
+    .coin-btn.zw-session-redcheck .zw-session-bars{
+      opacity:.18;
+    }
+    .coin-btn.zw-session-redcheck .zw-session-label{
+      opacity:1;
+      transform:scale(1);
+    }
+    .coin-btn.zw-session-fading .zw-session-layer{
+      opacity:0;
+      filter:brightness(0);
+      transition:opacity 1.2s ease, filter 1.2s ease;
+    }
+    .overlay.zw-decision-overlay{
+      align-items:center;
+      justify-content:center;
+      padding:max(16px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+      background:rgba(0,0,0,.72);
+    }
+    .zw-decision-panel{
+      width:min(90vw, 390px);
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.2);
+      background:radial-gradient(circle at 50% 12%, rgba(255,255,255,.12), rgba(0,0,0,.96) 58%);
+      box-shadow:0 0 32px rgba(0,0,0,.75), inset 0 0 32px rgba(255,255,255,.05);
+      padding:clamp(14px, 4vw, 22px);
+      display:flex;
+      flex-direction:column;
+      gap:clamp(10px, 2.8vw, 16px);
+    }
+    .zw-decision-title{
+      color:#fff;
+      font-size:clamp(28px, 9vw, 46px);
+      font-weight:1000;
+      line-height:1;
+      text-align:center;
+      text-shadow:0 0 16px rgba(255,255,255,.48);
+    }
+    .zw-end-report{
+      position:absolute;
+      z-index:6;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      pointer-events:none;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(0,0,0,.62);
+      color:rgba(255,255,255,.82);
+      font-size:clamp(15px, 4vw, 24px);
+      font-weight:900;
+      line-height:1;
+      letter-spacing:.01em;
+      text-shadow:0 0 10px rgba(255,255,255,.28);
+      box-shadow:0 0 14px rgba(0,0,0,.55), inset 0 0 12px rgba(255,255,255,.04);
+    }
+    .zw-end-report.visible{
+      display:flex;
     }
     .overlay.zw-exercise-overlay{
       align-items:center;
@@ -5485,7 +5628,17 @@
         <div class="zw-reminder-layer" id="zwReminderLayer" aria-hidden="true">
           <span class="zw-reminder-symbol">ZW</span>
         </div>
+        <div class="zw-session-layer" id="zwSessionLayer" aria-hidden="true">
+          <div class="zw-session-bars" id="zwSessionBars" aria-hidden="true">
+            <div class="zw-session-bar"><span class="zw-session-bar-fill" data-zw-bar-fill="0"></span></div>
+            <div class="zw-session-bar"><span class="zw-session-bar-fill" data-zw-bar-fill="1"></span></div>
+            <div class="zw-session-bar"><span class="zw-session-bar-fill" data-zw-bar-fill="2"></span></div>
+          </div>
+          <div class="zw-session-thumb" id="zwSessionThumb" aria-hidden="true">&#128077;</div>
+          <div class="zw-session-label" id="zwSessionLabel" aria-hidden="true">ZW</div>
+        </div>
       </button>
+      <div class="zw-end-report" id="zwEndReport" aria-hidden="true"></div>
       <button class="driving-focus-restore-area" id="drivingFocusRestoreArea" type="button" aria-label="Pokaż ukryte moduły"></button>
       <div class="early-month-module" id="earlyMonthModule" aria-hidden="true"></div>
     </div>
@@ -5504,7 +5657,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.22.0</div>
+    <div class="version">v6.23.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -7332,6 +7485,8 @@
     const ZW_MODE_YELLOW = 'yellow';
     const ZW_MODE_RED = 'red';
     const ZW_POSTPONE_MS = 5 * 60 * 1000;
+    const ZW_CONFIRM_WINDOW_MS = 15 * 1000;
+    const ZW_MODULE_FADE_MS = 1200;
     const ZW_LOG_LIMIT = 700;
     let zwState = createZwState();
     let zwExerciseFrame = null;
@@ -7381,9 +7536,9 @@
     }
     function getZwModeConfig(mode=zwState.mode){
       const m = normalizeZwMode(mode);
-      if(m === ZW_MODE_YELLOW) return { mode:m, intervalMs:24*60*1000, phases:[5,15,10], labels:['5S','15S','10S'] };
-      if(m === ZW_MODE_RED) return { mode:m, intervalMs:60*60*1000, phases:[], labels:[] };
-      return { mode:ZW_MODE_GREEN, intervalMs:12*60*1000, phases:[5,20,5], labels:['5S','20S','5S'] };
+      if(m === ZW_MODE_YELLOW) return { mode:m, intervalMs:24*60*1000, phases:[5,20,5], labels:['5S','20S','5S'], color:'#ffe150', redCheck:false };
+      if(m === ZW_MODE_RED) return { mode:m, intervalMs:60*60*1000, phases:[], labels:[], color:'#ff3838', redCheck:true };
+      return { mode:ZW_MODE_GREEN, intervalMs:12*60*1000, phases:[5,20,5], labels:['5S','20S','5S'], color:'#2dff80', redCheck:false };
     }
     function isZwActiveWorkday(){
       return startWorkMinutes !== null && endWorkMinutes === null;
@@ -7414,12 +7569,26 @@
         saveZwState();
       }
     }
+    function isZwCompletedExerciseLog(row){
+      return !!(row && row.type === 'done' && row.sessionKind !== 'red_check');
+    }
+    function countZwCompletedExercisesForDate(date){
+      return (zwState.log || []).filter(row=>row && row.workDate === date && isZwCompletedExerciseLog(row)).length;
+    }
+    function formatZwEndReportText(date){
+      const completed = countZwCompletedExercisesForDate(date);
+      if(completed <= 0) return 'ZW: 0/-';
+      const net = Math.max(0, getNetWorkMinutes());
+      return `ZW: ${completed}/${Math.max(0, Math.round(net / completed))}`;
+    }
     function buildZwDailySummary(date){
       const rows = (zwState.log || []).filter(row=>row && row.workDate === date);
       return {
-        ok:rows.filter(row=>row.type === 'done' && row.decision === 'ok').length,
-        light:rows.filter(row=>row.type === 'done' && row.decision === 'light').length,
-        stop:rows.filter(row=>row.type === 'done' && row.decision === 'stop').length,
+        completed:rows.filter(isZwCompletedExerciseLog).length,
+        ok:rows.filter(row=>isZwCompletedExerciseLog(row) && row.decision === 'ok').length,
+        light:rows.filter(row=>isZwCompletedExerciseLog(row) && row.decision === 'light').length,
+        stop:rows.filter(row=>isZwCompletedExerciseLog(row) && row.decision === 'stop').length,
+        redCheck:rows.filter(row=>row.type === 'red_check_decision').length,
         later:rows.filter(row=>row.type === 'postponed').length
       };
     }
@@ -7443,6 +7612,12 @@
       saveZwState();
       stopZwExerciseFrame();
     }
+    function isPrivateReminderHardBusy(){
+      return !!(
+        breakActive ||
+        (typeof uberReminderState !== 'undefined' && uberReminderState !== 'idle')
+      );
+    }
     function canShowPrivateReminderNow(){
       const endOverlay = document.getElementById('endConfirmOverlay');
       return isZwActiveWorkday() &&
@@ -7452,8 +7627,7 @@
              (!endOverlay || endOverlay.classList.contains('hidden')) &&
              !endConfirmActive &&
              !pendingEndWorkExport &&
-             !isRainLightsSyncBusy() &&
-             !isRainLightsMainFunctionBusy() &&
+             !isPrivateReminderHardBusy() &&
              activeViewPointers.size === 0 &&
              !(viewTouchLockedUntil && Date.now() < viewTouchLockedUntil);
     }
@@ -7469,6 +7643,8 @@
       return markZwReminderDueIfPossible() && canShowPrivateReminderNow();
     }
     function getReminderSlotDisplayState(coinVisible=false){
+      const zwSessionState = getZwSessionSlotState();
+      if(zwSessionState) return zwSessionState;
       if(coinVisible) return 'coin';
       if(shouldShowEyeReminder()) return 'eye';
       if(isEyeReminderFading()) return 'eye-fading';
@@ -7476,6 +7652,7 @@
       return 'empty';
     }
     function scheduleNextZwByMode(mode=zwState.mode, reason='next'){
+      stopZwExerciseFrame();
       zwState.mode = normalizeZwMode(mode);
       zwState.pendingReminder = false;
       zwState.activeSession = null;
@@ -7487,11 +7664,21 @@
       syncZwWorkdayScope(reason);
       zwState.pendingReminder = false;
       const mode = normalizeZwMode(zwState.mode);
-      zwState.activeSession = { mode, startedAt:Date.now(), redCheck:mode === ZW_MODE_RED };
+      const cfg = getZwModeConfig(mode);
+      zwState.activeSession = {
+        id:zwLogId(),
+        mode,
+        startedAt:Date.now(),
+        status:cfg.redCheck ? 'red-check' : 'running',
+        redCheck:!!cfg.redCheck,
+        completedAt:null,
+        autoConfirmAt:null,
+        finalized:false
+      };
       appendZwLog(mode === ZW_MODE_RED ? 'red_check_open' : 'session_start', { reason, phases:getZwModeConfig(mode).phases });
       saveZwState();
-      if(mode === ZW_MODE_RED) openZwRedCheckScreen();
-      else openZwExerciseScreen();
+      if(!cfg.redCheck) startZwExerciseFrame();
+      renderAll();
     }
     function openZwFromSlot(e){
       if(e){ e.preventDefault(); e.stopPropagation(); }
@@ -7502,14 +7689,82 @@
     function stopZwExerciseFrame(){
       if(zwExerciseFrame){ cancelAnimationFrame(zwExerciseFrame); zwExerciseFrame = null; }
     }
-    function zwIndicatorHtml(cfg, elapsedSec, index){
+    function startZwExerciseFrame(){
+      if(zwExerciseFrame || !zwState.activeSession) return;
+      zwExerciseFrame = requestAnimationFrame(renderZwExerciseFrame);
+    }
+    function zwDecisionFromMode(mode){
+      const m = normalizeZwMode(mode);
+      if(m === ZW_MODE_YELLOW) return 'light';
+      if(m === ZW_MODE_RED) return 'stop';
+      return 'ok';
+    }
+    function getZwSessionSlotState(){
+      const session = zwState && zwState.activeSession;
+      if(!session || !isZwActiveWorkday()) return null;
+      if(session.status === 'complete' || session.status === 'deciding') return 'zw-complete';
+      if(session.status === 'red-check') return 'zw-red-check';
+      if(session.status === 'fading') return 'zw-fading';
+      return 'zw-running';
+    }
+    function getZwSessionElapsedSec(session=zwState.activeSession){
+      const started = Number(session && session.startedAt) || Date.now();
+      return Math.max(0, (Date.now() - started) / 1000);
+    }
+    function getZwBarFillPct(cfg, elapsedSec, index){
       const start = cfg.phases.slice(0,index).reduce((sum,v)=>sum+v,0);
       const len = cfg.phases[index] || 1;
       const local = Math.max(0, Math.min(len, elapsedSec - start));
-      const pct = Math.round((local / len) * 100);
-      const done = elapsedSec >= start + len;
-      const active = elapsedSec >= start && elapsedSec < start + len;
-      return `<div class="zw-indicator ${done?'done':''} ${active?'active':''}" style="--zw-fill:${done?100:pct}%"><span class="zw-indicator-fill"></span><span class="zw-indicator-label">${cfg.labels[index]}</span></div>`;
+      return Math.max(0, Math.min(100, (local / len) * 100));
+    }
+    function ensureZwSessionProgress(){
+      const session = zwState && zwState.activeSession;
+      if(!session || session.finalized || !isZwActiveWorkday()) return;
+      const cfg = getZwModeConfig(session.mode);
+      if(session.status === 'running'){
+        const totalSec = cfg.phases.reduce((sum,v)=>sum+v,0);
+        if(totalSec > 0 && getZwSessionElapsedSec(session) >= totalSec){
+          session.status = 'complete';
+          session.completedAt = Date.now();
+          session.autoConfirmAt = session.completedAt + ZW_CONFIRM_WINDOW_MS;
+          saveZwState();
+        }
+      }
+      if(session.status === 'complete' && session.autoConfirmAt && Date.now() >= session.autoConfirmAt){
+        finalizeZwSession(zwDecisionFromMode(session.mode), 'auto');
+      }
+    }
+    function renderZwModuleSession(slotState){
+      ensureZwSessionProgress();
+      const session = zwState && zwState.activeSession;
+      const layer = document.getElementById('zwSessionLayer');
+      const bars = layer ? Array.from(layer.querySelectorAll('[data-zw-bar-fill]')) : [];
+      const label = document.getElementById('zwSessionLabel');
+      if(!layer) return;
+      if(!session || !isZwActiveWorkday()){
+        layer.setAttribute('aria-hidden', 'true');
+        bars.forEach(bar=>{ bar.style.height = '0%'; });
+        return;
+      }
+      const cfg = getZwModeConfig(session.mode);
+      layer.style.setProperty('--zw-mode-color', cfg.color || '#2dff80');
+      layer.setAttribute('aria-hidden', 'false');
+      if(slotState === 'zw-red-check'){
+        bars.forEach(bar=>{ bar.style.height = '100%'; });
+        if(label) label.textContent = 'ZW';
+        return;
+      }
+      const elapsedSec = getZwSessionElapsedSec(session);
+      bars.forEach((bar, index)=>{
+        const pct = slotState === 'zw-complete' ? 100 : getZwBarFillPct(cfg, elapsedSec, index);
+        bar.style.height = `${pct.toFixed(2)}%`;
+      });
+    }
+    function renderZwExerciseFrame(){
+      zwExerciseFrame = null;
+      if(!zwState.activeSession || !isZwActiveWorkday()) return;
+      renderMoneyButton();
+      if(zwState.activeSession) zwExerciseFrame = requestAnimationFrame(renderZwExerciseFrame);
     }
     function zwDecisionButtonsHtml(){
       return `<button class="zw-decision-btn ok" type="button" data-zw-decision="ok">OK</button>
@@ -7527,47 +7782,24 @@
       });
     }
     function openZwExerciseScreen(){
-      if(!isZwActiveWorkday() || !zwState.activeSession) return;
-      const cfg = getZwModeConfig(zwState.activeSession.mode);
-      overlay.dataset.lockClose = 'zwExercise';
-      overlay.classList.add('zw-exercise-overlay');
-      overlay.innerHTML = `<div class="zw-exercise-panel zw-mode-${cfg.mode}">
-        <div class="zw-exercise-symbol">ZW</div>
-        <div class="zw-indicators" data-zw-indicators></div>
-        <div class="zw-decisions hidden" data-zw-decisions></div>
-      </div>`;
-      overlay.classList.add('show');
-      lockViewTouch();
-      renderZwExerciseFrame();
-    }
-    function renderZwExerciseFrame(){
-      if(!zwState.activeSession || overlay.dataset.lockClose !== 'zwExercise'){
-        stopZwExerciseFrame();
-        return;
-      }
-      const cfg = getZwModeConfig(zwState.activeSession.mode);
-      const started = Number(zwState.activeSession.startedAt) || Date.now();
-      const elapsedSec = Math.max(0, (Date.now() - started) / 1000);
-      const totalSec = cfg.phases.reduce((sum,v)=>sum+v,0);
-      const indicators = overlay.querySelector('[data-zw-indicators]');
-      if(indicators) indicators.innerHTML = cfg.phases.map((_,i)=>zwIndicatorHtml(cfg, elapsedSec, i)).join('');
-      const decisions = overlay.querySelector('[data-zw-decisions]');
-      if(decisions && elapsedSec >= totalSec){
-        decisions.classList.remove('hidden');
-        if(!decisions.dataset.ready){
-          decisions.dataset.ready = '1';
-          decisions.innerHTML = zwDecisionButtonsHtml();
-          bindZwDecisionButtons();
-        }
-      }
-      zwExerciseFrame = requestAnimationFrame(renderZwExerciseFrame);
+      startZwExerciseFrame();
+      renderAll();
     }
     function openZwRedCheckScreen(){
-      overlay.dataset.lockClose = 'zwExercise';
-      overlay.classList.add('zw-exercise-overlay');
-      overlay.innerHTML = `<div class="zw-exercise-panel zw-mode-red">
-        <div class="zw-exercise-symbol">ZW</div>
-        <div class="zw-red-check">60</div>
+      renderAll();
+    }
+    function openZwDecisionMenu(){
+      if(!zwState.activeSession || !isZwActiveWorkday()) return;
+      if(zwState.activeSession.status === 'complete'){
+        zwState.activeSession.status = 'deciding';
+        zwState.activeSession.autoConfirmAt = null;
+        saveZwState();
+      }
+      stopZwExerciseFrame();
+      overlay.dataset.lockClose = 'zwDecision';
+      overlay.classList.add('zw-decision-overlay');
+      overlay.innerHTML = `<div class="zw-decision-panel">
+        <div class="zw-decision-title">ZW</div>
         <div class="zw-decisions">${zwDecisionButtonsHtml()}</div>
       </div>`;
       overlay.classList.add('show');
@@ -7580,9 +7812,9 @@
       completeZwDecision(decision);
     }
     function completeZwDecision(decision){
-      stopZwExerciseFrame();
       const normalized = ['ok','light','stop','later'].includes(decision) ? decision : 'later';
       if(normalized === 'later'){
+        stopZwExerciseFrame();
         zwState.pendingReminder = false;
         zwState.activeSession = null;
         zwState.nextReminderAt = Date.now() + ZW_POSTPONE_MS;
@@ -7592,33 +7824,55 @@
         renderAll();
         return;
       }
-      let nextMode = ZW_MODE_GREEN;
-      if(normalized === 'light') nextMode = ZW_MODE_YELLOW;
-      if(normalized === 'stop') nextMode = ZW_MODE_RED;
-      appendZwLog('done', { decision:normalized, minute:nowMinutes() });
-      if(normalized !== 'stop'){
-        const restoreFromAngle = getCurrentExerciseVanishAngle();
-        const now = nowMinutes();
-        lastExerciseMinutes = now;
-        exerciseMarkers.push(now);
-        saveStateAndScheduleAutoSync('exercise_done');
-        scheduleNextZwByMode(nextMode, `decision_${normalized}`);
-        hideOverlay();
-        startWheelRestore(restoreFromAngle);
-        noteRainLightsReturnSignal('exercise_done');
-        renderAll();
-        return;
-      }
-      scheduleNextZwByMode(nextMode, `decision_${normalized}`);
+      finalizeZwSession(normalized, 'manual');
       hideOverlay();
       renderAll();
     }
-    function noteZwExternalExerciseDone(){
-      if(!isZwActiveWorkday()) return;
-      syncZwWorkdayScope('external_exercise');
-      appendZwLog('external_done', { minute:nowMinutes() });
-      scheduleNextZwByMode(ZW_MODE_GREEN, 'external_exercise');
-      saveZwState();
+    function finalizeZwSession(decision, source='manual'){
+      const session = zwState && zwState.activeSession;
+      if(!session || session.finalized) return false;
+      const normalized = ['ok','light','stop'].includes(decision) ? decision : zwDecisionFromMode(session.mode);
+      session.finalized = true;
+      stopZwExerciseFrame();
+      let nextMode = ZW_MODE_GREEN;
+      if(normalized === 'light') nextMode = ZW_MODE_YELLOW;
+      if(normalized === 'stop') nextMode = ZW_MODE_RED;
+      if(session.redCheck || session.status === 'red-check'){
+        appendZwLog('red_check_decision', {
+          decision:normalized,
+          minute:nowMinutes(),
+          sessionId:session.id || '',
+          source
+        });
+      } else {
+        appendZwLog('done', {
+          decision:normalized,
+          minute:nowMinutes(),
+          sessionId:session.id || '',
+          source,
+          sessionKind:'exercise'
+        });
+      }
+      if(source === 'auto'){
+        zwState.mode = normalizeZwMode(nextMode);
+        zwState.pendingReminder = false;
+        zwState.nextReminderAt = Date.now() + getZwModeConfig(zwState.mode).intervalMs;
+        session.status = 'fading';
+        session.fadeUntil = Date.now() + ZW_MODULE_FADE_MS;
+        appendZwLog('next', { reason:`decision_${normalized}_${source}`, nextReminderAt:zwState.nextReminderAt });
+        saveZwState();
+        setTimeout(()=>{
+          if(zwState.activeSession && zwState.activeSession.id === session.id && zwState.activeSession.status === 'fading'){
+            zwState.activeSession = null;
+            saveZwState();
+            renderAll();
+          }
+        }, ZW_MODULE_FADE_MS + 60);
+        startZwExerciseFrame();
+        return true;
+      }
+      scheduleNextZwByMode(nextMode, `decision_${normalized}_${source}`);
+      return true;
     }
 
     function getEffectiveExerciseElapsedFractional(){
@@ -8694,23 +8948,61 @@
       const eyeDue = slotState === 'eye';
       const eyeFading = slotState === 'eye-fading';
       const zwDue = slotState === 'zw';
+      const zwRunning = slotState === 'zw-running';
+      const zwComplete = slotState === 'zw-complete';
+      const zwRedCheck = slotState === 'zw-red-check';
+      const zwFading = slotState === 'zw-fading';
       const eyeLayer = document.getElementById('eyeReminderLayer');
       const zwLayer = document.getElementById('zwReminderLayer');
+      const zwSessionLayer = document.getElementById('zwSessionLayer');
       if(coinBtn){
         coinBtn.classList.toggle('eye-reminder-active', eyeDue);
         coinBtn.classList.toggle('eye-reminder-dismissing', eyeFading);
         coinBtn.classList.toggle('zw-reminder-active', zwDue);
-        coinBtn.classList.toggle('empty-slot', !coinVisible && !eyeDue && !eyeFading && !zwDue);
-        coinBtn.setAttribute('aria-label', eyeDue ? 'OKO' : (zwDue ? 'ZW' : 'Obroty'));
+        coinBtn.classList.toggle('zw-session-active', zwRunning);
+        coinBtn.classList.toggle('zw-session-complete', zwComplete);
+        coinBtn.classList.toggle('zw-session-redcheck', zwRedCheck);
+        coinBtn.classList.toggle('zw-session-fading', zwFading);
+        coinBtn.classList.toggle('empty-slot', !coinVisible && !eyeDue && !eyeFading && !zwDue && !zwRunning && !zwComplete && !zwRedCheck && !zwFading);
+        coinBtn.setAttribute('aria-label', eyeDue ? 'OKO' : ((zwDue || zwRunning || zwComplete || zwRedCheck) ? 'ZW' : 'Obroty'));
       }
       if(eyeLayer) eyeLayer.setAttribute('aria-hidden', eyeDue ? 'false' : 'true');
       if(zwLayer) zwLayer.setAttribute('aria-hidden', zwDue ? 'false' : 'true');
+      if(zwSessionLayer) zwSessionLayer.setAttribute('aria-hidden', (zwRunning || zwComplete || zwRedCheck || zwFading) ? 'false' : 'true');
+      renderZwModuleSession(slotState);
       syncEyeBlinkController(eyeDue);
       if(controls){
         const resultsExpanded = startWorkMinutes !== null && endWorkMinutes !== null && total > 0 && coinVisible;
         controls.classList.toggle('results-ended', resultsExpanded);
         controls.classList.toggle('results-no-breaks', resultsExpanded && getClosedBreakMinutes() <= 0);
         renderPostWorkVerification(resultsExpanded);
+        renderZwEndReport(resultsExpanded);
+      }
+    }
+
+    function renderZwEndReport(visible){
+      const el = document.getElementById('zwEndReport');
+      const controls = document.querySelector('.controls');
+      const work = document.getElementById('workBtn');
+      if(!el) return;
+      if(!visible || !controls || !work || startWorkMinutes === null || endWorkMinutes === null){
+        el.classList.remove('visible');
+        el.setAttribute('aria-hidden', 'true');
+        el.textContent = '';
+        return;
+      }
+      el.textContent = formatZwEndReportText(workDate || todayISO());
+      el.classList.add('visible');
+      el.setAttribute('aria-hidden', 'false');
+      const controlsRect = controls.getBoundingClientRect();
+      const workRect = work.getBoundingClientRect();
+      if(controlsRect.width > 0 && workRect.width > 0){
+        const gap = Math.max(4, workRect.height * 0.06);
+        const height = Math.max(28, workRect.height * 0.5);
+        el.style.width = `${workRect.width.toFixed(2)}px`;
+        el.style.height = `${height.toFixed(2)}px`;
+        el.style.left = `${(workRect.left - controlsRect.left).toFixed(2)}px`;
+        el.style.top = `${(workRect.top - controlsRect.top - height - gap).toFixed(2)}px`;
       }
     }
 
@@ -9296,14 +9588,14 @@
     }, true);
     function showOverlay(html){
       delete overlay.dataset.lockClose;
-      overlay.classList.remove('keypad-overlay','keypad-left','keypad-right','rain-lights-overlay','zw-exercise-overlay');
+      overlay.classList.remove('keypad-overlay','keypad-left','keypad-right','rain-lights-overlay','zw-exercise-overlay','zw-decision-overlay');
       overlay.innerHTML=html;
       overlay.classList.add('show');
       lockViewTouch();
     }
     function hideOverlay(){
       delete overlay.dataset.lockClose;
-      overlay.classList.remove('show','keypad-overlay','keypad-left','keypad-right','rain-lights-overlay','zw-exercise-overlay');
+      overlay.classList.remove('show','keypad-overlay','keypad-left','keypad-right','rain-lights-overlay','zw-exercise-overlay','zw-decision-overlay');
       overlay.innerHTML='';
       lockViewTouch();
       schedulePendingRainLightsReminderCheck(500);
@@ -9960,7 +10252,7 @@
     }
     overlay.addEventListener('click',(e)=>{
       if(e.target!==overlay) return;
-      if(overlay.dataset.lockClose === 'tomorrowPreview' || overlay.dataset.lockClose === 'aiPaste' || overlay.dataset.lockClose === 'piggyCounter' || overlay.dataset.lockClose === 'rainLights' || overlay.dataset.lockClose === 'zwExercise') return;
+      if(overlay.dataset.lockClose === 'tomorrowPreview' || overlay.dataset.lockClose === 'aiPaste' || overlay.dataset.lockClose === 'piggyCounter' || overlay.dataset.lockClose === 'rainLights' || overlay.dataset.lockClose === 'zwExercise' || overlay.dataset.lockClose === 'zwDecision') return;
       moneyPanelDraft=null;
       counterPanelDraft=null;
       if(pendingEndWorkExport) abortPendingEndWorkReview();
@@ -13282,7 +13574,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.22.0';
+      return el ? el.textContent.trim() : 'v6.23.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -16091,7 +16383,6 @@ km priv: 0,00</div>
       lastExerciseMinutes=now;
       exerciseMarkers.push(now);
       saveStateAndScheduleAutoSync('exercise_done');
-      noteZwExternalExerciseDone();
       // Uruchom animację przywracania koła
       startWheelRestore(restoreFromAngle);
       noteRainLightsReturnSignal('exercise_done');
@@ -16220,6 +16511,13 @@ km priv: 0,00</div>
         openZwFromSlot(e);
         return;
       }
+      if(slotState === 'zw-complete' || slotState === 'zw-red-check'){
+        e.preventDefault();
+        e.stopPropagation();
+        openZwDecisionMenu();
+        return;
+      }
+      if(slotState === 'zw-running' || slotState === 'zw-fading') return;
       if(slotState === 'eye'){
         confirmEyeExerciseDone();
         return;
