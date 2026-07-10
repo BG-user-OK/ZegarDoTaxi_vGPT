@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.21.9: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.22.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -1665,7 +1665,161 @@
       transition-delay:0s;
     }
 
-    /* === v1.12: garnek "spał" po wykorzystaniu === */
+
+    .zw-reminder-layer{
+      position:absolute;
+      inset:0;
+      z-index:5;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#000;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .35s ease, filter .35s ease;
+    }
+    .zw-reminder-symbol{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:82%;
+      height:82%;
+      border-radius:50%;
+      color:#f6f6f6;
+      font-size:clamp(48px, 13.5vw, 92px);
+      font-weight:1000;
+      letter-spacing:.02em;
+      line-height:1;
+      background:radial-gradient(circle at 50% 45%, rgba(255,255,255,.2), rgba(255,255,255,.04) 38%, rgba(0,0,0,.92) 72%);
+      border:2px solid rgba(255,255,255,.44);
+      box-shadow:0 0 22px rgba(255,255,255,.24), inset 0 0 26px rgba(255,255,255,.08);
+      text-shadow:0 0 10px rgba(255,255,255,.95), 0 0 22px rgba(255,255,255,.45);
+    }
+    .coin-btn.zw-reminder-active{
+      background:#000 !important;
+      box-shadow:0 0 18px rgba(255,255,255,.2) !important;
+      outline:none !important;
+    }
+    .coin-btn.zw-reminder-active .coin-cell{
+      opacity:0;
+      filter:brightness(0) saturate(0);
+    }
+    .coin-btn.zw-reminder-active .zw-reminder-layer{
+      opacity:1;
+    }
+    .coin-btn.zw-reminder-active .zw-reminder-symbol{
+      animation:zwReminderPulse 1s ease-in-out infinite;
+    }
+    @keyframes zwReminderPulse{
+      0%,100%{ transform:scale(.96); opacity:.52; filter:brightness(.75); }
+      48%{ transform:scale(1.04); opacity:1; filter:brightness(1.75); }
+    }
+    .overlay.zw-exercise-overlay{
+      align-items:center;
+      justify-content:center;
+      padding:max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+      background:rgba(0,0,0,.94);
+    }
+    .zw-exercise-panel{
+      width:min(94vw, 520px);
+      min-height:min(78dvh, 660px);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:clamp(14px, 3.4vh, 28px);
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.18);
+      background:radial-gradient(circle at 50% 24%, rgba(255,255,255,.1), rgba(0,0,0,.96) 58%);
+      box-shadow:0 0 34px rgba(0,0,0,.7), inset 0 0 42px rgba(255,255,255,.05);
+      padding:clamp(18px, 4vh, 34px) clamp(14px, 4vw, 28px);
+      color:#fff;
+      text-align:center;
+    }
+    .zw-exercise-symbol{
+      width:clamp(128px, 42vw, 230px);
+      aspect-ratio:1;
+      border-radius:50%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:clamp(58px, 18vw, 112px);
+      font-weight:1000;
+      line-height:1;
+      letter-spacing:.02em;
+      background:radial-gradient(circle at 50% 42%, rgba(255,255,255,.24), rgba(255,255,255,.08) 37%, rgba(0,0,0,.93) 75%);
+      border:3px solid rgba(255,255,255,.5);
+      color:#fff;
+      text-shadow:0 0 12px rgba(255,255,255,.9), 0 0 34px rgba(255,255,255,.5);
+      box-shadow:0 0 28px rgba(255,255,255,.2), inset 0 0 42px rgba(255,255,255,.08);
+    }
+    .zw-exercise-panel.zw-mode-green .zw-exercise-symbol{ border-color:rgba(45,255,128,.72); box-shadow:0 0 28px rgba(45,255,128,.24), inset 0 0 42px rgba(45,255,128,.1); }
+    .zw-exercise-panel.zw-mode-yellow .zw-exercise-symbol{ border-color:rgba(255,225,80,.78); box-shadow:0 0 28px rgba(255,225,80,.28), inset 0 0 42px rgba(255,225,80,.1); }
+    .zw-exercise-panel.zw-mode-red .zw-exercise-symbol{ border-color:rgba(255,58,58,.8); box-shadow:0 0 30px rgba(255,58,58,.32), inset 0 0 42px rgba(255,58,58,.1); }
+    .zw-indicators{
+      width:100%;
+      display:grid;
+      grid-template-columns:repeat(3, 1fr);
+      gap:clamp(7px, 2vw, 14px);
+    }
+    .zw-indicator{
+      min-height:clamp(58px, 12vh, 92px);
+      border-radius:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      overflow:hidden;
+      color:rgba(255,255,255,.7);
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.14);
+      font-size:clamp(24px, 8vw, 48px);
+      font-weight:1000;
+      line-height:1;
+    }
+    .zw-indicator-fill{
+      position:absolute;
+      inset:auto 0 0 0;
+      height:var(--zw-fill,0%);
+      background:linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,.08));
+      opacity:.8;
+      transition:height .18s linear;
+    }
+    .zw-indicator-label{ position:relative; z-index:2; text-shadow:0 0 10px rgba(255,255,255,.6); }
+    .zw-indicator.done{ color:#fff; border-color:rgba(255,255,255,.46); }
+    .zw-indicator.active{ color:#fff; border-color:#fff; box-shadow:0 0 20px rgba(255,255,255,.34); }
+    .zw-exercise-panel.zw-mode-green .zw-indicator.active{ box-shadow:0 0 24px rgba(45,255,128,.38); }
+    .zw-exercise-panel.zw-mode-yellow .zw-indicator.active{ box-shadow:0 0 24px rgba(255,225,80,.42); }
+    .zw-decisions{
+      width:100%;
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:clamp(8px, 2.4vw, 14px);
+    }
+    .zw-decision-btn{
+      min-height:clamp(54px, 10vh, 82px);
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.22);
+      color:#fff;
+      font-size:clamp(21px, 6.2vw, 38px);
+      font-weight:1000;
+      background:#141414;
+      box-shadow:0 0 18px rgba(0,0,0,.6);
+    }
+    .zw-decision-btn.ok{ background:linear-gradient(180deg,#0f7d36,#052912); }
+    .zw-decision-btn.light{ background:linear-gradient(180deg,#e0bd26,#4a3702); color:#111; text-shadow:0 1px 0 rgba(255,255,255,.45); }
+    .zw-decision-btn.stop{ background:linear-gradient(180deg,#9a1717,#240505); }
+    .zw-decision-btn.later{ background:linear-gradient(180deg,#333,#060606); }
+    .zw-decisions.hidden{ display:none; }
+    .zw-red-check{
+      font-size:clamp(24px, 8vw, 44px);
+      font-weight:1000;
+      letter-spacing:.04em;
+      color:#ff4a4a;
+      text-shadow:0 0 16px rgba(255,70,70,.8);
+    }
+
+/* === v1.12: garnek "spał" po wykorzystaniu === */
     .pot-btn.dimmed{
       opacity:.45;
     }
@@ -5328,6 +5482,9 @@
                onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
           <span class="eye-reminder-fallback">👁</span>
         </div>
+        <div class="zw-reminder-layer" id="zwReminderLayer" aria-hidden="true">
+          <span class="zw-reminder-symbol">ZW</span>
+        </div>
       </button>
       <button class="driving-focus-restore-area" id="drivingFocusRestoreArea" type="button" aria-label="Pokaż ukryte moduły"></button>
       <div class="early-month-module" id="earlyMonthModule" aria-hidden="true"></div>
@@ -5347,7 +5504,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.21.9</div>
+    <div class="version">v6.22.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -5372,6 +5529,7 @@
     const LS_EARLY_MONTH_SHEET = 'tarcza_early_month_sheet_v1';
     const LS_UBER_REMINDER_ACTIVE = 'tarcza_uber_reminder_active_v1';
     const LS_PIGGY_COUNTER_DRAFT = 'tarcza_piggy_counter_draft_v1';
+    const LS_ZW_MODULE = 'tarcza_zw_module_v1';
     const FINAL_BREAK_NO_WORK_THRESHOLD_MIN = 2;
     const AI_PASTE_HOLD_MS = 2000;
     const EARLY_MONTH_WINDOW_DAYS = 7;
@@ -7169,6 +7327,300 @@
       setTimeout(renderAll, EYE_REMINDER_FADE_MS + 80);
     }
     // Płynna wersja w minutach z ułamkiem (uwzględnia sekundy z aktualnego zegara)
+
+    const ZW_MODE_GREEN = 'green';
+    const ZW_MODE_YELLOW = 'yellow';
+    const ZW_MODE_RED = 'red';
+    const ZW_POSTPONE_MS = 5 * 60 * 1000;
+    const ZW_LOG_LIMIT = 700;
+    let zwState = createZwState();
+    let zwExerciseFrame = null;
+
+    function createZwState(){
+      return {
+        schema:1,
+        workDate:null,
+        startWorkMinutes:null,
+        mode:ZW_MODE_GREEN,
+        nextReminderAt:null,
+        pendingReminder:false,
+        activeSession:null,
+        log:[]
+      };
+    }
+    function normalizeZwMode(mode){
+      return [ZW_MODE_GREEN, ZW_MODE_YELLOW, ZW_MODE_RED].includes(mode) ? mode : ZW_MODE_GREEN;
+    }
+    function normalizeZwState(raw){
+      const base = createZwState();
+      const src = raw && typeof raw === 'object' ? raw : {};
+      base.workDate = typeof src.workDate === 'string' ? src.workDate : null;
+      base.startWorkMinutes = Number.isFinite(Number(src.startWorkMinutes)) ? Number(src.startWorkMinutes) : null;
+      base.mode = normalizeZwMode(src.mode);
+      base.nextReminderAt = Number.isFinite(Number(src.nextReminderAt)) ? Number(src.nextReminderAt) : null;
+      base.pendingReminder = !!src.pendingReminder;
+      base.activeSession = (src.activeSession && typeof src.activeSession === 'object') ? src.activeSession : null;
+      base.log = Array.isArray(src.log) ? src.log.slice(-ZW_LOG_LIMIT) : [];
+      return base;
+    }
+    function loadZwState(){
+      try{ zwState = normalizeZwState(JSON.parse(localStorage.getItem(LS_ZW_MODULE) || 'null')); }
+      catch(e){ zwState = createZwState(); }
+      syncZwWorkdayScope('load');
+    }
+    function saveZwState(){
+      try{ localStorage.setItem(LS_ZW_MODULE, JSON.stringify(zwState)); }catch(e){}
+    }
+    function zwLogId(){
+      return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+    }
+    function appendZwLog(type, data={}){
+      if(!zwState) zwState = createZwState();
+      zwState.log.push({ id:zwLogId(), type, at:Date.now(), workDate:workDate || todayISO(), mode:zwState.mode, ...data });
+      if(zwState.log.length > ZW_LOG_LIMIT) zwState.log = zwState.log.slice(-ZW_LOG_LIMIT);
+    }
+    function getZwModeConfig(mode=zwState.mode){
+      const m = normalizeZwMode(mode);
+      if(m === ZW_MODE_YELLOW) return { mode:m, intervalMs:24*60*1000, phases:[5,15,10], labels:['5S','15S','10S'] };
+      if(m === ZW_MODE_RED) return { mode:m, intervalMs:60*60*1000, phases:[], labels:[] };
+      return { mode:ZW_MODE_GREEN, intervalMs:12*60*1000, phases:[5,20,5], labels:['5S','20S','5S'] };
+    }
+    function isZwActiveWorkday(){
+      return startWorkMinutes !== null && endWorkMinutes === null;
+    }
+    function syncZwWorkdayScope(reason='sync'){
+      if(!zwState) zwState = createZwState();
+      if(!isZwActiveWorkday()){
+        zwState.pendingReminder = false;
+        zwState.activeSession = null;
+        return;
+      }
+      const currentDate = workDate || todayISO();
+      const changedDay = zwState.workDate !== currentDate || zwState.startWorkMinutes !== startWorkMinutes;
+      if(changedDay){
+        zwState.workDate = currentDate;
+        zwState.startWorkMinutes = startWorkMinutes;
+        zwState.pendingReminder = false;
+        zwState.activeSession = null;
+        zwState.nextReminderAt = Date.now() + getZwModeConfig(zwState.mode).intervalMs;
+        appendZwLog('work_scope', { reason });
+        saveZwState();
+      }
+    }
+    function startZwWorkdayScope(reason='work_start'){
+      syncZwWorkdayScope(reason);
+      if(isZwActiveWorkday() && !zwState.nextReminderAt){
+        zwState.nextReminderAt = Date.now() + getZwModeConfig(zwState.mode).intervalMs;
+        saveZwState();
+      }
+    }
+    function buildZwDailySummary(date){
+      const rows = (zwState.log || []).filter(row=>row && row.workDate === date);
+      return {
+        ok:rows.filter(row=>row.type === 'done' && row.decision === 'ok').length,
+        light:rows.filter(row=>row.type === 'done' && row.decision === 'light').length,
+        stop:rows.filter(row=>row.type === 'done' && row.decision === 'stop').length,
+        later:rows.filter(row=>row.type === 'postponed').length
+      };
+    }
+    function endZwSession(reason='work_end'){
+      if(!zwState) zwState = createZwState();
+      if(zwState.workDate) appendZwLog('work_end', { reason, summary:buildZwDailySummary(zwState.workDate) });
+      zwState.pendingReminder = false;
+      zwState.activeSession = null;
+      zwState.nextReminderAt = null;
+      saveZwState();
+      stopZwExerciseFrame();
+    }
+    function clearZwWorkday(reason='day_reset'){
+      if(!zwState) zwState = createZwState();
+      appendZwLog('clear_workday', { reason, workDate:zwState.workDate });
+      zwState.workDate = null;
+      zwState.startWorkMinutes = null;
+      zwState.nextReminderAt = null;
+      zwState.pendingReminder = false;
+      zwState.activeSession = null;
+      saveZwState();
+      stopZwExerciseFrame();
+    }
+    function canShowPrivateReminderNow(){
+      const endOverlay = document.getElementById('endConfirmOverlay');
+      return isZwActiveWorkday() &&
+             document.visibilityState === 'visible' &&
+             typeof overlay !== 'undefined' &&
+             !overlay.classList.contains('show') &&
+             (!endOverlay || endOverlay.classList.contains('hidden')) &&
+             !endConfirmActive &&
+             !pendingEndWorkExport &&
+             !isRainLightsSyncBusy() &&
+             !isRainLightsMainFunctionBusy() &&
+             activeViewPointers.size === 0 &&
+             !(viewTouchLockedUntil && Date.now() < viewTouchLockedUntil);
+    }
+    function markZwReminderDueIfPossible(){
+      if(!isZwActiveWorkday()) return false;
+      syncZwWorkdayScope('due_check');
+      if(zwState.activeSession) return false;
+      if(!zwState.nextReminderAt) zwState.nextReminderAt = Date.now() + getZwModeConfig(zwState.mode).intervalMs;
+      if(Date.now() >= zwState.nextReminderAt) zwState.pendingReminder = true;
+      return !!zwState.pendingReminder;
+    }
+    function shouldShowZwReminderSlot(){
+      return markZwReminderDueIfPossible() && canShowPrivateReminderNow();
+    }
+    function getReminderSlotDisplayState(coinVisible=false){
+      if(coinVisible) return 'coin';
+      if(shouldShowEyeReminder()) return 'eye';
+      if(isEyeReminderFading()) return 'eye-fading';
+      if(shouldShowZwReminderSlot()) return 'zw';
+      return 'empty';
+    }
+    function scheduleNextZwByMode(mode=zwState.mode, reason='next'){
+      zwState.mode = normalizeZwMode(mode);
+      zwState.pendingReminder = false;
+      zwState.activeSession = null;
+      zwState.nextReminderAt = Date.now() + getZwModeConfig(zwState.mode).intervalMs;
+      appendZwLog('next', { reason, nextReminderAt:zwState.nextReminderAt });
+      saveZwState();
+    }
+    function startZwSession(reason='slot'){
+      syncZwWorkdayScope(reason);
+      zwState.pendingReminder = false;
+      const mode = normalizeZwMode(zwState.mode);
+      zwState.activeSession = { mode, startedAt:Date.now(), redCheck:mode === ZW_MODE_RED };
+      appendZwLog(mode === ZW_MODE_RED ? 'red_check_open' : 'session_start', { reason, phases:getZwModeConfig(mode).phases });
+      saveZwState();
+      if(mode === ZW_MODE_RED) openZwRedCheckScreen();
+      else openZwExerciseScreen();
+    }
+    function openZwFromSlot(e){
+      if(e){ e.preventDefault(); e.stopPropagation(); }
+      if(!shouldShowZwReminderSlot()) return;
+      startZwSession('slot_click');
+      renderAll();
+    }
+    function stopZwExerciseFrame(){
+      if(zwExerciseFrame){ cancelAnimationFrame(zwExerciseFrame); zwExerciseFrame = null; }
+    }
+    function zwIndicatorHtml(cfg, elapsedSec, index){
+      const start = cfg.phases.slice(0,index).reduce((sum,v)=>sum+v,0);
+      const len = cfg.phases[index] || 1;
+      const local = Math.max(0, Math.min(len, elapsedSec - start));
+      const pct = Math.round((local / len) * 100);
+      const done = elapsedSec >= start + len;
+      const active = elapsedSec >= start && elapsedSec < start + len;
+      return `<div class="zw-indicator ${done?'done':''} ${active?'active':''}" style="--zw-fill:${done?100:pct}%"><span class="zw-indicator-fill"></span><span class="zw-indicator-label">${cfg.labels[index]}</span></div>`;
+    }
+    function zwDecisionButtonsHtml(){
+      return `<button class="zw-decision-btn ok" type="button" data-zw-decision="ok">OK</button>
+        <button class="zw-decision-btn light" type="button" data-zw-decision="light">L&#379;EJ</button>
+        <button class="zw-decision-btn stop" type="button" data-zw-decision="stop">STOP</button>
+        <button class="zw-decision-btn later" type="button" data-zw-decision="later">P&#211;&#377;NIEJ</button>`;
+    }
+    function bindZwDecisionButtons(){
+      overlay.querySelectorAll('[data-zw-decision]').forEach(btn=>{
+        btn.addEventListener('click',(e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          handleZwDecisionClick(btn.dataset.zwDecision);
+        });
+      });
+    }
+    function openZwExerciseScreen(){
+      if(!isZwActiveWorkday() || !zwState.activeSession) return;
+      const cfg = getZwModeConfig(zwState.activeSession.mode);
+      overlay.dataset.lockClose = 'zwExercise';
+      overlay.classList.add('zw-exercise-overlay');
+      overlay.innerHTML = `<div class="zw-exercise-panel zw-mode-${cfg.mode}">
+        <div class="zw-exercise-symbol">ZW</div>
+        <div class="zw-indicators" data-zw-indicators></div>
+        <div class="zw-decisions hidden" data-zw-decisions></div>
+      </div>`;
+      overlay.classList.add('show');
+      lockViewTouch();
+      renderZwExerciseFrame();
+    }
+    function renderZwExerciseFrame(){
+      if(!zwState.activeSession || overlay.dataset.lockClose !== 'zwExercise'){
+        stopZwExerciseFrame();
+        return;
+      }
+      const cfg = getZwModeConfig(zwState.activeSession.mode);
+      const started = Number(zwState.activeSession.startedAt) || Date.now();
+      const elapsedSec = Math.max(0, (Date.now() - started) / 1000);
+      const totalSec = cfg.phases.reduce((sum,v)=>sum+v,0);
+      const indicators = overlay.querySelector('[data-zw-indicators]');
+      if(indicators) indicators.innerHTML = cfg.phases.map((_,i)=>zwIndicatorHtml(cfg, elapsedSec, i)).join('');
+      const decisions = overlay.querySelector('[data-zw-decisions]');
+      if(decisions && elapsedSec >= totalSec){
+        decisions.classList.remove('hidden');
+        if(!decisions.dataset.ready){
+          decisions.dataset.ready = '1';
+          decisions.innerHTML = zwDecisionButtonsHtml();
+          bindZwDecisionButtons();
+        }
+      }
+      zwExerciseFrame = requestAnimationFrame(renderZwExerciseFrame);
+    }
+    function openZwRedCheckScreen(){
+      overlay.dataset.lockClose = 'zwExercise';
+      overlay.classList.add('zw-exercise-overlay');
+      overlay.innerHTML = `<div class="zw-exercise-panel zw-mode-red">
+        <div class="zw-exercise-symbol">ZW</div>
+        <div class="zw-red-check">60</div>
+        <div class="zw-decisions">${zwDecisionButtonsHtml()}</div>
+      </div>`;
+      overlay.classList.add('show');
+      lockViewTouch();
+      bindZwDecisionButtons();
+    }
+    function handleZwDecisionClick(decision){
+      if(!zwState.activeSession && decision !== 'later') return;
+      overlay.querySelectorAll('[data-zw-decision]').forEach(btn=>{ btn.disabled = true; });
+      completeZwDecision(decision);
+    }
+    function completeZwDecision(decision){
+      stopZwExerciseFrame();
+      const normalized = ['ok','light','stop','later'].includes(decision) ? decision : 'later';
+      if(normalized === 'later'){
+        zwState.pendingReminder = false;
+        zwState.activeSession = null;
+        zwState.nextReminderAt = Date.now() + ZW_POSTPONE_MS;
+        appendZwLog('postponed', { minutes:5 });
+        saveZwState();
+        hideOverlay();
+        renderAll();
+        return;
+      }
+      let nextMode = ZW_MODE_GREEN;
+      if(normalized === 'light') nextMode = ZW_MODE_YELLOW;
+      if(normalized === 'stop') nextMode = ZW_MODE_RED;
+      appendZwLog('done', { decision:normalized, minute:nowMinutes() });
+      if(normalized !== 'stop'){
+        const restoreFromAngle = getCurrentExerciseVanishAngle();
+        const now = nowMinutes();
+        lastExerciseMinutes = now;
+        exerciseMarkers.push(now);
+        saveStateAndScheduleAutoSync('exercise_done');
+        scheduleNextZwByMode(nextMode, `decision_${normalized}`);
+        hideOverlay();
+        startWheelRestore(restoreFromAngle);
+        noteRainLightsReturnSignal('exercise_done');
+        renderAll();
+        return;
+      }
+      scheduleNextZwByMode(nextMode, `decision_${normalized}`);
+      hideOverlay();
+      renderAll();
+    }
+    function noteZwExternalExerciseDone(){
+      if(!isZwActiveWorkday()) return;
+      syncZwWorkdayScope('external_exercise');
+      appendZwLog('external_done', { minute:nowMinutes() });
+      scheduleNextZwByMode(ZW_MODE_GREEN, 'external_exercise');
+      saveZwState();
+    }
+
     function getEffectiveExerciseElapsedFractional(){
       if(startWorkMinutes===null||lastExerciseMinutes===null) return 0;
       const baseMin = getEffectiveExerciseElapsed();
@@ -8238,16 +8690,21 @@
       } else {
         coinCell.classList.add('empty');
       }
-      const eyeDue = shouldShowEyeReminder();
-      const eyeFading = isEyeReminderFading();
+      const slotState = getReminderSlotDisplayState(coinVisible);
+      const eyeDue = slotState === 'eye';
+      const eyeFading = slotState === 'eye-fading';
+      const zwDue = slotState === 'zw';
       const eyeLayer = document.getElementById('eyeReminderLayer');
+      const zwLayer = document.getElementById('zwReminderLayer');
       if(coinBtn){
         coinBtn.classList.toggle('eye-reminder-active', eyeDue);
-        coinBtn.classList.toggle('eye-reminder-dismissing', !eyeDue && eyeFading);
-        coinBtn.classList.toggle('empty-slot', !coinVisible && !eyeDue && !eyeFading);
-        coinBtn.setAttribute('aria-label', eyeDue ? 'Potwierdź ćwiczenie oczu' : 'Obroty');
+        coinBtn.classList.toggle('eye-reminder-dismissing', eyeFading);
+        coinBtn.classList.toggle('zw-reminder-active', zwDue);
+        coinBtn.classList.toggle('empty-slot', !coinVisible && !eyeDue && !eyeFading && !zwDue);
+        coinBtn.setAttribute('aria-label', eyeDue ? 'OKO' : (zwDue ? 'ZW' : 'Obroty'));
       }
       if(eyeLayer) eyeLayer.setAttribute('aria-hidden', eyeDue ? 'false' : 'true');
+      if(zwLayer) zwLayer.setAttribute('aria-hidden', zwDue ? 'false' : 'true');
       syncEyeBlinkController(eyeDue);
       if(controls){
         const resultsExpanded = startWorkMinutes !== null && endWorkMinutes !== null && total > 0 && coinVisible;
@@ -8839,14 +9296,14 @@
     }, true);
     function showOverlay(html){
       delete overlay.dataset.lockClose;
-      overlay.classList.remove('keypad-overlay','keypad-left','keypad-right','rain-lights-overlay');
+      overlay.classList.remove('keypad-overlay','keypad-left','keypad-right','rain-lights-overlay','zw-exercise-overlay');
       overlay.innerHTML=html;
       overlay.classList.add('show');
       lockViewTouch();
     }
     function hideOverlay(){
       delete overlay.dataset.lockClose;
-      overlay.classList.remove('show','keypad-overlay','keypad-left','keypad-right');
+      overlay.classList.remove('show','keypad-overlay','keypad-left','keypad-right','rain-lights-overlay','zw-exercise-overlay');
       overlay.innerHTML='';
       lockViewTouch();
       schedulePendingRainLightsReminderCheck(500);
@@ -9503,7 +9960,7 @@
     }
     overlay.addEventListener('click',(e)=>{
       if(e.target!==overlay) return;
-      if(overlay.dataset.lockClose === 'tomorrowPreview' || overlay.dataset.lockClose === 'aiPaste' || overlay.dataset.lockClose === 'piggyCounter' || overlay.dataset.lockClose === 'rainLights') return;
+      if(overlay.dataset.lockClose === 'tomorrowPreview' || overlay.dataset.lockClose === 'aiPaste' || overlay.dataset.lockClose === 'piggyCounter' || overlay.dataset.lockClose === 'rainLights' || overlay.dataset.lockClose === 'zwExercise') return;
       moneyPanelDraft=null;
       counterPanelDraft=null;
       if(pendingEndWorkExport) abortPendingEndWorkReview();
@@ -9718,7 +10175,7 @@
         if(el && (el.classList.contains('on') || el.classList.contains('blink-bg'))) return true;
       }
       if(id === 'coinBtn'){
-        if(shouldShowEyeReminder() || isEyeReminderFading()) return true;
+        if(shouldShowEyeReminder() || isEyeReminderFading() || shouldShowZwReminderSlot()) return true;
       }
       return false;
     }
@@ -12462,6 +12919,7 @@ km priv: 0,00</div>
       workDate = todayISO();
       if(!fromEdit) restoreDuePostponedNotes(workDate);
       saveStateAndScheduleAutoSync(fromEdit ? 'work_start_edit' : 'work_start');
+      startZwWorkdayScope(fromEdit ? 'work_start_edit' : 'work_start');
       startRainLightsWorkday(fromEdit ? 'work_start_edit' : 'work_start');
       renderAll();
       syncWorkWakeLock();
@@ -12504,6 +12962,7 @@ km priv: 0,00</div>
       restartDrivingFocusTimerForActiveWork();
       syncWorkWakeLock();
       startRainLightsWorkday('work_continue');
+      startZwWorkdayScope('work_continue');
     }
     function providerIncomeEntered(){
       return PROVIDERS.some(p => (revenues[p.key] || 0) !== 0);
@@ -12608,6 +13067,7 @@ km priv: 0,00</div>
       }
       breakActive=false; currentBreakStart=null;
       clearRainLightsWorkday('work_end');
+      endZwSession('work_end');
       pendingEndWorkExport = true;
       applyFinalBreakCorrectionIfNoWorkAfterBreak({ notify:true });
       document.getElementById('workBtn').classList.remove('on');
@@ -12651,6 +13111,7 @@ km priv: 0,00</div>
       counterStart=null; counterEnd=null; privKmTotal=0;
       clearPotStateForDay();
       clearRainLightsWorkday('day_reset');
+      clearZwWorkday('day_reset');
       // Reset garnka - nawet jeśli był w trakcie grzania albo alarmu z wczoraj
       // Punkt 7: cel godzinowy wraca do domyślnych 8h
       workTargetMinutes=480;
@@ -12821,7 +13282,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.21.9';
+      return el ? el.textContent.trim() : 'v6.22.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -15630,6 +16091,7 @@ km priv: 0,00</div>
       lastExerciseMinutes=now;
       exerciseMarkers.push(now);
       saveStateAndScheduleAutoSync('exercise_done');
+      noteZwExternalExerciseDone();
       // Uruchom animację przywracania koła
       startWheelRestore(restoreFromAngle);
       noteRainLightsReturnSignal('exercise_done');
@@ -15749,13 +16211,20 @@ km priv: 0,00</div>
       e.stopPropagation();
       cancelDailyExportOverwrite();
     }, true);
-    // === COIN === (też otwiera panel obrotów - to ten sam panel)
-    document.getElementById('coinBtn').addEventListener('click', ()=>{
-      if(shouldShowEyeReminder()){
+    // === COIN ===
+    document.getElementById('coinBtn').addEventListener('click', (e)=>{
+      const coinCell=document.getElementById('coinCell');
+      const coinVisible = coinCell && !coinCell.classList.contains('empty');
+      const slotState = getReminderSlotDisplayState(!!coinVisible);
+      if(slotState === 'zw'){
+        openZwFromSlot(e);
+        return;
+      }
+      if(slotState === 'eye'){
         confirmEyeExerciseDone();
         return;
       }
-      if(isEyeReminderFading()) return;
+      if(slotState === 'eye-fading') return;
       const btn=document.getElementById('coinBtn');
       if(btn && btn.classList.contains('empty-slot')) return;
       moneyPanelDraft=null;
@@ -15856,6 +16325,7 @@ km priv: 0,00</div>
     // ===== init =====
     initializeAppVersionTracking();
     loadState();
+    loadZwState();
     loadUberReminderState();
     loadPostWorkVerification();
     initializeDailyExportStatus();
@@ -15880,6 +16350,13 @@ km priv: 0,00</div>
     // Pierwszy render rolki może paść jeśli clientHeight=0 przed layoutem.
     // Po pierwszej klatce wymuszamy ponowny render dla pewności.
     requestAnimationFrame(()=>{ renderAll(); });
+    if(zwState.activeSession && isZwActiveWorkday()){
+      setTimeout(()=>{
+        if(!canShowPrivateReminderNow()) return;
+        if(zwState.activeSession && zwState.activeSession.redCheck) openZwRedCheckScreen();
+        else if(zwState.activeSession) openZwExerciseScreen();
+      }, 600);
+    }
 
     setInterval(()=>{ blinkState=!blinkState; renderAll(); }, 1000);
 
