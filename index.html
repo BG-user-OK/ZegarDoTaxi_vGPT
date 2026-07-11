@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.23.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.23.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -1732,21 +1732,20 @@
       position:absolute;
       inset:0;
       display:grid;
-      grid-template-columns:repeat(3, 1fr);
-      gap:2px;
+      grid-template-columns:33.334% 33.334% 33.334%;
+      gap:0;
       opacity:1;
     }
     .zw-session-bar{
       position:relative;
       overflow:hidden;
-      background:rgba(255,255,255,.035);
-      border-left:1px solid rgba(255,255,255,.08);
-      border-right:1px solid rgba(255,255,255,.04);
+      background:transparent;
+      border:0;
     }
     .zw-session-bar-fill{
       position:absolute;
-      left:0;
-      right:0;
+      left:-1px;
+      right:-1px;
       bottom:0;
       height:0%;
       background:linear-gradient(180deg, rgba(255,255,255,.38), var(--zw-mode-color));
@@ -1791,8 +1790,11 @@
     .coin-btn.zw-session-redcheck .zw-session-layer{
       opacity:1;
     }
+    .coin-btn.zw-session-complete .zw-session-layer{
+      background:var(--zw-mode-color);
+    }
     .coin-btn.zw-session-complete .zw-session-bars{
-      opacity:.95;
+      opacity:1;
       filter:brightness(1.15);
     }
     .coin-btn.zw-session-complete .zw-session-thumb{
@@ -1810,6 +1812,14 @@
       opacity:0;
       filter:brightness(0);
       transition:opacity 1.2s ease, filter 1.2s ease;
+    }
+    .coin-btn.zw-reminder-active.driving-focus-faded,
+    .coin-btn.zw-session-active.driving-focus-faded,
+    .coin-btn.zw-session-complete.driving-focus-faded,
+    .coin-btn.zw-session-redcheck.driving-focus-faded,
+    .coin-btn.zw-session-fading.driving-focus-faded{
+      opacity:1 !important;
+      filter:none !important;
     }
     .overlay.zw-decision-overlay{
       align-items:center;
@@ -5657,7 +5667,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.23.0</div>
+    <div class="version">v6.23.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -10467,7 +10477,16 @@
         if(el && (el.classList.contains('on') || el.classList.contains('blink-bg'))) return true;
       }
       if(id === 'coinBtn'){
+        const zwSlotState = getZwSessionSlotState();
         if(shouldShowEyeReminder() || isEyeReminderFading() || shouldShowZwReminderSlot()) return true;
+        if(zwSlotState === 'zw-running' || zwSlotState === 'zw-complete' || zwSlotState === 'zw-red-check' || zwSlotState === 'zw-fading') return true;
+        if(el && (
+          el.classList.contains('zw-reminder-active') ||
+          el.classList.contains('zw-session-active') ||
+          el.classList.contains('zw-session-complete') ||
+          el.classList.contains('zw-session-redcheck') ||
+          el.classList.contains('zw-session-fading')
+        )) return true;
       }
       return false;
     }
@@ -13574,7 +13593,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.23.0';
+      return el ? el.textContent.trim() : 'v6.23.1';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
