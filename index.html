@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.23.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.23.2: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -1813,6 +1813,8 @@
       filter:brightness(0);
       transition:opacity 1.2s ease, filter 1.2s ease;
     }
+    .coin-btn.eye-reminder-active.driving-focus-faded,
+    .coin-btn.eye-reminder-dismissing.driving-focus-faded,
     .coin-btn.zw-reminder-active.driving-focus-faded,
     .coin-btn.zw-session-active.driving-focus-faded,
     .coin-btn.zw-session-complete.driving-focus-faded,
@@ -3584,6 +3586,11 @@
         inset 0 0 0 2px rgba(93,255,123,.62),
         inset 0 4px 10px rgba(0,0,0,.72),
         0 0 14px rgba(63,255,101,.22);
+    }
+    .money-panel .provider-row.active .prov-btn.has-img .prov-img{
+      opacity:1;
+      filter:saturate(1.18) brightness(1.16) contrast(1.06);
+      transform:translate(-50%,-50%) scale(1.04);
     }
     .money-inline-mode{
       flex:0 0 auto;
@@ -5667,7 +5674,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.23.1</div>
+    <div class="version">v6.23.2</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -10461,6 +10468,16 @@
       // Active modules stay visible individually; they should not block the whole fade timer.
       return false;
     }
+    function isCoinReminderActionVisibleForDrivingFocus(el=document.getElementById('coinBtn')){
+      if(!el) return false;
+      return el.classList.contains('eye-reminder-active') ||
+             el.classList.contains('eye-reminder-dismissing') ||
+             el.classList.contains('zw-reminder-active') ||
+             el.classList.contains('zw-session-active') ||
+             el.classList.contains('zw-session-complete') ||
+             el.classList.contains('zw-session-redcheck') ||
+             el.classList.contains('zw-session-fading');
+    }
     function shouldKeepDrivingFocusModuleVisible(id){
       const el = document.getElementById(id);
       if(id === 'potBtn'){
@@ -10480,13 +10497,7 @@
         const zwSlotState = getZwSessionSlotState();
         if(shouldShowEyeReminder() || isEyeReminderFading() || shouldShowZwReminderSlot()) return true;
         if(zwSlotState === 'zw-running' || zwSlotState === 'zw-complete' || zwSlotState === 'zw-red-check' || zwSlotState === 'zw-fading') return true;
-        if(el && (
-          el.classList.contains('zw-reminder-active') ||
-          el.classList.contains('zw-session-active') ||
-          el.classList.contains('zw-session-complete') ||
-          el.classList.contains('zw-session-redcheck') ||
-          el.classList.contains('zw-session-fading')
-        )) return true;
+        if(isCoinReminderActionVisibleForDrivingFocus(el)) return true;
       }
       return false;
     }
@@ -10565,6 +10576,10 @@
     }
     function interceptDrivingFocusFadedTarget(e){
       const target = e.currentTarget;
+      if(target && target.id === 'coinBtn' && isCoinReminderActionVisibleForDrivingFocus(target)){
+        clearDrivingFocusRestoredTap();
+        return;
+      }
       if(drivingFocusFaded && target && target.classList.contains('driving-focus-faded')){
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -10837,7 +10852,6 @@
             workTargetMinutes = mins;
             saveStateAndScheduleAutoSync('work_target');
             renderAll();
-            openTimeEditor('start');
           }
         });
       }
@@ -11010,10 +11024,9 @@
           saveStateAndScheduleAutoSync('pot_duration');
           renderAll();
         } else if(editMode==='target'){
-          // Cel zatwierdzony - wracamy do edytora startu
           saveStateAndScheduleAutoSync('work_target');
+          hideOverlay();
           renderAll();
-          openTimeEditor('start');
           return;
         }
         hideOverlay(); return;
@@ -12777,7 +12790,7 @@ km priv: 0,00</div>
       touchSharedRecord(record);
       syncLegacyEmojiViews();
     }
-    const EMOJI_SEARCH_URL = 'https://emojiterra.com/keyboard/pl/';
+    const EMOJI_SEARCH_URL = 'https://emojicombos.com';
     let emojiSearchReturnPending = false;
     let emojiSearchOpenedAt = 0;
 
@@ -13593,7 +13606,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.23.1';
+      return el ? el.textContent.trim() : 'v6.23.2';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
