@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.23.2: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.24.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -443,19 +443,36 @@
       line-height:1; letter-spacing:-1.2px;
       transition:color .3s ease, text-shadow .3s ease;
     }
-    .number.active{
-      color:#ffffff;
-      text-shadow:
-        0 0 8px rgba(255,255,255,.85),
-        0 0 16px rgba(255,255,255,.6),
-        0 0 24px rgba(180,255,200,.4);
+    .number.vacated{
+      color:transparent;
+      text-shadow:none;
     }
-    .number.preview{
-      color:rgba(255,255,255,.58);
-      text-shadow:
-        0 0 4px rgba(255,255,255,.42),
-        0 0 9px rgba(255,255,255,.26),
-        0 0 14px rgba(180,255,200,.16);
+    .active-hour-marker{ pointer-events:none; }
+    .active-hour-marker-bg{
+      fill:#000;
+      stroke:#fff;
+      stroke-width:2.2;
+      filter:drop-shadow(0 0 5px rgba(255,255,255,.72));
+    }
+    .active-hour-marker-hour,
+    .active-hour-marker-minute{
+      fill:#fff;
+      font-family:inherit;
+      font-weight:900;
+      text-anchor:middle;
+      dominant-baseline:central;
+      filter:
+        drop-shadow(0 0 5px rgba(255,255,255,1))
+        drop-shadow(0 0 11px rgba(255,255,255,.76))
+        drop-shadow(0 0 19px rgba(180,255,200,.42));
+    }
+    .active-hour-marker-hour{ font-size:34px; }
+    .active-hour-marker-minute{ font-size:15px; }
+    .active-hour-marker-minute-bar{
+      stroke:#fff;
+      stroke-width:2;
+      stroke-linecap:round;
+      filter:drop-shadow(0 0 4px rgba(255,255,255,.88));
     }
     @keyframes barrierLightBlink{
       0%,49.99%{ opacity:var(--barrier-light-on, .95); }
@@ -5507,7 +5524,6 @@
         <g id="overtimeFill"></g>
         <g id="breakFill"></g>
         <g id="exerciseMarks"></g>
-        <g id="forecastHand"></g>
         <g id="dots"></g>
         <!-- Czarne koło pod datą - przykrywa wszystkie kolory tarczy w środku, datę pokazuje na czystym tle -->
         <circle cx="200" cy="200" r="75" fill="#000" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
@@ -5531,10 +5547,16 @@
         </div>
       </div>
 
-      <!-- Punkty 4+5: druga warstwa SVG nad cyframi godzin - dla strzałki godzinowej i kropki minut -->
+      <!-- Górna warstwa SVG: wskazówka, ruchomy znacznik godziny i zapora. -->
       <svg class="clock-svg clock-svg-overlay" viewBox="-30 -30 460 460" aria-hidden="true">
         <g id="hourArrow"></g>
-        <g id="minuteDot"></g>
+        <g id="activeHourMarker" class="active-hour-marker">
+          <circle class="active-hour-marker-bg" cx="0" cy="0" r="38"></circle>
+          <text class="active-hour-marker-hour" id="activeHourMarkerHour" x="-10" y="4">24</text>
+          <text class="active-hour-marker-minute" id="activeHourMarkerMinute" x="19" y="-12">00</text>
+          <line class="active-hour-marker-minute-bar" id="activeHourMarkerMinuteBar" x1="10" y1="-2" x2="28" y2="-2"></line>
+        </g>
+        <g id="forecastHand"></g>
       </svg>
       <button class="weather-status-icon weather-unknown" id="weatherStatusIcon" type="button" aria-label="Pogoda" title="Pogoda"></button>
     </div>
@@ -5674,7 +5696,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.23.2</div>
+    <div class="version">v6.24.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -7167,18 +7189,18 @@
       }
     }
 
-    // ===== wskazówki: kropka minut + strzałka godzin =====
+    // ===== wskazówki: ruchomy znacznik godziny + strzałka godzin =====
     function renderHands(){
       const gHour = document.getElementById('hourArrow');
-      const gMin  = document.getElementById('minuteDot');
-      clearChildren(gHour); clearChildren(gMin);
+      const marker = document.getElementById('activeHourMarker');
+      const markerHour = document.getElementById('activeHourMarkerHour');
+      const markerMinute = document.getElementById('activeHourMarkerMinute');
+      const markerMinuteBar = document.getElementById('activeHourMarkerMinuteBar');
+      clearChildren(gHour);
 
       const now = new Date();
       const h = now.getHours(), m = now.getMinutes();
       const hourDeg = (h % 12) * 30 + m * 0.5;
-      // Minuta stoi przy kierunku wskazówki godzinowej, lekko poza tarczą.
-      const minDeg  = hourDeg;
-
       // === Strzałka godzinowa - jako polygon (grot strzałki) ===
       const aRad = (hourDeg - 90) * Math.PI / 180;
       const r1 = 130, r2 = 75;
@@ -7220,45 +7242,30 @@
       hIn.setAttribute('fill', '#ffffff');
       gHour.appendChild(hIn);
 
-      // === Liczba minut na obwodzie ===
-      // Pozycja zależy od kierunku wskazówki godzinowej, a treść od aktualnej minuty.
-      const mRad = (minDeg - 90) * Math.PI / 180;
-      // Etykieta minut na zewnątrz
-      const lblR = radius + 18;
-      const lblX = cx + Math.cos(mRad) * lblR, lblY = cy + Math.sin(mRad) * lblR;
-      const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
-      lbl.setAttribute('x', lblX.toFixed(2)); lbl.setAttribute('y', lblY.toFixed(2));
-      lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('dominant-baseline','central');
-      lbl.setAttribute('fill','#fff'); lbl.setAttribute('font-size','30');
-      lbl.setAttribute('font-weight','900'); lbl.setAttribute('font-family','inherit');
-      lbl.setAttribute('opacity','1');
-      lbl.style.filter = 'drop-shadow(0 0 7px rgba(255,255,255,1)) drop-shadow(0 0 16px rgba(255,255,255,.9)) drop-shadow(0 0 30px rgba(185,220,255,.72)) drop-shadow(0 0 42px rgba(180,255,200,.42))';
-      lbl.textContent = pad(m);
-      gMin.appendChild(lbl);
-
-      // === Podświetlenie aktualnej godziny (tryb 24h dla świecących) ===
+      // === Ruchomy znacznik aktualnej godziny (tryb 24h) ===
       const hh12 = h === 0 ? 12 : (h > 12 ? h - 12 : h);
-      const hNext24 = (h + 1) % 24;
-      const nextHh = hNext24 === 0 ? 12 : (hNext24 > 12 ? hNext24 - 12 : hNext24);
       function hourLabel24(hour24){ return hour24 === 0 ? '24' : String(hour24); }
       const labelCurrent = hourLabel24(h);
-      const labelNext = hourLabel24(hNext24);
-      let activeHours = [];
-      if(m < 30)       activeHours = [{pos:hh12, label:labelCurrent, type:'active'}];
-      else if(m < 55)  activeHours = [{pos:hh12, label:labelCurrent, type:'active'},{pos:nextHh, label:labelNext, type:'preview'}];
-      else             activeHours = [{pos:nextHh, label:labelNext, type:'active'}];
-      const activePosMap = {};
-      for(const a of activeHours) activePosMap[a.pos] = a;
+      const markerRad = (hourDeg - 90) * Math.PI / 180;
+      const markerOrbitRadius = 184;
+      const markerX = cx + Math.cos(markerRad) * markerOrbitRadius;
+      const markerY = cy + Math.sin(markerRad) * markerOrbitRadius;
+      marker.setAttribute('transform', `translate(${markerX.toFixed(2)} ${markerY.toFixed(2)})`);
+      markerHour.textContent = labelCurrent;
+      markerMinute.textContent = pad(m);
+      const twoDigitHour = labelCurrent.length > 1;
+      const hourX = twoDigitHour ? -10 : -8;
+      const minuteX = twoDigitHour ? 19 : 14;
+      markerHour.setAttribute('x', String(hourX));
+      markerMinute.setAttribute('x', String(minuteX));
+      markerMinuteBar.setAttribute('x1', String(minuteX - 9));
+      markerMinuteBar.setAttribute('x2', String(minuteX + 9));
+
+      // Stałe miejsce aktualnej godziny pozostaje puste do następnej pełnej godziny.
       document.querySelectorAll('.number').forEach(el => {
         const hourVal = parseInt(el.dataset.hour, 10);
-        const state = activePosMap[hourVal];
-        el.classList.remove('active','preview');
-        if(state !== undefined){
-          el.classList.add(state.type);
-          el.textContent = state.label;
-        } else {
-          el.textContent = String(hourVal);
-        }
+        el.classList.toggle('vacated', hourVal === hh12);
+        el.textContent = String(hourVal);
       });
     }
 
@@ -13606,7 +13613,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.23.2';
+      return el ? el.textContent.trim() : 'v6.24.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
