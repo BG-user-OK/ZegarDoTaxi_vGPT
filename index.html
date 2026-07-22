@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.24.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.24.2: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5696,7 +5696,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.24.1</div>
+    <div class="version">v6.24.2</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -7203,7 +7203,7 @@
       const hourDeg = (h % 12) * 30 + m * 0.5;
       // === Strzałka godzinowa - jako polygon (grot strzałki) ===
       const aRad = (hourDeg - 90) * Math.PI / 180;
-      const r1 = 130, r2 = 75;
+      const r1 = 116, r2 = 75;
       // Punkty trzonu strzałki (prostokąt) + grot na końcu (przy cyfrze, r1)
       // Grot ma szerokość większą i kończy się w punkcie r1+8
       const tipR = r1 + 4;        // wierzchołek grotu
@@ -7247,7 +7247,7 @@
       function hourLabel24(hour24){ return hour24 === 0 ? '24' : String(hour24); }
       const labelCurrent = hourLabel24(h);
       const markerRad = (hourDeg - 90) * Math.PI / 180;
-      const markerOrbitRadius = 174;
+      const markerOrbitRadius = 179;
       const markerX = cx + Math.cos(markerRad) * markerOrbitRadius;
       const markerY = cy + Math.sin(markerRad) * markerOrbitRadius;
       marker.setAttribute('transform', `translate(${markerX.toFixed(2)} ${markerY.toFixed(2)})`);
@@ -13613,7 +13613,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.24.1';
+      return el ? el.textContent.trim() : 'v6.24.2';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
