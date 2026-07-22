@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.24.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.24.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -466,8 +466,8 @@
         drop-shadow(0 0 11px rgba(255,255,255,.76))
         drop-shadow(0 0 19px rgba(180,255,200,.42));
     }
-    .active-hour-marker-hour{ font-size:34px; }
-    .active-hour-marker-minute{ font-size:15px; }
+    .active-hour-marker-hour{ font-size:60px; }
+    .active-hour-marker-minute{ font-size:30px; }
     .active-hour-marker-minute-bar{
       stroke:#fff;
       stroke-width:2;
@@ -5551,10 +5551,10 @@
       <svg class="clock-svg clock-svg-overlay" viewBox="-30 -30 460 460" aria-hidden="true">
         <g id="hourArrow"></g>
         <g id="activeHourMarker" class="active-hour-marker">
-          <circle class="active-hour-marker-bg" cx="0" cy="0" r="38"></circle>
-          <text class="active-hour-marker-hour" id="activeHourMarkerHour" x="-10" y="4">24</text>
-          <text class="active-hour-marker-minute" id="activeHourMarkerMinute" x="19" y="-12">00</text>
-          <line class="active-hour-marker-minute-bar" id="activeHourMarkerMinuteBar" x1="10" y1="-2" x2="28" y2="-2"></line>
+          <circle class="active-hour-marker-bg" cx="0" cy="0" r="55"></circle>
+          <text class="active-hour-marker-hour" id="activeHourMarkerHour" x="-13" y="7">24</text>
+          <text class="active-hour-marker-minute" id="activeHourMarkerMinute" x="29" y="-20">00</text>
+          <line class="active-hour-marker-minute-bar" id="activeHourMarkerMinuteBar" x1="17" y1="-4" x2="41" y2="-4"></line>
         </g>
         <g id="forecastHand"></g>
       </svg>
@@ -5696,7 +5696,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.24.0</div>
+    <div class="version">v6.24.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -7247,19 +7247,19 @@
       function hourLabel24(hour24){ return hour24 === 0 ? '24' : String(hour24); }
       const labelCurrent = hourLabel24(h);
       const markerRad = (hourDeg - 90) * Math.PI / 180;
-      const markerOrbitRadius = 184;
+      const markerOrbitRadius = 174;
       const markerX = cx + Math.cos(markerRad) * markerOrbitRadius;
       const markerY = cy + Math.sin(markerRad) * markerOrbitRadius;
       marker.setAttribute('transform', `translate(${markerX.toFixed(2)} ${markerY.toFixed(2)})`);
       markerHour.textContent = labelCurrent;
       markerMinute.textContent = pad(m);
       const twoDigitHour = labelCurrent.length > 1;
-      const hourX = twoDigitHour ? -10 : -8;
-      const minuteX = twoDigitHour ? 19 : 14;
+      const hourX = twoDigitHour ? -13 : -9;
+      const minuteX = twoDigitHour ? 29 : 21;
       markerHour.setAttribute('x', String(hourX));
       markerMinute.setAttribute('x', String(minuteX));
-      markerMinuteBar.setAttribute('x1', String(minuteX - 9));
-      markerMinuteBar.setAttribute('x2', String(minuteX + 9));
+      markerMinuteBar.setAttribute('x1', String(minuteX - 12));
+      markerMinuteBar.setAttribute('x2', String(minuteX + 12));
 
       // Stałe miejsce aktualnej godziny pozostaje puste do następnej pełnej godziny.
       document.querySelectorAll('.number').forEach(el => {
@@ -13613,7 +13613,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.24.0';
+      return el ? el.textContent.trim() : 'v6.24.1';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
