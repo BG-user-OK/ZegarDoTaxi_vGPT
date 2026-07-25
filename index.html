@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.24.2: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.24.3: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -3588,11 +3588,18 @@
       font-size:38px !important;
       border-radius:17px !important;
     }
-    .money-panel .provider-row.active .prov-btn{
+    .money-panel .provider-row[data-provider-row].active .prov-btn{
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(102,255,128,.25) 0%, transparent 66%),
+        linear-gradient(180deg, rgba(14,55,22,.92), rgba(2,17,6,.96)) !important;
       box-shadow:
         inset 0 0 0 2px rgba(93,255,123,.62),
         inset 0 4px 9px rgba(0,0,0,.66),
         0 0 14px rgba(63,255,101,.25);
+    }
+    .money-panel .provider-row[data-provider-row].active .prov-btn .prov-label{
+      color:#f2fff4;
+      text-shadow:0 0 8px rgba(93,255,123,.48);
     }
     .money-panel .provider-row.active .prov-amount{
       background:
@@ -5696,7 +5703,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.24.2</div>
+    <div class="version">v6.24.3</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -13613,7 +13620,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.24.2';
+      return el ? el.textContent.trim() : 'v6.24.3';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
