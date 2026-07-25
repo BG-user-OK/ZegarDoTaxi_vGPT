@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.24.3: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.24.4: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -2679,7 +2679,7 @@
       padding:0;
       align-items:stretch;
       justify-content:center;
-      background:#000;
+      background:transparent;
     }
     .big-panel.rain-lights-panel{
       width:min(100vw, 560px);
@@ -2690,10 +2690,10 @@
       justify-content:flex-start;
       overflow:hidden;
       transform:none;
-      background:#030303;
-      border-color:#1f1f1f;
+      background:transparent;
+      border-color:transparent;
       border-radius:0;
-      box-shadow:0 0 34px rgba(0,0,0,.82), inset 0 0 0 1px rgba(255,255,255,.035);
+      box-shadow:none;
     }
     .rain-lights-visual{
       flex:0 1 auto;
@@ -5703,7 +5703,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.24.3</div>
+    <div class="version">v6.24.4</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -10259,7 +10259,6 @@
         rainLightsDecisionLocked = false;
         if(overlay.dataset.lockClose === 'rainLights'){
           hideOverlay();
-          renderAll();
         }
         scheduleRainLightsCheck('decision_' + finalDecision, RAIN_LIGHTS_CHECK_INTERVAL_MS, false);
       };
@@ -13620,7 +13619,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.24.3';
+      return el ? el.textContent.trim() : 'v6.24.4';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
