@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.24.4: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.24.5: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -3258,6 +3258,42 @@
     .money-panel .prov-amount{
       font-size:clamp(18px, 5.2vw, 22px);
     }
+    .money-panel .prov-amount.priv-counter-split{
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);
+      align-items:stretch;
+      padding:0;
+      overflow:hidden;
+    }
+    .money-panel .priv-total-display,
+    .money-panel .priv-entry-display{
+      min-width:0;
+      display:flex;
+      align-items:center;
+      font-size:clamp(13px, 3.8vw, 18px);
+      font-variant-numeric:tabular-nums;
+      overflow:hidden;
+    }
+    .money-panel .priv-total-display{
+      justify-content:space-between;
+      gap:3px;
+      padding:0 6px;
+      border-right:1px solid rgba(255,255,255,.2);
+      pointer-events:none;
+    }
+    .money-panel .priv-entry-display{
+      justify-content:flex-end;
+      padding:0 6px;
+    }
+    .money-panel .priv-total-value,
+    .money-panel .priv-entry-display{
+      white-space:nowrap;
+      text-overflow:clip;
+    }
+    .money-panel .priv-sigma{
+      flex:0 0 auto;
+      font-weight:900;
+    }
     .money-panel .counter-provider-control{
       display:flex;
       align-items:stretch;
@@ -5703,7 +5739,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.24.4</div>
+    <div class="version">v6.24.5</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -11498,6 +11534,12 @@
       const draft=moneyPanelDraft;
       if(!draft) return '';
       if(!moneyCounterKnown(draft.counterTarget) && draft.activeProvider!=='__counter') return '&mdash;';
+      if(draft.counterTarget==='priv'){
+        const active=draft.activeProvider==='__counter';
+        const total=moneyDraftPrivateKmTotal();
+        const addition=moneyDraftPrivateKmAddition();
+        return `<span class="priv-total-display" aria-label="Suma kilometrow prywatnych: ${total}"><span class="priv-sigma" aria-hidden="true">&sum;</span><span class="priv-total-value">${escapeHtml(String(total))}</span></span><span class="priv-entry-display">${inlineCursorHtml(String(addition),active)}</span>`;
+      }
       return inlineCursorHtml(String(moneyDraftCounterValue()),draft.activeProvider==='__counter');
     }
     function selectMoneyProvider(key){
@@ -11613,6 +11655,7 @@
         counterAmount.classList.toggle('counter-warning',warning);
         counterAmount.classList.toggle('filled',known);
         counterAmount.classList.toggle('empty',!known);
+        counterAmount.classList.toggle('priv-counter-split',draft.counterTarget==='priv');
         counterAmount.innerHTML=moneyCounterDisplay();
         const toggle=counterButton.querySelector('[data-counter-target-toggle]');
         if(toggle){
@@ -11707,7 +11750,7 @@
               ${moneyPanelDraft.counterTarget==='start'?'START':(moneyPanelDraft.counterTarget==='end'?'END':'PRIV')}
             </button>
           </div>
-          <div class="prov-amount ${counterKnown?'filled':'empty'} ${counterWarning?'counter-warning':''}" data-provider-counter-select>${moneyCounterDisplay()}</div>
+          <div class="prov-amount ${counterKnown?'filled':'empty'} ${counterWarning?'counter-warning':''} ${moneyPanelDraft.counterTarget==='priv'?'priv-counter-split':''}" data-provider-counter-select>${moneyCounterDisplay()}</div>
         </div>`;
       showOverlay(`
         <div class="big-panel money-panel">
@@ -13619,7 +13662,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.24.4';
+      return el ? el.textContent.trim() : 'v6.24.5';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
