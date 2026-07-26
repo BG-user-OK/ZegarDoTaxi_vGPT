@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.24.5: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v6.24.6: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -511,23 +511,6 @@
     /* v6.6.0: matches the size and baseline of the other top-row buttons. */
       aspect-ratio:1/1 !important;
       align-self:end;
-    }
-    .driving-focus-restore-area{
-      display:none;
-      position:absolute;
-      inset:auto;
-      width:0;
-      height:0;
-      z-index:-1;
-      border:none;
-      border-radius:16px;
-      padding:0;
-      margin:0;
-      background:transparent;
-      pointer-events:none;
-    }
-    .controls.driving-focus-faded .driving-focus-restore-area{
-      display:none;
     }
     .btn.driving-focus-fade-target,
     .date-work-start.driving-focus-fade-target{
@@ -5721,7 +5704,6 @@
         </div>
       </button>
       <div class="zw-end-report" id="zwEndReport" aria-hidden="true"></div>
-      <button class="driving-focus-restore-area" id="drivingFocusRestoreArea" type="button" aria-label="Pokaż ukryte moduły"></button>
       <div class="early-month-module" id="earlyMonthModule" aria-hidden="true"></div>
     </div>
     <div class="export-overwrite-guard" id="exportOverwriteGuard" aria-hidden="true" role="alertdialog" aria-labelledby="exportOverwriteTitle">
@@ -5739,7 +5721,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.24.5</div>
+    <div class="version">v6.24.6</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -10501,8 +10483,13 @@
     }
 
     const DRIVING_FOCUS_VISIBLE_MS = 2 * 60 * 1000;
-    let drivingFocusTimer = null;
-    let drivingFocusFaded = false;
+    const DRIVING_FOCUS_MODULE_IDS = Object.freeze(['potBtn','moneyBtn','breakBtn','coinBtn']);
+    const drivingFocusModuleState = new Map(
+      DRIVING_FOCUS_MODULE_IDS.map(id=>[id, { dimmed:false, timer:null }])
+    );
+    let drivingFocusStartLineDimmed = false;
+    let drivingFocusStartLineTimer = null;
+    let drivingFocusWorkScopeKey = '';
 
     function isWorkActiveForDrivingFocus(){
       return startWorkMinutes !== null && endWorkMinutes === null;
@@ -10527,6 +10514,25 @@
              el.classList.contains('zw-session-redcheck') ||
              el.classList.contains('zw-session-fading');
     }
+    function getCoinReminderTapOwner(el=document.getElementById('coinBtn')){
+      if(!el) return '';
+      const sessionState = getZwSessionSlotState();
+      if(sessionState) return 'zw';
+      if(isCoinReminderActionVisibleForDrivingFocus(el)) return 'rendered-reminder';
+      const coinCell = document.getElementById('coinCell');
+      const coinVisible = !!(coinCell && !coinCell.classList.contains('empty'));
+      if(coinVisible) return '';
+      if(shouldShowEyeReminder() || isEyeReminderFading()) return 'eye';
+      const endOverlay = document.getElementById('endConfirmOverlay');
+      if(zwState && zwState.pendingReminder && isZwActiveWorkday() &&
+         document.visibilityState === 'visible' &&
+         !overlay.classList.contains('show') &&
+         (!endOverlay || endOverlay.classList.contains('hidden')) &&
+         !endConfirmActive && !pendingEndWorkExport && !isPrivateReminderHardBusy()){
+        return 'zw';
+      }
+      return '';
+    }
     function shouldKeepDrivingFocusModuleVisible(id){
       const el = document.getElementById(id);
       if(id === 'potBtn'){
@@ -10550,112 +10556,167 @@
       }
       return false;
     }
-    function setDrivingFocusVisual(faded){
+    function getDrivingFocusWorkScopeKey(){
+      if(!isWorkActiveForDrivingFocus()) return '';
+      return `${workDate || todayISO()}|${startWorkMinutes}`;
+    }
+    function getDrivingFocusModuleState(id){
+      return drivingFocusModuleState.get(id) || null;
+    }
+    function isDrivingFocusModuleDimmed(id){
+      const state = getDrivingFocusModuleState(id);
+      return !!(state && state.dimmed);
+    }
+    function areDrivingFocusModulesDimmed(ids=DRIVING_FOCUS_MODULE_IDS){
+      return ids.every(id=>isDrivingFocusModuleDimmed(id));
+    }
+    function clearDrivingFocusModuleTimer(id){
+      const state = getDrivingFocusModuleState(id);
+      if(!state) return;
+      clearTimeout(state.timer);
+      state.timer = null;
+    }
+    function clearAllDrivingFocusTimers(){
+      DRIVING_FOCUS_MODULE_IDS.forEach(clearDrivingFocusModuleTimer);
+      clearTimeout(drivingFocusStartLineTimer);
+      drivingFocusStartLineTimer = null;
+    }
+    function applyDrivingFocusVisual(){
       const controls = document.querySelector('.controls');
-      if(controls) controls.classList.toggle('driving-focus-faded', !!faded);
-      ['potBtn','moneyBtn','breakBtn','coinBtn'].forEach(id=>{
+      if(controls) controls.classList.toggle('driving-focus-faded', areDrivingFocusModulesDimmed());
+      DRIVING_FOCUS_MODULE_IDS.forEach(id=>{
         const el = document.getElementById(id);
         if(!el) return;
         el.classList.add('driving-focus-fade-target');
-        el.classList.toggle('driving-focus-faded', !!faded && !shouldKeepDrivingFocusModuleVisible(id));
+        el.classList.toggle(
+          'driving-focus-faded',
+          isDrivingFocusModuleDimmed(id) && !shouldKeepDrivingFocusModuleVisible(id)
+        );
       });
       const startLine = document.querySelector('.date-work-start');
       if(startLine){
         startLine.classList.add('driving-focus-fade-target');
-        startLine.classList.toggle('driving-focus-faded', !!faded);
+        startLine.classList.toggle('driving-focus-faded', drivingFocusStartLineDimmed);
       }
     }
-    function setDrivingFocusInstantRestore(enabled){
-      ['potBtn','moneyBtn','breakBtn','coinBtn'].forEach(id=>{
-        const el = document.getElementById(id);
-        if(el) el.classList.toggle('driving-focus-instant-restore', !!enabled);
-      });
-      const startLine = document.querySelector('.date-work-start');
-      if(startLine) startLine.classList.toggle('driving-focus-instant-restore', !!enabled);
-    }
-    function clearDrivingFocusTimer(){
-      clearTimeout(drivingFocusTimer);
-      drivingFocusTimer = null;
-    }
-    function clearDrivingFocusFade(){
-      clearDrivingFocusTimer();
-      drivingFocusFaded = false;
-      setDrivingFocusVisual(false);
-    }
-    function scheduleDrivingFocusFade(){
-      if(drivingFocusTimer || drivingFocusFaded) return;
-      drivingFocusTimer = setTimeout(()=>{
-        drivingFocusTimer = null;
-        if(!isWorkActiveForDrivingFocus() || !isMainScreenVisibleForDrivingFocus() || hasDrivingFocusBlocker()){
-          clearDrivingFocusFade();
-          return;
-        }
-        drivingFocusFaded = true;
-        setDrivingFocusVisual(true);
+    function scheduleDrivingFocusModuleFade(id){
+      const state = getDrivingFocusModuleState(id);
+      if(!state || state.dimmed || state.timer || !isWorkActiveForDrivingFocus()) return;
+      const scopeKey = drivingFocusWorkScopeKey;
+      state.timer = setTimeout(()=>{
+        state.timer = null;
+        if(!isWorkActiveForDrivingFocus() || scopeKey !== drivingFocusWorkScopeKey) return;
+        state.dimmed = true;
+        applyDrivingFocusVisual();
+        if(typeof reevaluateEarlyMonthPromptWatch === 'function') reevaluateEarlyMonthPromptWatch();
       }, DRIVING_FOCUS_VISIBLE_MS);
     }
-    function restoreDrivingFocusFade(restartTimer=true){
-      clearDrivingFocusTimer();
-      setDrivingFocusInstantRestore(true);
-      drivingFocusFaded = false;
-      setDrivingFocusVisual(false);
-      const controls = document.querySelector('.controls');
-      if(controls) void controls.offsetHeight;
-      const startLine = document.querySelector('.date-work-start');
-      if(startLine) void startLine.offsetHeight;
-      requestAnimationFrame(()=>setDrivingFocusInstantRestore(false));
-      if(restartTimer && isWorkActiveForDrivingFocus() && isMainScreenVisibleForDrivingFocus() && !hasDrivingFocusBlocker()){
-        scheduleDrivingFocusFade();
+    function scheduleDrivingFocusStartLineFade(){
+      if(drivingFocusStartLineDimmed || drivingFocusStartLineTimer || !isWorkActiveForDrivingFocus()) return;
+      const scopeKey = drivingFocusWorkScopeKey;
+      drivingFocusStartLineTimer = setTimeout(()=>{
+        drivingFocusStartLineTimer = null;
+        if(!isWorkActiveForDrivingFocus() || scopeKey !== drivingFocusWorkScopeKey) return;
+        drivingFocusStartLineDimmed = true;
+        applyDrivingFocusVisual();
+      }, DRIVING_FOCUS_VISIBLE_MS);
+    }
+    function scheduleVisibleDrivingFocusFades(){
+      DRIVING_FOCUS_MODULE_IDS.forEach(scheduleDrivingFocusModuleFade);
+      scheduleDrivingFocusStartLineFade();
+    }
+    function initializeDrivingFocusScope(dimmed){
+      clearAllDrivingFocusTimers();
+      drivingFocusWorkScopeKey = getDrivingFocusWorkScopeKey();
+      DRIVING_FOCUS_MODULE_IDS.forEach(id=>{
+        const state = getDrivingFocusModuleState(id);
+        if(state) state.dimmed = !!dimmed;
+      });
+      drivingFocusStartLineDimmed = !!dimmed;
+      applyDrivingFocusVisual();
+      if(!dimmed && isMainScreenVisibleForDrivingFocus()) scheduleVisibleDrivingFocusFades();
+    }
+    function startDrivingFocusForNewWork(){
+      initializeDrivingFocusScope(false);
+    }
+    function refreshDrivingFocusScopeWithoutReveal(){
+      clearAllDrivingFocusTimers();
+      drivingFocusWorkScopeKey = getDrivingFocusWorkScopeKey();
+      applyDrivingFocusVisual();
+      if(isMainScreenVisibleForDrivingFocus()) scheduleVisibleDrivingFocusFades();
+    }
+    function resumeDrivingFocusForActiveWork(){
+      initializeDrivingFocusScope(true);
+    }
+    function resetDrivingFocusForInactiveWork(){
+      clearAllDrivingFocusTimers();
+      drivingFocusWorkScopeKey = '';
+      DRIVING_FOCUS_MODULE_IDS.forEach(id=>{
+        const state = getDrivingFocusModuleState(id);
+        if(state) state.dimmed = false;
+      });
+      drivingFocusStartLineDimmed = false;
+      applyDrivingFocusVisual();
+    }
+    function ensureDrivingFocusScope(){
+      const currentScopeKey = getDrivingFocusWorkScopeKey();
+      if(currentScopeKey && currentScopeKey !== drivingFocusWorkScopeKey){
+        // Reloaded or downloaded active workdays start safely dimmed.
+        initializeDrivingFocusScope(true);
       }
     }
-    function restartDrivingFocusTimerForActiveWork(){
-      clearDrivingFocusTimer();
-      drivingFocusFaded = false;
-      setDrivingFocusVisual(false);
-      if(isWorkActiveForDrivingFocus() && isMainScreenVisibleForDrivingFocus() && !hasDrivingFocusBlocker()){
-        scheduleDrivingFocusFade();
-      }
+    function revealDrivingFocusModuleFromDirectTap(id){
+      const state = getDrivingFocusModuleState(id);
+      const el = document.getElementById(id);
+      if(!state || !el || !state.dimmed) return false;
+      clearDrivingFocusModuleTimer(id);
+      el.classList.add('driving-focus-instant-restore');
+      state.dimmed = false;
+      applyDrivingFocusVisual();
+      void el.offsetHeight;
+      requestAnimationFrame(()=>el.classList.remove('driving-focus-instant-restore'));
+      scheduleDrivingFocusModuleFade(id);
+      return true;
     }
-    let drivingFocusRestoredAt = 0;
-    let drivingFocusRestoredPointerId = null;
-    let drivingFocusRestoredClickTarget = null;
-    function clearDrivingFocusRestoredTap(){
-      drivingFocusRestoredPointerId = null;
-      drivingFocusRestoredClickTarget = null;
+    let drivingFocusWakePointerId = null;
+    let drivingFocusWakeTarget = null;
+    function clearDrivingFocusWakeGesture(){
+      drivingFocusWakePointerId = null;
+      drivingFocusWakeTarget = null;
     }
     function interceptDrivingFocusFadedTarget(e){
       const target = e.currentTarget;
-      if(target && target.id === 'coinBtn' && isCoinReminderActionVisibleForDrivingFocus(target)){
-        clearDrivingFocusRestoredTap();
-        return;
-      }
-      if(drivingFocusFaded && target && target.classList.contains('driving-focus-faded')){
+      if(!target || !DRIVING_FOCUS_MODULE_IDS.includes(target.id)) return;
+      if(e.type === 'pointerdown') clearDrivingFocusWakeGesture();
+      if(e.type === 'pointerup' && target === drivingFocusWakeTarget && e.pointerId === drivingFocusWakePointerId){
         e.preventDefault();
         e.stopImmediatePropagation();
-        drivingFocusRestoredAt = Date.now();
-        drivingFocusRestoredPointerId = e.pointerId;
-        drivingFocusRestoredClickTarget = target;
+        return;
+      }
+      if(e.type === 'click' && target === drivingFocusWakeTarget){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        clearDrivingFocusWakeGesture();
+        return;
+      }
+      if(target.id === 'coinBtn' && getCoinReminderTapOwner(target)){
+        clearDrivingFocusWakeGesture();
+        return;
+      }
+      const canWake = (e.type === 'pointerdown' || e.type === 'click') &&
+                      isDrivingFocusModuleDimmed(target.id) &&
+                      target.classList.contains('driving-focus-faded');
+      if(canWake){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        drivingFocusWakePointerId = e.pointerId;
+        drivingFocusWakeTarget = target;
         if(e.pointerId !== undefined) blockedViewPointers.add(e.pointerId);
-        restoreDrivingFocusFade(true);
-        return;
-      }
-      if(e.type === 'pointerup' && target === drivingFocusRestoredClickTarget && e.pointerId === drivingFocusRestoredPointerId){
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        return;
-      }
-      if(e.type === 'click' && target === drivingFocusRestoredClickTarget){
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        clearDrivingFocusRestoredTap();
-        return;
-      }
-      if(e.type === 'pointerdown'){
-        clearDrivingFocusRestoredTap();
+        revealDrivingFocusModuleFromDirectTap(target.id);
       }
     }
     function bindDrivingFocusRestoreTargets(){
-      ['potBtn','moneyBtn','breakBtn','coinBtn'].forEach(id=>{
+      DRIVING_FOCUS_MODULE_IDS.forEach(id=>{
         const el = document.getElementById(id);
         if(!el || el.dataset.drivingFocusRestoreBound === '1') return;
         el.dataset.drivingFocusRestoreBound = '1';
@@ -10665,12 +10726,15 @@
       });
     }
     function updateDrivingFocusFade(){
-      if(!isWorkActiveForDrivingFocus() || !isMainScreenVisibleForDrivingFocus() || hasDrivingFocusBlocker()){
-        clearDrivingFocusFade();
+      if(!isWorkActiveForDrivingFocus()){
+        resetDrivingFocusForInactiveWork();
         return;
       }
-      setDrivingFocusVisual(drivingFocusFaded);
-      scheduleDrivingFocusFade();
+      ensureDrivingFocusScope();
+      applyDrivingFocusVisual();
+      if(isMainScreenVisibleForDrivingFocus() && !hasDrivingFocusBlocker()){
+        scheduleVisibleDrivingFocusFades();
+      }
     }
 
     // ===== wspolny picker czasu =====
@@ -13301,6 +13365,8 @@ km priv: 0,00</div>
       saveStateAndScheduleAutoSync(fromEdit ? 'work_start_edit' : 'work_start');
       startZwWorkdayScope(fromEdit ? 'work_start_edit' : 'work_start');
       startRainLightsWorkday(fromEdit ? 'work_start_edit' : 'work_start');
+      if(fromEdit) refreshDrivingFocusScopeWithoutReveal();
+      else startDrivingFocusForNewWork();
       renderAll();
       syncWorkWakeLock();
       if(!fromEdit){
@@ -13338,8 +13404,8 @@ km priv: 0,00</div>
 
       document.getElementById('workBtn').classList.add('on');
       saveStateAndScheduleAutoSync('work_continue');
+      resumeDrivingFocusForActiveWork();
       renderAll();
-      restartDrivingFocusTimerForActiveWork();
       syncWorkWakeLock();
       startRainLightsWorkday('work_continue');
       startZwWorkdayScope('work_continue');
@@ -13662,7 +13728,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.24.5';
+      return el ? el.textContent.trim() : 'v6.24.6';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -14698,7 +14764,7 @@ km priv: 0,00</div>
       const controls = document.querySelector('.controls');
       if(!controls || controls.classList.contains('results-ended')) return false;
       if(shouldShowExportOverwriteGuard()) return false;
-      if(!drivingFocusFaded) return false;
+      if(!areDrivingFocusModulesDimmed()) return false;
       const required = ['potBtn','moneyBtn','breakBtn','coinBtn'];
       for(const id of required){
         const el = document.getElementById(id);
@@ -16618,11 +16684,6 @@ km priv: 0,00</div>
     });
 
     // trick: 3x puk w wersję = konfiguracja URL Apps Script
-    document.getElementById('drivingFocusRestoreArea').addEventListener('click', (e)=>{
-      e.preventDefault();
-      e.stopPropagation();
-      restoreDrivingFocusFade(true);
-    });
     let vt=0, vtT=null;
     document.querySelector('.version').addEventListener('click', async ()=>{
       vt++;
