@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v6.24.8: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.0.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -280,6 +280,7 @@
       margin:8px 0;
       z-index:1;
       isolation:isolate;
+      touch-action:none;
     }
     .clock-wrap::before{
       content:'';
@@ -423,9 +424,15 @@
       pointer-events:none;
     }
     .clock-svg{ width:100%; height:100%; display:block; overflow:visible; }
-    .clock-wrap > .clock-svg:not(.clock-svg-overlay){
+    .clock-svg-base{
       position:relative;
       z-index:1;
+    }
+    .clock-svg-intermediate{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      z-index:15;
     }
     /* Punkty 4+5: druga warstwa SVG NAD cyframi godzin - dla strzałki i kropki minut */
     .clock-svg-overlay{
@@ -438,7 +445,7 @@
       position:absolute; inset:0;
       display:flex; align-items:center; justify-content:center;
       pointer-events:none;
-      z-index:2;
+      z-index:20;
     }
     .clock-face{ width:75%; height:75%; border-radius:50%; position:relative; }
     .number{
@@ -483,6 +490,10 @@
     @keyframes barrierLightBlink{
       0%,49.99%{ opacity:var(--barrier-light-on, .95); }
       50%,100%{ opacity:var(--barrier-light-off, .1); }
+    }
+    @keyframes countdownColonBlink{
+      0%,49.99%{ opacity:1; }
+      50%,100%{ opacity:.12; }
     }
 
     .controls{
@@ -2587,6 +2598,33 @@
     }
     .date-center.has-work-end .date-work-time{
       font-size:clamp(15px,3.9vw,21px);
+    }
+    .date-center.countdown-mode{
+      gap:7px;
+      padding:5px 4px;
+      font-variant-numeric:tabular-nums;
+      text-shadow:none;
+    }
+    .countdown-value{
+      width:100%;
+      white-space:nowrap;
+      text-align:center;
+      font-weight:1000;
+      line-height:.95;
+      letter-spacing:-1.4px;
+    }
+    .countdown-remaining{
+      color:#ff2a2a;
+      font-size:clamp(20px,5.6vw,32px);
+      text-shadow:0 0 8px rgba(255,42,42,.72),0 0 15px rgba(255,0,0,.42);
+    }
+    .countdown-target{
+      color:#35e36f;
+      font-size:clamp(24px,6.6vw,38px);
+      text-shadow:0 0 8px rgba(53,227,111,.62),0 0 15px rgba(0,180,72,.34);
+    }
+    .countdown-colon.blinking{
+      animation:countdownColonBlink 1s steps(1,end) infinite;
     }
 
     .money-btn{ background:linear-gradient(180deg,var(--btn-money-1),var(--btn-money-2)); }
@@ -5553,7 +5591,7 @@
           <div class="end-confirm-hint"></div>
         </div>
       </div>
-      <svg class="clock-svg" viewBox="-30 -30 460 460" aria-hidden="true">
+      <svg class="clock-svg clock-svg-base" viewBox="-30 -30 460 460" aria-hidden="true">
         <defs>
           <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="3" result="blur"/>
@@ -5569,6 +5607,12 @@
         <g id="dots"></g>
         <!-- Czarne koło pod datą - przykrywa wszystkie kolory tarczy w środku, datę pokazuje na czystym tle -->
         <circle cx="200" cy="200" r="75" fill="#000" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+      </svg>
+
+      <!-- Warstwa pośrednia: zapora końca pracy, a nad nią Tryb Odliczania. -->
+      <svg class="clock-svg clock-svg-intermediate" viewBox="-30 -30 460 460" aria-hidden="true">
+        <g id="forecastHand"></g>
+        <g id="countdownFill"></g>
       </svg>
 
       <div class="clock-center">
@@ -5589,7 +5633,7 @@
         </div>
       </div>
 
-      <!-- Górna warstwa SVG: wskazówka, ruchomy znacznik godziny i zapora. -->
+      <!-- Górna warstwa SVG: wskazówka i ruchomy znacznik godziny. -->
       <svg class="clock-svg clock-svg-overlay" viewBox="-30 -30 460 460" aria-hidden="true">
         <g id="hourArrow"></g>
         <g id="activeHourMarker" class="active-hour-marker">
@@ -5598,7 +5642,6 @@
           <text class="active-hour-marker-minute" id="activeHourMarkerMinute" x="29" y="-20">00</text>
           <line class="active-hour-marker-minute-bar" id="activeHourMarkerMinuteBar" x1="17" y1="-4" x2="41" y2="-4"></line>
         </g>
-        <g id="forecastHand"></g>
       </svg>
       <button class="weather-status-icon weather-unknown" id="weatherStatusIcon" type="button" aria-label="Pogoda" title="Pogoda"></button>
     </div>
@@ -5737,7 +5780,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v6.24.8</div>
+    <div class="version">v7.0.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -5763,6 +5806,7 @@
     const LS_UBER_REMINDER_ACTIVE = 'tarcza_uber_reminder_active_v1';
     const LS_PIGGY_COUNTER_DRAFT = 'tarcza_piggy_counter_draft_v1';
     const LS_ZW_MODULE = 'tarcza_zw_module_v1';
+    const LS_COUNTDOWN = 'tarcza_countdown_v1';
     const FINAL_BREAK_NO_WORK_THRESHOLD_MIN = 2;
     const AI_PASTE_HOLD_MS = 2000;
     const EARLY_MONTH_WINDOW_DAYS = 7;
@@ -5865,6 +5909,21 @@
     let uberReminderArmStartedAt = 0;
     let uberReminderArmTimer = null;
     let uberReminderArmFrame = null;
+    const COUNTDOWN_INNER_RADIUS = 75;
+    const COUNTDOWN_OUTER_RADIUS = 200;
+    const COUNTDOWN_ACTIVATION_END_DEG = 30;
+    const COUNTDOWN_DEGREE_MS = 10000;
+    const COUNTDOWN_MAX_MS = ((99 * 60 + 59) * 60 + 59) * 1000;
+    const COUNTDOWN_MIN_COMMIT_MS = 1000;
+    const COUNTDOWN_MIN_DRAG_PX = 6;
+    const COUNTDOWN_EDIT_TOLERANCE_DEG = 12;
+    const COUNTDOWN_MIN_TRACK_RADIUS = 42;
+    let countdownPhase = 'idle';
+    let countdownTargetAtMs = 0;
+    let countdownDraftDurationMs = 0;
+    let countdownGesture = null;
+    let countdownAnimationFrame = null;
+    let countdownCenterSignature = '';
 
     function normalizeForSyncCompare(value, key){
       if(Array.isArray(value)) return value.map(v=>normalizeForSyncCompare(v, key));
@@ -7088,6 +7147,394 @@
       Object.keys(extra).forEach(k=>p.setAttribute(k,extra[k]));
       return p;
     }
+
+    function normalizeCountdownDeg(value){
+      const deg=Number(value)||0;
+      return ((deg%360)+360)%360;
+    }
+    function countdownSignedAngleDelta(fromDeg,toDeg){
+      let delta=normalizeCountdownDeg(toDeg)-normalizeCountdownDeg(fromDeg);
+      if(delta>180) delta-=360;
+      if(delta<-180) delta+=360;
+      return delta;
+    }
+    function countdownAngularDistance(a,b){
+      return Math.abs(countdownSignedAngleDelta(a,b));
+    }
+    function createCountdownAnnularPath(spanDeg){
+      const span=Math.max(0,Math.min(360,Number(spanDeg)||0));
+      if(span<=0.0001) return '';
+      const outer=COUNTDOWN_OUTER_RADIUS;
+      const inner=COUNTDOWN_INNER_RADIUS;
+      const outerStart=polarToCartesian(cx,cy,outer,-90);
+      const innerStart=polarToCartesian(cx,cy,inner,-90);
+      if(span>=359.9999){
+        const outerBottom=polarToCartesian(cx,cy,outer,90);
+        const innerBottom=polarToCartesian(cx,cy,inner,90);
+        return `M ${outerStart.x} ${outerStart.y} `+
+          `A ${outer} ${outer} 0 1 1 ${outerBottom.x} ${outerBottom.y} `+
+          `A ${outer} ${outer} 0 1 1 ${outerStart.x} ${outerStart.y} Z `+
+          `M ${innerStart.x} ${innerStart.y} `+
+          `A ${inner} ${inner} 0 1 0 ${innerBottom.x} ${innerBottom.y} `+
+          `A ${inner} ${inner} 0 1 0 ${innerStart.x} ${innerStart.y} Z`;
+      }
+      const outerEnd=polarToCartesian(cx,cy,outer,span-90);
+      const innerEnd=polarToCartesian(cx,cy,inner,span-90);
+      const large=span>180?1:0;
+      return `M ${outerStart.x} ${outerStart.y} `+
+        `A ${outer} ${outer} 0 ${large} 1 ${outerEnd.x} ${outerEnd.y} `+
+        `L ${innerEnd.x} ${innerEnd.y} `+
+        `A ${inner} ${inner} 0 ${large} 0 ${innerStart.x} ${innerStart.y} Z`;
+    }
+    function countdownLapColor(lapIndex){
+      const lightness=Math.max(22,56-Math.max(0,lapIndex)*7);
+      return `hsl(0 100% ${lightness}%)`;
+    }
+    function isCountdownVisible(){
+      return countdownPhase==='creating' || countdownPhase==='running' || countdownPhase==='editing';
+    }
+    function getCountdownRemainingMs(nowMs=Date.now()){
+      if(countdownPhase==='creating') return Math.max(0,Math.min(COUNTDOWN_MAX_MS,countdownDraftDurationMs));
+      if(countdownPhase==='running' || countdownPhase==='editing'){
+        return Math.max(0,Math.min(COUNTDOWN_MAX_MS,countdownTargetAtMs-nowMs));
+      }
+      return 0;
+    }
+    function getCountdownDisplayTargetMs(nowMs=Date.now()){
+      return countdownPhase==='creating' ? nowMs+getCountdownRemainingMs(nowMs) : countdownTargetAtMs;
+    }
+    function formatCountdownDuration(ms){
+      const totalSeconds=Math.max(0,Math.min(359999,Math.ceil((Number(ms)||0)/1000)));
+      const hours=Math.floor(totalSeconds/3600);
+      const minutes=Math.floor((totalSeconds%3600)/60);
+      const seconds=totalSeconds%60;
+      return hours>0
+        ? `${hours}:${pad(minutes)}:${pad(seconds)}`
+        : `${pad(minutes)}:${pad(seconds)}`;
+    }
+    function formatCountdownTarget(ms){
+      const d=new Date(Number(ms)||Date.now());
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    function countdownValueHtml(text,blinking){
+      return Array.from(String(text||'')).map(ch=>ch===':'
+        ? `<span class="countdown-colon${blinking?' blinking':''}">:</span>`
+        : ch
+      ).join('');
+    }
+    function renderCountdownSector(nowMs=Date.now()){
+      const group=document.getElementById('countdownFill');
+      if(!group) return;
+      clearChildren(group);
+      if(!isCountdownVisible()) return;
+      const totalDeg=getCountdownRemainingMs(nowMs)/COUNTDOWN_DEGREE_MS;
+      if(totalDeg<=0) return;
+      let fullLaps=Math.floor(totalDeg/360);
+      let partialDeg=totalDeg-fullLaps*360;
+      if(partialDeg<0.0001) partialDeg=0;
+      if(fullLaps>0){
+        const fullPath=svgFilledPath(
+          createCountdownAnnularPath(360),
+          countdownLapColor(fullLaps-1),
+          .88,
+          {'fill-rule':'evenodd'}
+        );
+        group.appendChild(fullPath);
+      }
+      if(partialDeg>0){
+        const partialPath=svgFilledPath(
+          createCountdownAnnularPath(partialDeg),
+          countdownLapColor(fullLaps),
+          .92,
+          {'fill-rule':'evenodd'}
+        );
+        partialPath.setAttribute('stroke',countdownLapColor(fullLaps));
+        partialPath.setAttribute('stroke-width','1.2');
+        group.appendChild(partialPath);
+      }
+    }
+    function renderCountdownCenter(nowMs=Date.now()){
+      const el=document.getElementById('dateCenterEl');
+      if(!el || !isCountdownVisible()) return false;
+      const remainingText=formatCountdownDuration(getCountdownRemainingMs(nowMs));
+      const targetText=formatCountdownTarget(getCountdownDisplayTargetMs(nowMs));
+      const signature=`${countdownPhase}|${remainingText}|${targetText}`;
+      if(signature===countdownCenterSignature) return true;
+      countdownCenterSignature=signature;
+      dateCenterFitSignature='';
+      el.classList.remove('has-work-start','has-work-end');
+      el.classList.add('countdown-mode');
+      el.innerHTML=
+        `<div class="countdown-value countdown-remaining">${countdownValueHtml(remainingText,true)}</div>`+
+        `<div class="countdown-value countdown-target">${countdownValueHtml(targetText,false)}</div>`;
+      el.setAttribute('aria-label',`Pozostało ${remainingText}. Cel ${targetText}.`);
+      return true;
+    }
+    function removeCountdownPersistence(){
+      try{ localStorage.removeItem(LS_COUNTDOWN); }catch(e){}
+    }
+    function saveCountdownPersistence(){
+      try{
+        if((countdownPhase==='running' || countdownPhase==='editing') && countdownTargetAtMs>Date.now()){
+          localStorage.setItem(LS_COUNTDOWN,JSON.stringify({
+            schema:'tarcza-countdown-v1',
+            targetAtMs:countdownTargetAtMs,
+            updatedAtMs:Date.now()
+          }));
+        } else {
+          localStorage.removeItem(LS_COUNTDOWN);
+        }
+      }catch(e){}
+    }
+    function stopCountdownAnimation(){
+      if(countdownAnimationFrame!==null){
+        cancelAnimationFrame(countdownAnimationFrame);
+        countdownAnimationFrame=null;
+      }
+    }
+    function requestCountdownAnimation(){
+      if(countdownAnimationFrame!==null || document.visibilityState==='hidden') return;
+      if(countdownPhase!=='running' && countdownPhase!=='editing') return;
+      countdownAnimationFrame=requestAnimationFrame(tickCountdownAnimation);
+    }
+    function finishCountdown(){
+      stopCountdownAnimation();
+      countdownPhase='idle';
+      countdownTargetAtMs=0;
+      countdownDraftDurationMs=0;
+      countdownGesture=null;
+      countdownCenterSignature='';
+      removeCountdownPersistence();
+      renderCountdownSector();
+      renderDate();
+    }
+    function renderCountdownVisuals(nowMs=Date.now()){
+      if((countdownPhase==='running' || countdownPhase==='editing') && countdownTargetAtMs<=nowMs){
+        finishCountdown();
+        return;
+      }
+      renderCountdownSector(nowMs);
+      if(isCountdownVisible()) renderCountdownCenter(nowMs);
+    }
+    function tickCountdownAnimation(){
+      countdownAnimationFrame=null;
+      renderCountdownVisuals(Date.now());
+      requestCountdownAnimation();
+    }
+    function loadCountdownState(){
+      countdownPhase='idle';
+      countdownTargetAtMs=0;
+      countdownDraftDurationMs=0;
+      try{
+        const raw=localStorage.getItem(LS_COUNTDOWN);
+        if(!raw) return;
+        const parsed=JSON.parse(raw);
+        const now=Date.now();
+        const storedTarget=Number(parsed&&parsed.targetAtMs);
+        if(!Number.isFinite(storedTarget) || storedTarget<=now){
+          localStorage.removeItem(LS_COUNTDOWN);
+          return;
+        }
+        countdownTargetAtMs=Math.min(storedTarget,now+COUNTDOWN_MAX_MS);
+        countdownPhase='running';
+        if(countdownTargetAtMs!==storedTarget) saveCountdownPersistence();
+      }catch(e){
+        removeCountdownPersistence();
+      }
+    }
+    function countdownPointFromEvent(e,clockWrap){
+      const rect=clockWrap.getBoundingClientRect();
+      if(!rect.width || !rect.height) return null;
+      const x=((e.clientX-rect.left)/rect.width)*460-30;
+      const y=((e.clientY-rect.top)/rect.height)*460-30;
+      const dx=x-cx;
+      const dy=y-cy;
+      return {
+        x,y,dx,dy,
+        radius:Math.hypot(dx,dy),
+        deg:normalizeCountdownDeg(Math.atan2(dy,dx)*180/Math.PI+90)
+      };
+    }
+    function isPointInCountdownAnnulus(point){
+      return !!point && point.radius>=COUNTDOWN_INNER_RADIUS && point.radius<=COUNTDOWN_OUTER_RADIUS;
+    }
+    function isCountdownInteractionBlocked(){
+      const endOverlay=document.getElementById('endConfirmOverlay');
+      return !!(endConfirmActive ||
+        (overlay && overlay.classList.contains('show')) ||
+        (endOverlay && !endOverlay.classList.contains('hidden')));
+    }
+    function cancelCountdownGesture(){
+      const gesture=countdownGesture;
+      if(!gesture) return;
+      countdownGesture=null;
+      if(gesture.kind==='create'){
+        countdownPhase='idle';
+        countdownDraftDurationMs=0;
+        countdownCenterSignature='';
+        renderCountdownSector();
+        renderDate();
+      } else {
+        countdownTargetAtMs=gesture.originalTargetAtMs;
+        countdownPhase='running';
+        countdownCenterSignature='';
+        saveCountdownPersistence();
+        renderCountdownVisuals();
+        requestCountdownAnimation();
+      }
+    }
+    function setupCountdownMode(){
+      const clockWrap=document.querySelector('.clock-wrap');
+      if(!clockWrap || clockWrap.dataset.countdownBound==='1') return;
+      clockWrap.dataset.countdownBound='1';
+
+      function releasePointer(pointerId){
+        try{
+          if(clockWrap.hasPointerCapture(pointerId)) clockWrap.releasePointerCapture(pointerId);
+        }catch(e){}
+      }
+      function startGesture(e){
+        if(countdownGesture || isCountdownInteractionBlocked()) return;
+        if(e.isPrimary===false || (typeof e.button==='number' && e.button!==0)) return;
+        const point=countdownPointFromEvent(e,clockWrap);
+        if(!isPointInCountdownAnnulus(point)) return;
+        const now=Date.now();
+        if((countdownPhase==='running' || countdownPhase==='editing') && countdownTargetAtMs<=now){
+          finishCountdown();
+          return;
+        }
+
+        let kind='';
+        if(countdownPhase==='idle' && point.deg<=COUNTDOWN_ACTIVATION_END_DEG){
+          kind='create';
+        } else if(countdownPhase==='running'){
+          const boundaryDeg=normalizeCountdownDeg(getCountdownRemainingMs(now)/COUNTDOWN_DEGREE_MS);
+          if(countdownAngularDistance(point.deg,boundaryDeg)<=COUNTDOWN_EDIT_TOLERANCE_DEG){
+            kind='edit';
+          }
+        }
+        if(!kind) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        try{ clockWrap.setPointerCapture(e.pointerId); }catch(err){}
+        countdownGesture={
+          kind,
+          pointerId:e.pointerId,
+          startClientX:e.clientX,
+          startClientY:e.clientY,
+          lastDeg:point.deg,
+          hasDragged:false,
+          originalTargetAtMs:countdownTargetAtMs
+        };
+        if(kind==='create'){
+          countdownPhase='creating';
+          countdownDraftDurationMs=Math.min(COUNTDOWN_MAX_MS,point.deg*COUNTDOWN_DEGREE_MS);
+        } else {
+          countdownPhase='editing';
+          requestCountdownAnimation();
+        }
+        countdownCenterSignature='';
+        renderCountdownVisuals(now);
+      }
+      function applyGesturePoint(sourceEvent){
+        const gesture=countdownGesture;
+        if(!gesture) return;
+        const point=countdownPointFromEvent(sourceEvent,clockWrap);
+        if(!point || point.radius<COUNTDOWN_MIN_TRACK_RADIUS) return;
+        if(Math.hypot(sourceEvent.clientX-gesture.startClientX,sourceEvent.clientY-gesture.startClientY)>=COUNTDOWN_MIN_DRAG_PX){
+          gesture.hasDragged=true;
+        }
+        const deltaDeg=countdownSignedAngleDelta(gesture.lastDeg,point.deg);
+        gesture.lastDeg=point.deg;
+        if(!deltaDeg) return;
+        if(gesture.kind==='create'){
+          countdownDraftDurationMs=Math.max(0,Math.min(
+            COUNTDOWN_MAX_MS,
+            countdownDraftDurationMs+deltaDeg*COUNTDOWN_DEGREE_MS
+          ));
+        } else {
+          const now=Date.now();
+          countdownTargetAtMs=Math.max(now,Math.min(
+            now+COUNTDOWN_MAX_MS,
+            countdownTargetAtMs+deltaDeg*COUNTDOWN_DEGREE_MS
+          ));
+          if(countdownTargetAtMs<=now){
+            finishCountdown();
+            releasePointer(gesture.pointerId);
+            return;
+          }
+        }
+        countdownCenterSignature='';
+        renderCountdownVisuals(Date.now());
+      }
+      function moveGesture(e){
+        if(!countdownGesture || e.pointerId!==countdownGesture.pointerId) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const coalesced=typeof e.getCoalescedEvents==='function' ? e.getCoalescedEvents() : [];
+        const events=coalesced&&coalesced.length?coalesced:[e];
+        for(const item of events){
+          if(!countdownGesture) break;
+          applyGesturePoint(item);
+        }
+      }
+      function endGesture(e){
+        const gesture=countdownGesture;
+        if(!gesture || e.pointerId!==gesture.pointerId) return;
+        e.preventDefault();
+        e.stopPropagation();
+        countdownGesture=null;
+        releasePointer(gesture.pointerId);
+        if(gesture.kind==='create'){
+          if(!gesture.hasDragged || countdownDraftDurationMs<COUNTDOWN_MIN_COMMIT_MS){
+            countdownPhase='idle';
+            countdownDraftDurationMs=0;
+            countdownCenterSignature='';
+            renderCountdownSector();
+            renderDate();
+            return;
+          }
+          countdownTargetAtMs=Date.now()+Math.min(COUNTDOWN_MAX_MS,countdownDraftDurationMs);
+          countdownDraftDurationMs=0;
+          countdownPhase='running';
+        } else {
+          if(!gesture.hasDragged) countdownTargetAtMs=gesture.originalTargetAtMs;
+          countdownPhase='running';
+        }
+        countdownCenterSignature='';
+        saveCountdownPersistence();
+        renderCountdownVisuals();
+        requestCountdownAnimation();
+      }
+      function cancelGesture(e){
+        if(!countdownGesture || (e&&e.pointerId!==undefined&&e.pointerId!==countdownGesture.pointerId)) return;
+        const pointerId=countdownGesture.pointerId;
+        cancelCountdownGesture();
+        releasePointer(pointerId);
+      }
+
+      clockWrap.addEventListener('pointerdown',startGesture,{passive:false});
+      clockWrap.addEventListener('pointermove',moveGesture,{passive:false});
+      clockWrap.addEventListener('pointerup',endGesture,{passive:false});
+      clockWrap.addEventListener('pointercancel',cancelGesture,{passive:false});
+      clockWrap.addEventListener('lostpointercapture',cancelGesture);
+      window.addEventListener('orientationchange',cancelGesture);
+      window.addEventListener('resize',()=>renderCountdownVisuals());
+      document.addEventListener('visibilitychange',()=>{
+        if(document.visibilityState==='hidden'){
+          stopCountdownAnimation();
+          return;
+        }
+        renderCountdownVisuals();
+        requestCountdownAnimation();
+      });
+      window.addEventListener('pageshow',()=>{
+        renderCountdownVisuals();
+        requestCountdownAnimation();
+      });
+    }
+
     const WORK_GREEN_LAP_COLOR = '#166f33';
     const OVERTIME_ORANGE_LAP_COLOR = '#9a4b05';
     const BREAK_LAP_COLOR = '#666666';
@@ -9364,6 +9811,7 @@
       renderBreakFill();
       renderExerciseMarks();
       renderForecastHand();
+      renderCountdownVisuals();
       renderButtons();
       renderExportOverwriteGuard();
       renderDate();
@@ -9419,6 +9867,10 @@
     function renderDate(){
       const el = document.getElementById('dateCenterEl');
       if(!el) return;
+      if(renderCountdownCenter(Date.now())) return;
+      countdownCenterSignature='';
+      el.classList.remove('countdown-mode');
+      el.removeAttribute('aria-label');
       const days = ['niedziela','poniedziałek','wtorek','środa','czwartek','piątek','sobota'];
       const months = ['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
       const d = new Date();
@@ -13744,7 +14196,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v6.24.8';
+      return el ? el.textContent.trim() : 'v7.0.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -16788,6 +17240,7 @@ km priv: 0,00</div>
     // ===== init =====
     initializeAppVersionTracking();
     loadState();
+    loadCountdownState();
     loadZwState();
     loadUberReminderState();
     loadPostWorkVerification();
@@ -16800,8 +17253,10 @@ km priv: 0,00</div>
       document.getElementById('workBtn').classList.add('on');
     }
     buildDots();
+    setupCountdownMode();
     bindDrivingFocusRestoreTargets();
     renderAll();
+    requestCountdownAnimation();
     syncWorkWakeLock();
     updateAutoSyncIndicator();
     initializeEarlyMonthPrompt();
