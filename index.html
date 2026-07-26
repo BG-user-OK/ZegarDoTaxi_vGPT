@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.0.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.0.2: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -1798,10 +1798,12 @@
     .zw-session-bars{
       position:absolute;
       inset:0;
+      z-index:3;
       display:grid;
       grid-template-columns:33.334% 33.334% 33.334%;
       gap:0;
       opacity:1;
+      filter:brightness(1);
     }
     .zw-session-bar{
       position:relative;
@@ -1821,8 +1823,13 @@
     }
     .zw-session-thumb,
     .zw-session-label{
-      position:relative;
+      position:absolute;
+      inset:0;
+      margin:auto;
       z-index:2;
+      display:flex;
+      align-items:center;
+      justify-content:center;
       opacity:0;
       transition:opacity .32s ease, transform .32s ease, filter .32s ease;
       font-weight:1000;
@@ -1830,9 +1837,13 @@
       text-shadow:0 0 14px rgba(0,0,0,.88), 0 0 26px rgba(255,255,255,.28);
     }
     .zw-session-thumb{
-      font-size:clamp(54px, 15vw, 104px);
+      width:94%;
+      height:94%;
+      font-size:clamp(88px, 27vw, 178px);
+      line-height:.88;
       color:#071006;
       filter:drop-shadow(0 0 12px rgba(255,255,255,.42));
+      transform:scale(.94);
     }
     .zw-session-label{
       font-size:clamp(44px, 13vw, 90px);
@@ -1857,16 +1868,38 @@
     .coin-btn.zw-session-redcheck .zw-session-layer{
       opacity:1;
     }
-    .coin-btn.zw-session-complete .zw-session-layer{
-      background:var(--zw-mode-color);
+    .coin-btn.zw-session-active .zw-session-label{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:82%;
+      height:82%;
+      border-radius:50%;
+      color:#f6f6f6;
+      font-size:clamp(48px, 13.5vw, 92px);
+      letter-spacing:.02em;
+      background:radial-gradient(circle at 50% 45%, rgba(255,255,255,.2), rgba(255,255,255,.04) 38%, rgba(0,0,0,.92) 72%);
+      border:2px solid rgba(255,255,255,.44);
+      box-shadow:0 0 22px rgba(255,255,255,.24), inset 0 0 26px rgba(255,255,255,.08);
+      text-shadow:0 0 10px rgba(255,255,255,.95), 0 0 22px rgba(255,255,255,.45);
+      opacity:1;
+      transform:scale(1);
     }
     .coin-btn.zw-session-complete .zw-session-bars{
       opacity:1;
       filter:brightness(1.15);
+      animation:zwGreenCurtainReveal 1.2s ease .16s forwards;
     }
     .coin-btn.zw-session-complete .zw-session-thumb{
       opacity:1;
       transform:scale(1);
+    }
+    .coin-btn.zw-session-complete .zw-session-label{
+      opacity:0;
+    }
+    @keyframes zwGreenCurtainReveal{
+      0%{ opacity:1; filter:brightness(1.15); }
+      100%{ opacity:0; filter:brightness(.72); }
     }
     .coin-btn.zw-session-redcheck .zw-session-bars{
       opacity:.18;
@@ -1879,6 +1912,14 @@
       opacity:0;
       filter:brightness(0);
       transition:opacity 1.2s ease, filter 1.2s ease;
+    }
+    .coin-btn.zw-session-fading .zw-session-bars{
+      opacity:0;
+      animation:none;
+    }
+    .coin-btn.zw-session-fading .zw-session-thumb{
+      opacity:1;
+      transform:scale(1);
     }
     .coin-btn.eye-reminder-active.driving-focus-faded,
     .coin-btn.eye-reminder-dismissing.driving-focus-faded,
@@ -5840,7 +5881,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.0.1</div>
+    <div class="version">v7.0.2</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -14267,7 +14308,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.0.1';
+      return el ? el.textContent.trim() : 'v7.0.2';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
