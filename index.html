@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.0.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.0.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -29,6 +29,11 @@
       --hand-minute:#b9b9b9;
       --hand-outline:rgba(0,0,0,.85);
       --dial-number:#8a8a8a;
+      --dial-premium-top:#ffffff;
+      --dial-premium-mid:#f1f3f5;
+      --dial-premium-bottom:#c7cdd2;
+      --dial-premium-edge:#fbfcfd;
+      --dial-premium-shadow:rgba(0,0,0,.82);
 
       --work-green:#38c866;
       --no-exercise-red:#ff3838;
@@ -451,15 +456,52 @@
     .number{
       position:absolute; left:50%; top:50%;
       transform:translate(-50%,-50%);
-      color:var(--dial-number); font-weight:900;
+      color:var(--dial-premium-mid); font-weight:900;
       font-size:clamp(47px, 12.6vw, 88px);
       line-height:1; letter-spacing:-1.2px;
-      transition:color .3s ease, text-shadow .3s ease;
+      background:linear-gradient(
+        180deg,
+        var(--dial-premium-top) 0%,
+        var(--dial-premium-mid) 46%,
+        var(--dial-premium-bottom) 100%
+      );
+      -webkit-background-clip:text;
+      background-clip:text;
+      -webkit-text-fill-color:transparent;
+      -webkit-text-stroke:.38px rgba(255,255,255,.52);
+      filter:
+        drop-shadow(0 -.45px .28px rgba(255,255,255,.72))
+        drop-shadow(0 1.25px .72px var(--dial-premium-shadow));
+      transition:opacity .3s ease, filter .3s ease;
     }
     .number.vacated{
       color:transparent;
+      background:none;
+      -webkit-text-fill-color:transparent;
+      -webkit-text-stroke-color:transparent;
+      opacity:0;
+      filter:none;
       text-shadow:none;
     }
+    @supports not ((-webkit-background-clip:text) or (background-clip:text)){
+      .number{
+        background:none;
+        color:var(--dial-premium-mid);
+        -webkit-text-fill-color:var(--dial-premium-mid);
+      }
+      .number.vacated{
+        color:transparent;
+        -webkit-text-fill-color:transparent;
+      }
+    }
+    .dial-marker{
+      fill:url(#dialMarkerSurface);
+      stroke:var(--dial-premium-edge);
+      stroke-linejoin:round;
+      shape-rendering:geometricPrecision;
+    }
+    .dial-marker-minute{ stroke-width:.48; }
+    .dial-marker-hour{ stroke-width:.72; }
     .active-hour-marker{ pointer-events:none; }
     .active-hour-marker-bg{
       fill:#000;
@@ -5597,6 +5639,14 @@
             <feGaussianBlur stdDeviation="3" result="blur"/>
             <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
+          <linearGradient id="dialMarkerSurface" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--dial-premium-top)"/>
+            <stop offset="48%" stop-color="var(--dial-premium-mid)"/>
+            <stop offset="100%" stop-color="var(--dial-premium-bottom)"/>
+          </linearGradient>
+          <filter id="dialMarkerShadow" x="-12%" y="-12%" width="124%" height="126%" color-interpolation-filters="sRGB">
+            <feDropShadow dx="0" dy="1" stdDeviation=".58" flood-color="#000000" flood-opacity=".78"/>
+          </filter>
         </defs>
         <g id="workFill"></g>
         <g id="noExerciseFill"></g>
@@ -5604,7 +5654,7 @@
         <g id="overtimeFill"></g>
         <g id="breakFill"></g>
         <g id="exerciseMarks"></g>
-        <g id="dots"></g>
+        <g id="dots" filter="url(#dialMarkerShadow)"></g>
         <!-- Czarne koło pod datą - przykrywa wszystkie kolory tarczy w środku, datę pokazuje na czystym tle -->
         <circle cx="200" cy="200" r="75" fill="#000" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
       </svg>
@@ -5635,6 +5685,16 @@
 
       <!-- Górna warstwa SVG: wskazówka i ruchomy znacznik godziny. -->
       <svg class="clock-svg clock-svg-overlay" viewBox="-30 -30 460 460" aria-hidden="true">
+        <defs>
+          <linearGradient id="dialHandSurface" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--dial-premium-top)"/>
+            <stop offset="45%" stop-color="var(--dial-premium-mid)"/>
+            <stop offset="100%" stop-color="var(--dial-premium-bottom)"/>
+          </linearGradient>
+          <filter id="dialHandShadow" x="-24%" y="-24%" width="148%" height="152%" color-interpolation-filters="sRGB">
+            <feDropShadow dx="0" dy="1.35" stdDeviation=".9" flood-color="#000000" flood-opacity=".74"/>
+          </filter>
+        </defs>
         <g id="hourArrow"></g>
         <g id="activeHourMarker" class="active-hour-marker">
           <circle class="active-hour-marker-bg" cx="0" cy="0" r="55"></circle>
@@ -5780,7 +5840,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.0.0</div>
+    <div class="version">v7.0.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -7668,12 +7728,18 @@
         const ang=(i*6-90)*Math.PI/180;
         const x=cx+Math.cos(ang)*radius, y=cy+Math.sin(ang)*radius;
         const isH=i%5===0;
-        const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
-        dot.setAttribute('cx',x.toFixed(2)); dot.setAttribute('cy',y.toFixed(2));
-        dot.setAttribute('r', isH?'3.8':'2.1');
-        dot.setAttribute('fill', isH?'var(--dot-big)':'var(--dot)');
-        dot.setAttribute('opacity', isH?'0.92':'0.72');
-        g.appendChild(dot);
+        const width=isH?9.6:3.8;
+        const height=isH?9.6:9.2;
+        const marker=document.createElementNS('http://www.w3.org/2000/svg','rect');
+        marker.setAttribute('x',(x-width/2).toFixed(2));
+        marker.setAttribute('y',(y-height/2).toFixed(2));
+        marker.setAttribute('width',String(width));
+        marker.setAttribute('height',String(height));
+        marker.setAttribute('rx',isH?'1.35':'.72');
+        marker.setAttribute('class',`dial-marker ${isH?'dial-marker-hour':'dial-marker-minute'}`);
+        marker.setAttribute('transform',`rotate(${i*6} ${x.toFixed(2)} ${y.toFixed(2)})`);
+        marker.setAttribute('opacity',isH?'1':'.96');
+        g.appendChild(marker);
       }
     }
 
@@ -7719,15 +7785,20 @@
       // Obwódka (czarna)
       const hOut = document.createElementNS('http://www.w3.org/2000/svg','polygon');
       hOut.setAttribute('points', points);
-      hOut.setAttribute('fill', '#000');
-      hOut.setAttribute('stroke', '#000');
+      hOut.setAttribute('fill', '#101316');
+      hOut.setAttribute('stroke', '#050607');
       hOut.setAttribute('stroke-width', '4');
       hOut.setAttribute('stroke-linejoin', 'round');
+      hOut.setAttribute('filter', 'url(#dialHandShadow)');
       gHour.appendChild(hOut);
       // Wypełnienie białe
       const hIn = document.createElementNS('http://www.w3.org/2000/svg','polygon');
       hIn.setAttribute('points', points);
-      hIn.setAttribute('fill', '#ffffff');
+      hIn.setAttribute('fill', 'url(#dialHandSurface)');
+      hIn.setAttribute('stroke', '#fbfcfd');
+      hIn.setAttribute('stroke-width', '.72');
+      hIn.setAttribute('stroke-opacity', '.72');
+      hIn.setAttribute('stroke-linejoin', 'round');
       gHour.appendChild(hIn);
 
       // === Ruchomy znacznik aktualnej godziny (tryb 24h) ===
@@ -14196,7 +14267,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.0.0';
+      return el ? el.textContent.trim() : 'v7.0.1';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
