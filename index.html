@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.0.3: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.0.4: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5905,7 +5905,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.0.3</div>
+    <div class="version">v7.0.4</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -10279,6 +10279,7 @@
     let rainLightsAlertVisible = false;
     let rainLightsDecisionLocked = false;
     let rainLightsPendingTimer = null;
+    let rainLightsDaylightTimer = null;
     const WEATHER_STATUS_VISIBLE_MS = 2 * 60 * 1000;
     const WEATHER_STATUS_STALE_MS = 6 * 60 * 60 * 1000;
     const WEATHER_STATUS_PUBLIC_MAP_URL = 'https://www.meteoblue.com/en/weather/maps/index';
@@ -10512,7 +10513,15 @@
         currentWeatherLabel:'',
         currentWeatherAt:0,
         currentWeatherLat:null,
-        currentWeatherLon:null
+        currentWeatherLon:null,
+        daylightDate:'',
+        daylightSunriseAt:0,
+        daylightSunsetAt:0,
+        daylightTimezone:'',
+        daylightUtcOffsetSeconds:0,
+        daylightLat:null,
+        daylightLon:null,
+        daylightUpdatedAt:0
       };
     }
     function normalizeRainLightsState(raw){
@@ -10539,6 +10548,14 @@
       base.currentWeatherLon = Number.isFinite(Number(base.currentWeatherLon)) ? Number(base.currentWeatherLon) : null;
       base.currentWeatherKind = normalizeWeatherIconKind(base.currentWeatherKind);
       base.currentWeatherLabel = String(base.currentWeatherLabel || '');
+      base.daylightDate = String(base.daylightDate || '');
+      base.daylightSunriseAt = Number(base.daylightSunriseAt) || 0;
+      base.daylightSunsetAt = Number(base.daylightSunsetAt) || 0;
+      base.daylightTimezone = String(base.daylightTimezone || '');
+      base.daylightUtcOffsetSeconds = Number(base.daylightUtcOffsetSeconds) || 0;
+      base.daylightLat = Number.isFinite(Number(base.daylightLat)) ? Number(base.daylightLat) : null;
+      base.daylightLon = Number.isFinite(Number(base.daylightLon)) ? Number(base.daylightLon) : null;
+      base.daylightUpdatedAt = Number(base.daylightUpdatedAt) || 0;
       if(base.decision !== 'ok' && base.decision !== 'postpone') base.decision = '';
       return base;
     }
@@ -10553,6 +10570,110 @@
     function isRainLightsActiveWorkday(){
       return startWorkMinutes !== null && endWorkMinutes === null;
     }
+    function parseRainLightsLocalTimestamp(value, utcOffsetSeconds){
+      const text = String(value || '').trim();
+      const offset = Number(utcOffsetSeconds);
+      if(!text || !Number.isFinite(offset)) return 0;
+      const hasExplicitZone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(text);
+      const parsed = Date.parse(hasExplicitZone ? text : text + 'Z');
+      if(!Number.isFinite(parsed)) return 0;
+      return hasExplicitZone ? parsed : parsed - offset * 1000;
+    }
+    function clearRainLightsDaylightData(){
+      rainLightsState.daylightDate = '';
+      rainLightsState.daylightSunriseAt = 0;
+      rainLightsState.daylightSunsetAt = 0;
+      rainLightsState.daylightTimezone = '';
+      rainLightsState.daylightUtcOffsetSeconds = 0;
+      rainLightsState.daylightLat = null;
+      rainLightsState.daylightLon = null;
+      rainLightsState.daylightUpdatedAt = 0;
+      clearTimeout(rainLightsDaylightTimer);
+      rainLightsDaylightTimer = null;
+    }
+    function updateRainLightsDaylight(forecast, lat, lon){
+      const daily = forecast && forecast.daily;
+      const offset = Number(forecast && forecast.utc_offset_seconds);
+      const sunriseText = daily && Array.isArray(daily.sunrise) ? daily.sunrise[0] : '';
+      const sunsetText = daily && Array.isArray(daily.sunset) ? daily.sunset[0] : '';
+      const sunriseAt = parseRainLightsLocalTimestamp(sunriseText, offset);
+      const sunsetAt = parseRainLightsLocalTimestamp(sunsetText, offset);
+      if(!sunriseAt || !sunsetAt || sunsetAt <= sunriseAt){
+        clearRainLightsDaylightData();
+        return false;
+      }
+      rainLightsState.daylightDate = daily && Array.isArray(daily.time) ? String(daily.time[0] || '') : '';
+      rainLightsState.daylightSunriseAt = sunriseAt;
+      rainLightsState.daylightSunsetAt = sunsetAt;
+      rainLightsState.daylightTimezone = String(forecast.timezone || '');
+      rainLightsState.daylightUtcOffsetSeconds = offset;
+      rainLightsState.daylightLat = Number.isFinite(Number(lat)) ? Number(lat) : null;
+      rainLightsState.daylightLon = Number.isFinite(Number(lon)) ? Number(lon) : null;
+      rainLightsState.daylightUpdatedAt = Date.now();
+      scheduleRainLightsDaylightBoundary();
+      return true;
+    }
+    function isRainLightsDaylight(now=Date.now()){
+      const sunriseAt = Number(rainLightsState && rainLightsState.daylightSunriseAt || 0);
+      const sunsetAt = Number(rainLightsState && rainLightsState.daylightSunsetAt || 0);
+      const timestamp = Number(now);
+      return Number.isFinite(timestamp) && sunriseAt > 0 && sunsetAt > sunriseAt &&
+        timestamp >= sunriseAt && timestamp < sunsetAt;
+    }
+    function clearPendingRainLightsReminder(){
+      const changed = !!(rainLightsState.pendingAlert || rainLightsState.pendingReason);
+      rainLightsState.pendingAlert = false;
+      rainLightsState.pendingReason = '';
+      clearTimeout(rainLightsPendingTimer);
+      rainLightsPendingTimer = null;
+      return changed;
+    }
+    function closeRainLightsReminderOutsideDaylight(){
+      let changed = clearPendingRainLightsReminder();
+      const rainOverlayVisible = overlay.dataset.lockClose === 'rainLights';
+      if(rainLightsAlertVisible || rainOverlayVisible){
+        rainLightsAlertVisible = false;
+        rainLightsDecisionLocked = false;
+        if(rainOverlayVisible){
+          hideOverlay();
+          renderAll();
+        }
+        changed = true;
+      }
+      if(changed) saveRainLightsState();
+    }
+    function enforceRainLightsDaylight(now=Date.now()){
+      const daylight = isRainLightsDaylight(now);
+      if(!daylight) closeRainLightsReminderOutsideDaylight();
+      scheduleRainLightsDaylightBoundary(now);
+      return daylight;
+    }
+    function scheduleRainLightsDaylightBoundary(now=Date.now()){
+      clearTimeout(rainLightsDaylightTimer);
+      rainLightsDaylightTimer = null;
+      if(!isRainLightsActiveWorkday()) return;
+      const timestamp = Number(now);
+      const sunriseAt = Number(rainLightsState.daylightSunriseAt || 0);
+      const sunsetAt = Number(rainLightsState.daylightSunsetAt || 0);
+      let boundaryAt = 0;
+      let boundaryReason = '';
+      if(Number.isFinite(timestamp) && sunriseAt > timestamp){
+        boundaryAt = sunriseAt;
+        boundaryReason = 'sunrise';
+      } else if(Number.isFinite(timestamp) && sunsetAt > timestamp){
+        boundaryAt = sunsetAt;
+        boundaryReason = 'sunset';
+      }
+      if(!boundaryAt) return;
+      const delay = Math.min(2147483000, Math.max(250, boundaryAt - timestamp + 50));
+      rainLightsDaylightTimer = setTimeout(()=>{
+        rainLightsDaylightTimer = null;
+        const daylight = enforceRainLightsDaylight(Date.now());
+        if(boundaryReason === 'sunrise' && daylight){
+          scheduleRainLightsCheck('sunrise', 0, true);
+        }
+      }, delay);
+    }
     function syncRainLightsWorkdayScope(save=true){
       if(!isRainLightsActiveWorkday()){
         rainLightsState = createRainLightsState();
@@ -10561,6 +10682,8 @@
         rainLightsTimer = null;
         clearTimeout(rainLightsPendingTimer);
         rainLightsPendingTimer = null;
+        clearTimeout(rainLightsDaylightTimer);
+        rainLightsDaylightTimer = null;
         hideWeatherStatusIcon(true);
         if(rainLightsAlertVisible && overlay.dataset.lockClose === 'rainLights'){
           rainLightsAlertVisible = false;
@@ -10586,6 +10709,10 @@
     }
     function noteRainLightsReturnSignal(reason){
       if(!syncRainLightsWorkdayScope(true)) return;
+      if(!enforceRainLightsDaylight()){
+        scheduleRainLightsCheck(reason || 'return', 1500, true);
+        return;
+      }
       rainLightsState.returnSignalAt = Date.now();
       saveRainLightsState();
       scheduleRainLightsCheck(reason || 'return', 1500, true);
@@ -10593,11 +10720,13 @@
     function initializeRainLightsReminder(){
       loadRainLightsState();
       if(isRainLightsActiveWorkday()){
+        enforceRainLightsDaylight();
         scheduleRainLightsCheck('startup', 7000, true);
-        if(rainLightsState.pendingAlert) schedulePendingRainLightsReminderCheck(1200);
+        if(rainLightsState.pendingAlert && isRainLightsDaylight()) schedulePendingRainLightsReminderCheck(1200);
       }
       setInterval(()=>{
         if(!syncRainLightsWorkdayScope(true)) return;
+        enforceRainLightsDaylight();
         if(Date.now() - (rainLightsState.lastCheckAt || 0) >= RAIN_LIGHTS_CHECK_INTERVAL_MS){
           scheduleRainLightsCheck('periodic', 0, false);
         }
@@ -10638,6 +10767,7 @@
       url.searchParams.set('latitude', String(Number(lat).toFixed(4)));
       url.searchParams.set('longitude', String(Number(lon).toFixed(4)));
       url.searchParams.set('hourly', 'weather_code,precipitation_probability,precipitation,rain,showers');
+      url.searchParams.set('daily', 'sunrise,sunset');
       url.searchParams.set('forecast_days', '1');
       url.searchParams.set('timezone', 'auto');
       const controller = new AbortController();
@@ -10723,6 +10853,7 @@
     function canShowRainReminderNow(){
       const endOverlay = document.getElementById('endConfirmOverlay');
       return isRainLightsActiveWorkday() &&
+             isRainLightsDaylight() &&
              document.visibilityState === 'visible' &&
              !overlay.classList.contains('show') &&
              (!endOverlay || endOverlay.classList.contains('hidden')) &&
@@ -10737,6 +10868,11 @@
       clearTimeout(rainLightsPendingTimer);
       rainLightsPendingTimer = null;
       if(!rainLightsState || !rainLightsState.pendingAlert || !isRainLightsActiveWorkday()) return;
+      if(!isRainLightsDaylight()){
+        clearPendingRainLightsReminder();
+        saveRainLightsState();
+        return;
+      }
       rainLightsPendingTimer = setTimeout(()=>{
         rainLightsPendingTimer = null;
         flushPendingRainLightsReminder();
@@ -10744,6 +10880,7 @@
     }
     function queueRainLightsReminder(risk, reason){
       if(!isRainLightsActiveWorkday()) return;
+      if(!enforceRainLightsDaylight()) return;
       rainLightsState.pendingAlert = true;
       rainLightsState.pendingReason = String(reason || 'queued');
       rainLightsState.currentRiskLevel = Number(risk && risk.level || rainLightsState.currentRiskLevel || 0);
@@ -10752,6 +10889,7 @@
     }
     function flushPendingRainLightsReminder(){
       if(!syncRainLightsWorkdayScope(true)) return;
+      if(!enforceRainLightsDaylight()) return;
       if(!rainLightsState.pendingAlert || !rainLightsState.lastRiskPresent) return;
       if(Date.now() - Number(rainLightsState.lastCheckAt || 0) >= RAIN_LIGHTS_CHECK_INTERVAL_MS){
         scheduleRainLightsCheck('queued_refresh', 0, true);
@@ -10775,7 +10913,7 @@
       showRainLightsReminder(risk, reason);
     }
     function shouldShowRainLightsReminder(risk){
-      if(!risk || rainLightsAlertVisible) return false;
+      if(!risk || rainLightsAlertVisible || !isRainLightsDaylight()) return false;
       const now = Date.now();
       const returnedAfterDecision = rainLightsState.returnSignalAt > rainLightsState.decisionAt;
       const worsened = Number(risk.level || 0) >= Number(rainLightsState.decisionRiskLevel || 0) + 15;
@@ -10804,6 +10942,8 @@
             rainLightsState.returnSignalAt = Date.now();
             rainLightsState.decision = '';
             rainLightsState.postponedUntil = 0;
+            clearRainLightsDaylightData();
+            enforceRainLightsDaylight();
           }
         }
         rainLightsState.lastLat = roundedLat;
@@ -10811,10 +10951,14 @@
         rainLightsState.lastCheckAt = Date.now();
         const forecast = await fetchRainLightsForecast(coords.latitude, coords.longitude);
         if(!forecast){
+          clearRainLightsDaylightData();
+          enforceRainLightsDaylight();
           updateRainLightsWeatherNoData(roundedLat, roundedLon);
           saveRainLightsState();
           return;
         }
+        updateRainLightsDaylight(forecast, roundedLat, roundedLon);
+        enforceRainLightsDaylight();
         updateRainLightsCurrentWeather(forecast, roundedLat, roundedLon);
         const risk = evaluateRainLightsRisk(forecast);
         if(!risk){
@@ -10825,12 +10969,15 @@
         rainLightsState.lastRiskPresent = true;
         rainLightsState.currentRiskLevel = risk.level;
         saveRainLightsState();
+        if(!isRainLightsDaylight()) return;
         if(shouldShowRainLightsReminder(risk)){
           if(canShowRainReminderNow()) showRainLightsReminder(risk, reason);
           else queueRainLightsReminder(risk, reason);
         }
       }catch(e){
         rainLightsState.lastCheckAt = Date.now();
+        clearRainLightsDaylightData();
+        enforceRainLightsDaylight();
         updateRainLightsWeatherNoData();
         saveRainLightsState();
       }finally{
@@ -10842,7 +10989,7 @@
       }
     }
     function showRainLightsReminder(risk, reason){
-      if(rainLightsAlertVisible || !isRainLightsActiveWorkday()) return;
+      if(rainLightsAlertVisible || !isRainLightsActiveWorkday() || !enforceRainLightsDaylight()) return;
       if(!canShowRainReminderNow()){
         queueRainLightsReminder(risk, reason);
         return;
@@ -10885,6 +11032,7 @@
       saveRainLightsState();
 
       const completeRainLightsClose = ()=>{
+        if(!rainLightsAlertVisible && overlay.dataset.lockClose !== 'rainLights') return;
         rainLightsAlertVisible = false;
         rainLightsDecisionLocked = false;
         if(overlay.dataset.lockClose === 'rainLights'){
@@ -14340,7 +14488,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.0.3';
+      return el ? el.textContent.trim() : 'v7.0.4';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
