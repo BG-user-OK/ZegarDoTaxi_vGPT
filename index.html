@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.0.4: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.0.5: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5764,8 +5764,8 @@
         <g id="activeHourMarker" class="active-hour-marker">
           <circle class="active-hour-marker-bg" cx="0" cy="0" r="55"></circle>
           <text class="active-hour-marker-hour" id="activeHourMarkerHour" x="-18" y="7" textLength="68" lengthAdjust="spacingAndGlyphs">24</text>
-          <text class="active-hour-marker-minute" id="activeHourMarkerMinute" x="36" y="-20" textLength="34" lengthAdjust="spacingAndGlyphs">00</text>
-          <line class="active-hour-marker-minute-bar" id="activeHourMarkerMinuteBar" x1="25" y1="-4" x2="47" y2="-4"></line>
+          <text class="active-hour-marker-minute" id="activeHourMarkerMinute" x="33" y="-20" textLength="30" lengthAdjust="spacingAndGlyphs">00</text>
+          <line class="active-hour-marker-minute-bar" id="activeHourMarkerMinuteBar" x1="22" y1="-4" x2="44" y2="-4"></line>
         </g>
       </svg>
       <button class="weather-status-icon weather-unknown" id="weatherStatusIcon" type="button" aria-label="Pogoda" title="Pogoda"></button>
@@ -5905,7 +5905,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.0.4</div>
+    <div class="version">v7.0.5</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -7879,7 +7879,7 @@
       markerMinute.textContent = pad(m);
       const twoDigitHour = labelCurrent.length > 1;
       const hourX = twoDigitHour ? -18 : -12;
-      const minuteX = twoDigitHour ? 36 : 29;
+      const minuteX = twoDigitHour ? 33 : 26;
       markerHour.setAttribute('x', String(hourX));
       markerMinute.setAttribute('x', String(minuteX));
       if(twoDigitHour){
@@ -7888,7 +7888,7 @@
         markerHour.removeAttribute('textLength');
       }
       markerHour.setAttribute('lengthAdjust', 'spacingAndGlyphs');
-      markerMinute.setAttribute('textLength', '34');
+      markerMinute.setAttribute('textLength', '30');
       markerMinute.setAttribute('lengthAdjust', 'spacingAndGlyphs');
       markerMinuteBar.setAttribute('x1', String(minuteX - 11));
       markerMinuteBar.setAttribute('x2', String(minuteX + 11));
@@ -14488,7 +14488,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.0.4';
+      return el ? el.textContent.trim() : 'v7.0.5';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
