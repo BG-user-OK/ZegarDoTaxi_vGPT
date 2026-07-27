@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.0.5: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.0.6: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -1786,6 +1786,7 @@
       background:#000 !important;
       box-shadow:0 0 18px rgba(255,255,255,.2) !important;
       outline:none !important;
+      touch-action:none;
     }
     .coin-btn.zw-reminder-active .coin-cell{
       opacity:0;
@@ -1796,6 +1797,12 @@
     }
     .coin-btn.zw-reminder-active .zw-reminder-symbol{
       animation:zwReminderPulse 1s ease-in-out infinite;
+    }
+    .coin-btn.zw-reminder-active.reliable-pointer-pressed .zw-reminder-symbol{
+      animation-play-state:paused;
+      opacity:1;
+      transform:scale(1.02);
+      filter:brightness(1.8);
     }
     @keyframes zwReminderPulse{
       0%,100%{ transform:scale(.96); opacity:.52; filter:brightness(.75); }
@@ -2884,7 +2891,7 @@
       line-height:1.05;
       letter-spacing:0;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.10), 0 0 22px rgba(0,0,0,.65);
-      touch-action:manipulation;
+      touch-action:none;
       transition:opacity .44s ease, filter .44s ease, transform .18s ease;
     }
     .rain-lights-action::before{
@@ -2894,7 +2901,10 @@
       pointer-events:none;
       opacity:.72;
     }
-    .rain-lights-action > span{ position:relative; z-index:1; }
+    .rain-lights-action.reliable-pointer-pressed{
+      transform:scale(.985);
+      filter:brightness(1.16);
+    }
     .rain-lights-action:disabled{
       opacity:1;
     }
@@ -5905,7 +5915,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.0.5</div>
+    <div class="version">v7.0.6</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -8146,6 +8156,8 @@
     const ZW_LOG_LIMIT = 700;
     let zwState = createZwState();
     let zwExerciseFrame = null;
+    let zwReminderPointerId = null;
+    let zwSessionStartLocked = false;
 
     function createZwState(){
       return {
@@ -8298,9 +8310,19 @@
     function shouldShowZwReminderSlot(){
       return markZwReminderDueIfPossible() && canShowPrivateReminderNow();
     }
+    function isZwReminderPointerGestureActive(){
+      return zwReminderPointerId !== null &&
+             !!zwState &&
+             !!zwState.pendingReminder &&
+             !zwState.activeSession &&
+             isZwActiveWorkday();
+    }
     function getReminderSlotDisplayState(coinVisible=false){
       const zwSessionState = getZwSessionSlotState();
       if(zwSessionState) return zwSessionState;
+      // Once the visible ZW control owns a pointer, keep that owner stable until
+      // pointerup/cancel. The one-second renderer must not turn it into empty-slot.
+      if(isZwReminderPointerGestureActive()) return 'zw';
       if(coinVisible) return 'coin';
       if(shouldShowEyeReminder()) return 'eye';
       if(isEyeReminderFading()) return 'eye-fading';
@@ -8317,30 +8339,55 @@
       saveZwState();
     }
     function startZwSession(reason='slot'){
-      syncZwWorkdayScope(reason);
-      zwState.pendingReminder = false;
-      const mode = normalizeZwMode(zwState.mode);
-      const cfg = getZwModeConfig(mode);
-      zwState.activeSession = {
-        id:zwLogId(),
-        mode,
-        startedAt:Date.now(),
-        status:cfg.redCheck ? 'red-check' : 'running',
-        redCheck:!!cfg.redCheck,
-        completedAt:null,
-        autoConfirmAt:null,
-        finalized:false
-      };
-      appendZwLog(mode === ZW_MODE_RED ? 'red_check_open' : 'session_start', { reason, phases:getZwModeConfig(mode).phases });
-      saveZwState();
-      if(!cfg.redCheck) startZwExerciseFrame();
-      renderAll();
+      if(zwSessionStartLocked || !zwState || zwState.activeSession || !zwState.pendingReminder || !isZwActiveWorkday()) return false;
+      zwSessionStartLocked = true;
+      try{
+        syncZwWorkdayScope(reason);
+        if(zwState.activeSession || !zwState.pendingReminder || !isZwActiveWorkday()) return false;
+        const mode = normalizeZwMode(zwState.mode);
+        const cfg = getZwModeConfig(mode);
+        stopZwExerciseFrame();
+        zwState.pendingReminder = false;
+        zwState.nextReminderAt = null;
+        zwState.activeSession = {
+          id:zwLogId(),
+          mode,
+          startedAt:Date.now(),
+          status:cfg.redCheck ? 'red-check' : 'running',
+          redCheck:!!cfg.redCheck,
+          completedAt:null,
+          autoConfirmAt:null,
+          finalized:false
+        };
+        appendZwLog(mode === ZW_MODE_RED ? 'red_check_open' : 'session_start', { reason, phases:cfg.phases });
+        saveZwState();
+        if(typeof clearDrivingFocusModuleTimer === 'function') clearDrivingFocusModuleTimer('coinBtn');
+        if(!cfg.redCheck) startZwExerciseFrame();
+        renderAll();
+        return true;
+      } finally {
+        zwSessionStartLocked = false;
+      }
     }
     function openZwFromSlot(e){
       if(e){ e.preventDefault(); e.stopPropagation(); }
-      if(!shouldShowZwReminderSlot()) return;
-      startZwSession('slot_click');
-      renderAll();
+      return startZwSession('slot_pointer');
+    }
+    function bindZwReminderPointerAction(){
+      const button = document.getElementById('coinBtn');
+      if(!button) return;
+      bindReliablePointerAction(
+        button,
+        event=>openZwFromSlot(event),
+        {
+          canStart:()=>button.classList.contains('zw-reminder-active') &&
+            !!zwState && !!zwState.pendingReminder && !zwState.activeSession && isZwActiveWorkday(),
+          onStart:gesture=>{ zwReminderPointerId = gesture.pointerId; },
+          onFinish:gesture=>{
+            if(zwReminderPointerId === gesture.pointerId) zwReminderPointerId = null;
+          }
+        }
+      );
     }
     function stopZwExerciseFrame(){
       if(zwExerciseFrame){ cancelAnimationFrame(zwExerciseFrame); zwExerciseFrame = null; }
@@ -10247,6 +10294,77 @@
         stopViewTouchEvent(e);
       }
     }, true);
+    const RELIABLE_POINTER_TOUCH_SLOP_PX = 20;
+    const RELIABLE_POINTER_MOUSE_SLOP_PX = 6;
+    function bindReliablePointerAction(element, action, options={}){
+      if(!element || typeof action !== 'function') return;
+      let gesture = null;
+      let suppressClickUntil = 0;
+      const pressedClass = options.pressedClass || 'reliable-pointer-pressed';
+      const canStart = event=>typeof options.canStart !== 'function' || options.canStart(event);
+      const clearGesture = (event, cancelled=false)=>{
+        if(!gesture) return;
+        const current = gesture;
+        gesture = null;
+        element.classList.remove(pressedClass);
+        try{
+          if(element.hasPointerCapture(current.pointerId)) element.releasePointerCapture(current.pointerId);
+        }catch(error){}
+        if(typeof options.onFinish === 'function') options.onFinish(current, event, cancelled);
+      };
+      element.addEventListener('pointerdown', event=>{
+        if(gesture || !event.isPrimary || event.button !== 0 || !canStart(event)) return;
+        gesture = {
+          pointerId:event.pointerId,
+          pointerType:event.pointerType || 'mouse',
+          startX:event.clientX,
+          startY:event.clientY,
+          maxDistance:0
+        };
+        element.classList.add(pressedClass);
+        try{ element.setPointerCapture(event.pointerId); }catch(error){}
+        if(typeof options.onStart === 'function') options.onStart(gesture, event);
+        event.preventDefault();
+        event.stopPropagation();
+      });
+      element.addEventListener('pointermove', event=>{
+        if(!gesture || event.pointerId !== gesture.pointerId) return;
+        const distance = Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY);
+        gesture.maxDistance = Math.max(gesture.maxDistance, distance);
+        event.preventDefault();
+        event.stopPropagation();
+      });
+      element.addEventListener('pointerup', event=>{
+        if(!gesture || event.pointerId !== gesture.pointerId) return;
+        const current = gesture;
+        const slop = current.pointerType === 'mouse' ? RELIABLE_POINTER_MOUSE_SLOP_PX : RELIABLE_POINTER_TOUCH_SLOP_PX;
+        suppressClickUntil = Date.now() + 700;
+        event.preventDefault();
+        event.stopPropagation();
+        if(current.maxDistance <= slop && canStart(event)) action(event);
+        clearGesture(event, current.maxDistance > slop);
+      });
+      element.addEventListener('pointercancel', event=>{
+        if(!gesture || event.pointerId !== gesture.pointerId) return;
+        suppressClickUntil = Date.now() + 700;
+        clearGesture(event, true);
+      });
+      element.addEventListener('lostpointercapture', event=>{
+        if(gesture && event.pointerId === gesture.pointerId) clearGesture(event, true);
+      });
+      element.addEventListener('click', event=>{
+        if(Date.now() < suppressClickUntil){
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          return;
+        }
+        if(event.detail === 0 && canStart(event)){
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          action(event);
+        }
+      }, true);
+    }
     function showOverlay(html){
       delete overlay.dataset.lockClose;
       overlay.classList.remove('keypad-overlay','keypad-left','keypad-right','rain-lights-overlay','zw-exercise-overlay','zw-decision-overlay');
@@ -11003,20 +11121,34 @@
       rainLightsDecisionLocked = false;
       showOverlay(`
         <div class="big-panel rain-lights-panel">
-          <button class="rain-lights-action rain-lights-ok" id="rainLightsOkBtn" type="button"><span>OK, W&#321;&#260;CZY&#321;EM</span></button>
+          <button class="rain-lights-action rain-lights-ok" id="rainLightsOkBtn" type="button" aria-label="OK, w&#322;&#261;czy&#322;em"></button>
           <div class="rain-lights-visual">
             <img src="Photos/deszcz.png" alt="Deszcz" class="rain-lights-img" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
             <div class="rain-lights-fallback">DESZCZ</div>
           </div>
-          <button class="rain-lights-action rain-lights-later" id="rainLightsLaterBtn" type="button"><span>NA RAZIE NIE TRZEBA</span></button>
+          <button class="rain-lights-action rain-lights-later" id="rainLightsLaterBtn" type="button" aria-label="Na razie nie trzeba"></button>
         </div>
       `);
       overlay.dataset.lockClose = 'rainLights';
       overlay.classList.add('rain-lights-overlay');
       const okBtn = document.getElementById('rainLightsOkBtn');
       const laterBtn = document.getElementById('rainLightsLaterBtn');
-      if(okBtn) okBtn.addEventListener('click', (event)=>finishRainLightsReminder('ok', event.currentTarget));
-      if(laterBtn) laterBtn.addEventListener('click', (event)=>finishRainLightsReminder('postpone', event.currentTarget));
+      const canChooseRainDecision = ()=>rainLightsAlertVisible &&
+        !rainLightsDecisionLocked && overlay.dataset.lockClose === 'rainLights';
+      if(okBtn){
+        bindReliablePointerAction(
+          okBtn,
+          ()=>finishRainLightsReminder('ok', okBtn),
+          { canStart:canChooseRainDecision }
+        );
+      }
+      if(laterBtn){
+        bindReliablePointerAction(
+          laterBtn,
+          ()=>finishRainLightsReminder('postpone', laterBtn),
+          { canStart:canChooseRainDecision }
+        );
+      }
     }
     function finishRainLightsReminder(decision, selectedButton){
       if(!rainLightsAlertVisible || rainLightsDecisionLocked) return;
@@ -14488,7 +14620,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.0.5';
+      return el ? el.textContent.trim() : 'v7.0.6';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -17547,6 +17679,7 @@ km priv: 0,00</div>
     buildDots();
     setupCountdownMode();
     bindDrivingFocusRestoreTargets();
+    bindZwReminderPointerAction();
     renderAll();
     requestCountdownAnimation();
     syncWorkWakeLock();
