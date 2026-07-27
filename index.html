@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.0.2: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.0.3: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -439,6 +439,12 @@
       pointer-events:none;
       z-index:15;
     }
+    .clock-svg-barrier{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      z-index:25;
+    }
     /* Punkty 4+5: druga warstwa SVG NAD cyframi godzin - dla strzałki i kropki minut */
     .clock-svg-overlay{
       position:absolute;
@@ -504,25 +510,39 @@
     .dial-marker-hour{ stroke-width:.72; }
     .active-hour-marker{ pointer-events:none; }
     .active-hour-marker-bg{
-      fill:#000;
+      fill:rgba(0,0,0,.92);
       stroke:#fff;
       stroke-width:2.2;
       filter:drop-shadow(0 0 5px rgba(255,255,255,.72));
     }
     .active-hour-marker-hour,
     .active-hour-marker-minute{
-      fill:#fff;
       font-family:inherit;
       font-weight:900;
       text-anchor:middle;
       dominant-baseline:central;
+    }
+    .active-hour-marker-hour{
+      fill:url(#dialHandSurface);
+      stroke:rgba(255,255,255,.58);
+      stroke-width:.62;
+      paint-order:stroke fill;
+      letter-spacing:-1.2px;
+      filter:
+        drop-shadow(0 -.5px .3px rgba(255,255,255,.95))
+        drop-shadow(0 1.3px .75px var(--dial-premium-shadow))
+        drop-shadow(0 0 6px rgba(255,255,255,.98))
+        drop-shadow(0 0 14px rgba(255,255,255,.68));
+      font-size:60px;
+    }
+    .active-hour-marker-minute{
+      fill:#fff;
+      font-size:30px;
       filter:
         drop-shadow(0 0 5px rgba(255,255,255,1))
         drop-shadow(0 0 11px rgba(255,255,255,.76))
         drop-shadow(0 0 19px rgba(180,255,200,.42));
     }
-    .active-hour-marker-hour{ font-size:60px; }
-    .active-hour-marker-minute{ font-size:30px; }
     .active-hour-marker-minute-bar{
       stroke:#fff;
       stroke-width:2;
@@ -5700,9 +5720,8 @@
         <circle cx="200" cy="200" r="75" fill="#000" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
       </svg>
 
-      <!-- Warstwa pośrednia: zapora końca pracy, a nad nią Tryb Odliczania. -->
+      <!-- Warstwa pośrednia: Tryb Odliczania pozostaje pod cyframi godzin. -->
       <svg class="clock-svg clock-svg-intermediate" viewBox="-30 -30 460 460" aria-hidden="true">
-        <g id="forecastHand"></g>
         <g id="countdownFill"></g>
       </svg>
 
@@ -5724,6 +5743,11 @@
         </div>
       </div>
 
+      <!-- Zapora końca pracy przykrywa stałe cyfry, ale pozostaje pod ruchomym znacznikiem. -->
+      <svg class="clock-svg clock-svg-barrier" viewBox="-30 -30 460 460" aria-hidden="true">
+        <g id="forecastHand"></g>
+      </svg>
+
       <!-- Górna warstwa SVG: wskazówka i ruchomy znacznik godziny. -->
       <svg class="clock-svg clock-svg-overlay" viewBox="-30 -30 460 460" aria-hidden="true">
         <defs>
@@ -5739,9 +5763,9 @@
         <g id="hourArrow"></g>
         <g id="activeHourMarker" class="active-hour-marker">
           <circle class="active-hour-marker-bg" cx="0" cy="0" r="55"></circle>
-          <text class="active-hour-marker-hour" id="activeHourMarkerHour" x="-13" y="7">24</text>
-          <text class="active-hour-marker-minute" id="activeHourMarkerMinute" x="29" y="-20">00</text>
-          <line class="active-hour-marker-minute-bar" id="activeHourMarkerMinuteBar" x1="17" y1="-4" x2="41" y2="-4"></line>
+          <text class="active-hour-marker-hour" id="activeHourMarkerHour" x="-18" y="7" textLength="68" lengthAdjust="spacingAndGlyphs">24</text>
+          <text class="active-hour-marker-minute" id="activeHourMarkerMinute" x="36" y="-20" textLength="34" lengthAdjust="spacingAndGlyphs">00</text>
+          <line class="active-hour-marker-minute-bar" id="activeHourMarkerMinuteBar" x1="25" y1="-4" x2="47" y2="-4"></line>
         </g>
       </svg>
       <button class="weather-status-icon weather-unknown" id="weatherStatusIcon" type="button" aria-label="Pogoda" title="Pogoda"></button>
@@ -5881,7 +5905,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.0.2</div>
+    <div class="version">v7.0.3</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -7854,12 +7878,20 @@
       markerHour.textContent = labelCurrent;
       markerMinute.textContent = pad(m);
       const twoDigitHour = labelCurrent.length > 1;
-      const hourX = twoDigitHour ? -13 : -9;
-      const minuteX = twoDigitHour ? 29 : 21;
+      const hourX = twoDigitHour ? -18 : -12;
+      const minuteX = twoDigitHour ? 36 : 29;
       markerHour.setAttribute('x', String(hourX));
       markerMinute.setAttribute('x', String(minuteX));
-      markerMinuteBar.setAttribute('x1', String(minuteX - 12));
-      markerMinuteBar.setAttribute('x2', String(minuteX + 12));
+      if(twoDigitHour){
+        markerHour.setAttribute('textLength', '68');
+      } else {
+        markerHour.removeAttribute('textLength');
+      }
+      markerHour.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+      markerMinute.setAttribute('textLength', '34');
+      markerMinute.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+      markerMinuteBar.setAttribute('x1', String(minuteX - 11));
+      markerMinuteBar.setAttribute('x2', String(minuteX + 11));
 
       // Stałe miejsce aktualnej godziny pozostaje puste do następnej pełnej godziny.
       document.querySelectorAll('.number').forEach(el => {
@@ -14308,7 +14340,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.0.2';
+      return el ? el.textContent.trim() : 'v7.0.3';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
