@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.0.6: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.0.7: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -105,7 +105,7 @@
       width:100%; height:64px; min-height:64px; max-height:64px;
       flex:0 0 64px;
       display:flex; align-items:center; align-content:flex-start; gap:2px;
-      padding:4px 6px;
+      padding:4px 6px 4px 0;
       flex-wrap:wrap;
       overflow:visible;
       position:relative;
@@ -190,6 +190,13 @@
       background:#1a1a1a;
       color:#5a5a3a;
       font-size:18px;
+    }
+    .note-add-status{
+      position:absolute;
+      top:58px;
+      right:2px;
+      z-index:2;
+      pointer-events:auto;
     }
     .note-sticker.filled{
       background:transparent;
@@ -5687,6 +5694,7 @@
         </svg>
       </div>
       <div class="battery-indicator" id="batteryIndicator">—</div>
+      <button class="note-sticker empty note-add-status" id="noteAddButton" type="button" aria-label="Dodaj notatkę">＋</button>
     </div>
     <button class="auto-sync-indicator" id="autoSyncIndicator" type="button" aria-label="Auto Sync"></button>
     <div class="notes-bar" id="notesBar"></div>
@@ -5915,7 +5923,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.0.6</div>
+    <div class="version">v7.0.7</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -9892,20 +9900,13 @@
 
       // Dynamiczne skalowanie - im więcej karteczek tym mniejsze
       const displayNotes = getSortedNotesForDisplay();
-      const total = displayNotes.length + 1;  // +1 za "dodaj"
+      const total = displayNotes.length + 1;  // Zachowaj dotychczasowe progi rozmiaru po przeniesieniu przycisku.
       let size = 68;
       if(total > 5) size = 60;
       if(total > 7) size = 52;
       if(total > 9) size = 44;
       if(total > 12) size = 36;
       bar.style.setProperty('--note-size', size + 'px');
-
-      const add=document.createElement('button');
-      add.className='note-sticker empty';
-      add.style.setProperty('--note-size', size + 'px');
-      add.textContent='＋';
-      add.addEventListener('click', ()=> openNoteEditor(null));
-      bar.appendChild(add);
 
       // Sprawdź alarmy
       const nowMs = Date.now();
@@ -14620,7 +14621,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.0.6';
+      return el ? el.textContent.trim() : 'v7.0.7';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -17656,6 +17657,10 @@ km priv: 0,00</div>
       } else {
         openWorkMenu();
       }
+    });
+    document.getElementById('noteAddButton').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      openNoteEditor(null);
     });
     document.getElementById('uberReminderZone').addEventListener('click', handleUberReminderZoneClick);
     window.addEventListener('resize', renderUberReminder);
