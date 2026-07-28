@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.0.9: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.0.10: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5945,7 +5945,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.0.9</div>
+    <div class="version">v7.0.10</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -6075,12 +6075,16 @@
     let uberReminderArmTimer = null;
     let uberReminderArmFrame = null;
     const COUNTDOWN_INNER_RADIUS = 75;
-    const COUNTDOWN_OUTER_RADIUS = 200;
+    const COUNTDOWN_INTERACTION_OUTER_RADIUS = 200;
+    const COUNTDOWN_FIRST_LAYER_OUTER_RADIUS = 138;
+    const COUNTDOWN_LAYER_RADIAL_SCALES = [1, .9, .8];
+    const COUNTDOWN_LAYER_COLORS = ['#ff2424', '#c81111', '#7b0808'];
     const COUNTDOWN_ACTIVATION_END_DEG = 30;
     const COUNTDOWN_DEGREE_MS = 10000;
-    const COUNTDOWN_MAX_MS = ((99 * 60 + 59) * 60 + 59) * 1000;
     const COUNTDOWN_MINUTE_MS = 60 * 1000;
-    const COUNTDOWN_MAX_SNAPPED_MS = Math.floor(COUNTDOWN_MAX_MS / COUNTDOWN_MINUTE_MS) * COUNTDOWN_MINUTE_MS;
+    const COUNTDOWN_MAX_MINUTES = 180;
+    const COUNTDOWN_MAX_MS = COUNTDOWN_MAX_MINUTES * COUNTDOWN_MINUTE_MS;
+    const COUNTDOWN_MAX_SNAPPED_MS = COUNTDOWN_MAX_MS;
     const COUNTDOWN_MIN_COMMIT_MS = 1000;
     const COUNTDOWN_MIN_DRAG_PX = 6;
     const COUNTDOWN_EDIT_TOLERANCE_DEG = 12;
@@ -7336,10 +7340,15 @@
         Math.min(COUNTDOWN_MAX_SNAPPED_MS,Math.round(raw/COUNTDOWN_MINUTE_MS)*COUNTDOWN_MINUTE_MS)
       );
     }
-    function createCountdownAnnularPath(spanDeg){
+    function countdownLayerOuterRadius(layerIndex){
+      const radialLength=COUNTDOWN_FIRST_LAYER_OUTER_RADIUS-COUNTDOWN_INNER_RADIUS;
+      const scale=COUNTDOWN_LAYER_RADIAL_SCALES[layerIndex] || 0;
+      return COUNTDOWN_INNER_RADIUS+radialLength*scale;
+    }
+    function createCountdownAnnularPath(spanDeg,outerRadius){
       const span=Math.max(0,Math.min(360,Number(spanDeg)||0));
       if(span<=0.0001) return '';
-      const outer=COUNTDOWN_OUTER_RADIUS;
+      const outer=Math.max(COUNTDOWN_INNER_RADIUS,Number(outerRadius)||0);
       const inner=COUNTDOWN_INNER_RADIUS;
       const outerStart=polarToCartesian(cx,cy,outer,-90);
       const innerStart=polarToCartesian(cx,cy,inner,-90);
@@ -7360,10 +7369,6 @@
         `A ${outer} ${outer} 0 ${large} 1 ${outerEnd.x} ${outerEnd.y} `+
         `L ${innerEnd.x} ${innerEnd.y} `+
         `A ${inner} ${inner} 0 ${large} 0 ${innerStart.x} ${innerStart.y} Z`;
-    }
-    function countdownLapColor(lapIndex){
-      const lightness=Math.max(22,56-Math.max(0,lapIndex)*7);
-      return `hsl(0 100% ${lightness}%)`;
     }
     function isCountdownVisible(){
       return countdownPhase==='creating' || countdownPhase==='running' || countdownPhase==='editing';
@@ -7409,30 +7414,20 @@
       if(!group) return;
       clearChildren(group);
       if(!isCountdownVisible()) return;
-      const totalDeg=getCountdownRemainingMs(nowMs)/COUNTDOWN_DEGREE_MS;
+      const totalDeg=Math.min(
+        COUNTDOWN_LAYER_RADIAL_SCALES.length*360,
+        getCountdownRemainingMs(nowMs)/COUNTDOWN_DEGREE_MS
+      );
       if(totalDeg<=0) return;
-      let fullLaps=Math.floor(totalDeg/360);
-      let partialDeg=totalDeg-fullLaps*360;
-      if(partialDeg<0.0001) partialDeg=0;
-      if(fullLaps>0){
-        const fullPath=svgFilledPath(
-          createCountdownAnnularPath(360),
-          countdownLapColor(fullLaps-1),
-          .88,
-          {'fill-rule':'evenodd'}
-        );
-        group.appendChild(fullPath);
-      }
-      if(partialDeg>0){
-        const partialPath=svgFilledPath(
-          createCountdownAnnularPath(partialDeg),
-          countdownLapColor(fullLaps),
-          .92,
-          {'fill-rule':'evenodd'}
-        );
-        partialPath.setAttribute('stroke',countdownLapColor(fullLaps));
-        partialPath.setAttribute('stroke-width','1.2');
-        group.appendChild(partialPath);
+      for(let layerIndex=0;layerIndex<COUNTDOWN_LAYER_RADIAL_SCALES.length;layerIndex++){
+        const layerSpan=Math.max(0,Math.min(360,totalDeg-layerIndex*360));
+        if(layerSpan<=0.0001) continue;
+        group.appendChild(svgFilledPath(
+          createCountdownAnnularPath(layerSpan,countdownLayerOuterRadius(layerIndex)),
+          COUNTDOWN_LAYER_COLORS[layerIndex],
+          .96,
+          {'fill-rule':'evenodd','data-countdown-layer':String(layerIndex+1)}
+        ));
       }
     }
     function renderCountdownCenter(nowMs=Date.now()){
@@ -7542,7 +7537,7 @@
       };
     }
     function isPointInCountdownAnnulus(point){
-      return !!point && point.radius>=COUNTDOWN_INNER_RADIUS && point.radius<=COUNTDOWN_OUTER_RADIUS;
+      return !!point && point.radius>=COUNTDOWN_INNER_RADIUS && point.radius<=COUNTDOWN_INTERACTION_OUTER_RADIUS;
     }
     function isCountdownInteractionBlocked(){
       const endOverlay=document.getElementById('endConfirmOverlay');
@@ -14688,7 +14683,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.0.9';
+      return el ? el.textContent.trim() : 'v7.0.10';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
