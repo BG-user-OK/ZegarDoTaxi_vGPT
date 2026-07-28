@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.0.7: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.0.8: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5193,6 +5193,10 @@
       min-width:.52em;
       text-align:center;
     }
+    .counter-user-entered-digit{
+      color:#42f56f;
+      text-shadow:0 0 7px rgba(66,245,111,.72),0 0 14px rgba(32,196,80,.38);
+    }
     .inline-caret-digit::after{
       content:'';
       position:absolute;
@@ -5923,7 +5927,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.0.7</div>
+    <div class="version">v7.0.8</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -6057,6 +6061,8 @@
     const COUNTDOWN_ACTIVATION_END_DEG = 30;
     const COUNTDOWN_DEGREE_MS = 10000;
     const COUNTDOWN_MAX_MS = ((99 * 60 + 59) * 60 + 59) * 1000;
+    const COUNTDOWN_MINUTE_MS = 60 * 1000;
+    const COUNTDOWN_MAX_SNAPPED_MS = Math.floor(COUNTDOWN_MAX_MS / COUNTDOWN_MINUTE_MS) * COUNTDOWN_MINUTE_MS;
     const COUNTDOWN_MIN_COMMIT_MS = 1000;
     const COUNTDOWN_MIN_DRAG_PX = 6;
     const COUNTDOWN_EDIT_TOLERANCE_DEG = 12;
@@ -7304,6 +7310,14 @@
     function countdownAngularDistance(a,b){
       return Math.abs(countdownSignedAngleDelta(a,b));
     }
+    function snapCountdownDurationMs(value){
+      const raw=Math.max(0,Math.min(COUNTDOWN_MAX_SNAPPED_MS,Number(value)||0));
+      if(raw<=0) return 0;
+      return Math.max(
+        COUNTDOWN_MINUTE_MS,
+        Math.min(COUNTDOWN_MAX_SNAPPED_MS,Math.round(raw/COUNTDOWN_MINUTE_MS)*COUNTDOWN_MINUTE_MS)
+      );
+    }
     function createCountdownAnnularPath(spanDeg){
       const span=Math.max(0,Math.min(360,Number(spanDeg)||0));
       if(span<=0.0001) return '';
@@ -7337,14 +7351,18 @@
       return countdownPhase==='creating' || countdownPhase==='running' || countdownPhase==='editing';
     }
     function getCountdownRemainingMs(nowMs=Date.now()){
-      if(countdownPhase==='creating') return Math.max(0,Math.min(COUNTDOWN_MAX_MS,countdownDraftDurationMs));
-      if(countdownPhase==='running' || countdownPhase==='editing'){
+      if(countdownPhase==='creating' || countdownPhase==='editing'){
+        return Math.max(0,Math.min(COUNTDOWN_MAX_SNAPPED_MS,countdownDraftDurationMs));
+      }
+      if(countdownPhase==='running'){
         return Math.max(0,Math.min(COUNTDOWN_MAX_MS,countdownTargetAtMs-nowMs));
       }
       return 0;
     }
     function getCountdownDisplayTargetMs(nowMs=Date.now()){
-      return countdownPhase==='creating' ? nowMs+getCountdownRemainingMs(nowMs) : countdownTargetAtMs;
+      return countdownPhase==='creating' || countdownPhase==='editing'
+        ? nowMs+getCountdownRemainingMs(nowMs)
+        : countdownTargetAtMs;
     }
     function formatCountdownDuration(ms){
       const totalSeconds=Math.max(0,Math.min(359999,Math.ceil((Number(ms)||0)/1000)));
@@ -7354,6 +7372,15 @@
       return hours>0
         ? `${hours}:${pad(minutes)}:${pad(seconds)}`
         : `${pad(minutes)}:${pad(seconds)}`;
+    }
+    function formatCountdownSetupDuration(ms){
+      const totalMinutes=Math.max(0,Math.min(
+        Math.floor(COUNTDOWN_MAX_SNAPPED_MS/COUNTDOWN_MINUTE_MS),
+        Math.round((Number(ms)||0)/COUNTDOWN_MINUTE_MS)
+      ));
+      const hours=Math.floor(totalMinutes/60);
+      const minutes=totalMinutes%60;
+      return hours>0 ? `${hours}:${pad(minutes)}` : `${pad(totalMinutes)}:00`;
     }
     function formatCountdownTarget(ms){
       const d=new Date(Number(ms)||Date.now());
@@ -7399,7 +7426,11 @@
     function renderCountdownCenter(nowMs=Date.now()){
       const el=document.getElementById('dateCenterEl');
       if(!el || !isCountdownVisible()) return false;
-      const remainingText=formatCountdownDuration(getCountdownRemainingMs(nowMs));
+      const isSetup=countdownPhase==='creating' || countdownPhase==='editing';
+      const remainingMs=getCountdownRemainingMs(nowMs);
+      const remainingText=isSetup
+        ? formatCountdownSetupDuration(remainingMs)
+        : formatCountdownDuration(remainingMs);
       const targetText=formatCountdownTarget(getCountdownDisplayTargetMs(nowMs));
       const signature=`${countdownPhase}|${remainingText}|${targetText}`;
       if(signature===countdownCenterSignature) return true;
@@ -7408,7 +7439,7 @@
       el.classList.remove('has-work-start','has-work-end');
       el.classList.add('countdown-mode');
       el.innerHTML=
-        `<div class="countdown-value countdown-remaining">${countdownValueHtml(remainingText,true)}</div>`+
+        `<div class="countdown-value countdown-remaining">${countdownValueHtml(remainingText,countdownPhase==='running')}</div>`+
         `<div class="countdown-value countdown-target">${countdownValueHtml(targetText,false)}</div>`;
       el.setAttribute('aria-label',`Pozostało ${remainingText}. Cel ${targetText}.`);
       return true;
@@ -7437,7 +7468,7 @@
     }
     function requestCountdownAnimation(){
       if(countdownAnimationFrame!==null || document.visibilityState==='hidden') return;
-      if(countdownPhase!=='running' && countdownPhase!=='editing') return;
+      if(countdownPhase!=='running') return;
       countdownAnimationFrame=requestAnimationFrame(tickCountdownAnimation);
     }
     function finishCountdown(){
@@ -7452,7 +7483,7 @@
       renderDate();
     }
     function renderCountdownVisuals(nowMs=Date.now()){
-      if((countdownPhase==='running' || countdownPhase==='editing') && countdownTargetAtMs<=nowMs){
+      if(countdownPhase==='running' && countdownTargetAtMs<=nowMs){
         finishCountdown();
         return;
       }
@@ -7519,6 +7550,7 @@
         renderDate();
       } else {
         countdownTargetAtMs=gesture.originalTargetAtMs;
+        countdownDraftDurationMs=0;
         countdownPhase='running';
         countdownCenterSignature='';
         saveCountdownPersistence();
@@ -7561,6 +7593,9 @@
         e.preventDefault();
         e.stopPropagation();
         try{ clockWrap.setPointerCapture(e.pointerId); }catch(err){}
+        const rawDurationMs=kind==='create'
+          ? Math.min(COUNTDOWN_MAX_SNAPPED_MS,point.deg*COUNTDOWN_DEGREE_MS)
+          : Math.max(0,Math.min(COUNTDOWN_MAX_SNAPPED_MS,countdownTargetAtMs-now));
         countdownGesture={
           kind,
           pointerId:e.pointerId,
@@ -7568,14 +7603,16 @@
           startClientY:e.clientY,
           lastDeg:point.deg,
           hasDragged:false,
-          originalTargetAtMs:countdownTargetAtMs
+          originalTargetAtMs:countdownTargetAtMs,
+          rawDurationMs
         };
         if(kind==='create'){
           countdownPhase='creating';
-          countdownDraftDurationMs=Math.min(COUNTDOWN_MAX_MS,point.deg*COUNTDOWN_DEGREE_MS);
+          countdownDraftDurationMs=snapCountdownDurationMs(rawDurationMs);
         } else {
+          stopCountdownAnimation();
           countdownPhase='editing';
-          requestCountdownAnimation();
+          countdownDraftDurationMs=snapCountdownDurationMs(rawDurationMs);
         }
         countdownCenterSignature='';
         renderCountdownVisuals(now);
@@ -7591,22 +7628,15 @@
         const deltaDeg=countdownSignedAngleDelta(gesture.lastDeg,point.deg);
         gesture.lastDeg=point.deg;
         if(!deltaDeg) return;
-        if(gesture.kind==='create'){
-          countdownDraftDurationMs=Math.max(0,Math.min(
-            COUNTDOWN_MAX_MS,
-            countdownDraftDurationMs+deltaDeg*COUNTDOWN_DEGREE_MS
-          ));
-        } else {
-          const now=Date.now();
-          countdownTargetAtMs=Math.max(now,Math.min(
-            now+COUNTDOWN_MAX_MS,
-            countdownTargetAtMs+deltaDeg*COUNTDOWN_DEGREE_MS
-          ));
-          if(countdownTargetAtMs<=now){
-            finishCountdown();
-            releasePointer(gesture.pointerId);
-            return;
-          }
+        gesture.rawDurationMs=Math.max(0,Math.min(
+          COUNTDOWN_MAX_SNAPPED_MS,
+          gesture.rawDurationMs+deltaDeg*COUNTDOWN_DEGREE_MS
+        ));
+        countdownDraftDurationMs=snapCountdownDurationMs(gesture.rawDurationMs);
+        if(gesture.kind==='edit' && countdownDraftDurationMs<=0){
+          finishCountdown();
+          releasePointer(gesture.pointerId);
+          return;
         }
         countdownCenterSignature='';
         renderCountdownVisuals(Date.now());
@@ -7638,11 +7668,14 @@
             renderDate();
             return;
           }
-          countdownTargetAtMs=Date.now()+Math.min(COUNTDOWN_MAX_MS,countdownDraftDurationMs);
+          countdownTargetAtMs=Date.now()+Math.min(COUNTDOWN_MAX_SNAPPED_MS,countdownDraftDurationMs);
           countdownDraftDurationMs=0;
           countdownPhase='running';
         } else {
-          if(!gesture.hasDragged) countdownTargetAtMs=gesture.originalTargetAtMs;
+          countdownTargetAtMs=gesture.hasDragged
+            ? Date.now()+Math.min(COUNTDOWN_MAX_SNAPPED_MS,countdownDraftDurationMs)
+            : gesture.originalTargetAtMs;
+          countdownDraftDurationMs=0;
           countdownPhase='running';
         }
         countdownCenterSignature='';
@@ -13180,12 +13213,14 @@ km priv: 0,00</div>
       counterPanelDraft[`${field}Base`]=0;
       counterPanelDraft[`${field}Digits`]=String(Math.max(0,Math.trunc(value||0)));
       counterPanelDraft[`${field}Cleared`]=true;
+      if(field==='end') counterPanelDraft.endUserDigitCount=0;
     }
     function setCounterDraftSuggestedValue(field,value){
       if(!counterPanelDraft || !['start','end'].includes(field)) return;
       counterPanelDraft[`${field}Base`]=Math.max(0,Math.trunc(value||0));
       counterPanelDraft[`${field}Digits`]='';
       counterPanelDraft[`${field}Cleared`]=false;
+      if(field==='end') counterPanelDraft.endUserDigitCount=0;
       if(field==='start') counterPanelDraft.saveSuggestedStart=true;
       if(field==='end') counterPanelDraft.saveSuggestedEnd=true;
     }
@@ -13525,6 +13560,7 @@ km priv: 0,00</div>
         privBase:privKmTotal,
         startDigits:'',
         endDigits:'',
+        endUserDigitCount:0,
         privDigits:'',
         startCleared:false,
         endCleared:false,
@@ -13537,6 +13573,7 @@ km priv: 0,00</div>
       if(!draft || !draft.mirrorStartToEnd || draft.activeField!=='start') return;
       draft.endBase=counterDraftFieldValue('start');
       draft.endDigits='';
+      draft.endUserDigitCount=0;
       draft.endCleared=false;
     }
     function counterDraftFieldValue(field){
@@ -13574,6 +13611,19 @@ km priv: 0,00</div>
       const draft=counterPanelDraft;
       const active=draft && draft.activeField===field;
       const value=field==='priv' ? counterDraftPrivDisplay() : String(counterDraftFieldValue(field));
+      if(field==='end' && active && draft.providerEntryMode==='endWork'){
+        const chars=Array.from(value);
+        if(!chars.length) chars.push('0');
+        const greenCount=Math.max(0,Math.min(chars.length,Number(draft.endUserDigitCount)||0));
+        const greenStart=chars.length-greenCount;
+        return chars.map((ch,index)=>{
+          const classes=[];
+          if(index>=greenStart) classes.push('counter-user-entered-digit');
+          if(index===chars.length-1) classes.push('inline-caret-digit');
+          const escaped=escapeHtml(ch);
+          return classes.length ? `<span class="${classes.join(' ')}">${escaped}</span>` : escaped;
+        }).join('');
+      }
       return inlineCursorHtml(value,active);
     }
     function counterInlinePress(key){
@@ -13593,6 +13643,7 @@ km priv: 0,00</div>
         } else {
           draft[`${field}Digits`]='';
           draft[`${field}Cleared`]=false;
+          if(field==='end') draft.endUserDigitCount=0;
         }
         mirrorCounterStartDraftToEnd();
         renderCounterPanel();
@@ -13604,6 +13655,7 @@ km priv: 0,00</div>
         } else {
           const prop=`${field}Digits`;
           draft[prop]=draft[prop].slice(0,-1);
+          if(field==='end' && draft.endUserDigitCount>0) draft.endUserDigitCount--;
           if(!draft[prop]) draft[`${field}Cleared`]=false;
         }
         mirrorCounterStartDraftToEnd();
@@ -13615,7 +13667,10 @@ km priv: 0,00</div>
         if(draft.privDigits.length<6) draft.privDigits+=key;
       } else {
         const prop=`${field}Digits`;
-        if(draft[prop].length<6) draft[prop]+=key;
+        if(draft[prop].length<6){
+          draft[prop]+=key;
+          if(field==='end') draft.endUserDigitCount=Math.min(6,draft.endUserDigitCount+1);
+        }
       }
       mirrorCounterStartDraftToEnd();
       renderCounterPanel();
@@ -14621,7 +14676,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.0.7';
+      return el ? el.textContent.trim() : 'v7.0.8';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
