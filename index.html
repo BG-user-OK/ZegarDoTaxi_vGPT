@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.0.10: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.0.11: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5945,7 +5945,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.0.10</div>
+    <div class="version">v7.0.11</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -12475,6 +12475,21 @@
       const last=chars.pop();
       return `${escapeHtml(chars.join(''))}<span class="inline-caret-digit">${escapeHtml(last)}</span>`;
     }
+    function mixedCounterDigitOriginHtml(text,manualDigitCount,active){
+      const chars=Array.from(String(text??''));
+      if(!chars.length) chars.push('0');
+      const greenCount=active
+        ? Math.max(0,Math.min(chars.length,Number(manualDigitCount)||0))
+        : 0;
+      const greenStart=chars.length-greenCount;
+      return chars.map((ch,index)=>{
+        const classes=[];
+        if(index>=greenStart) classes.push('counter-user-entered-digit');
+        if(active && index===chars.length-1) classes.push('inline-caret-digit');
+        const escaped=escapeHtml(ch);
+        return classes.length ? `<span class="${classes.join(' ')}">${escaped}</span>` : escaped;
+      }).join('');
+    }
     function moneyProviderDisplay(key){
       const draft=moneyPanelDraft;
       if(!draft) return '&mdash;';
@@ -12537,7 +12552,9 @@
         const addition=moneyDraftPrivateKmAddition();
         return `<span class="priv-total-display" aria-label="Suma kilometrow prywatnych: ${total}"><span class="priv-sigma" aria-hidden="true">&sum;</span><span class="priv-total-value">${escapeHtml(String(total))}</span></span><span class="priv-entry-display">${inlineCursorHtml(String(addition),active)}</span>`;
       }
-      return inlineCursorHtml(String(moneyDraftCounterValue()),draft.activeProvider==='__counter');
+      const active=draft.activeProvider==='__counter';
+      const digits=draft[moneyCounterDraftProp(draft.counterTarget,'Digits')];
+      return mixedCounterDigitOriginHtml(String(moneyDraftCounterValue()),digits.length,active);
     }
     function selectMoneyProvider(key){
       const draft=moneyPanelDraft;
@@ -13220,14 +13237,14 @@ km priv: 0,00</div>
       counterPanelDraft[`${field}Base`]=0;
       counterPanelDraft[`${field}Digits`]=String(Math.max(0,Math.trunc(value||0)));
       counterPanelDraft[`${field}Cleared`]=true;
-      if(field==='end') counterPanelDraft.endUserDigitCount=0;
+      counterPanelDraft[`${field}UserDigitCount`]=0;
     }
     function setCounterDraftSuggestedValue(field,value){
       if(!counterPanelDraft || !['start','end'].includes(field)) return;
       counterPanelDraft[`${field}Base`]=Math.max(0,Math.trunc(value||0));
       counterPanelDraft[`${field}Digits`]='';
       counterPanelDraft[`${field}Cleared`]=false;
-      if(field==='end') counterPanelDraft.endUserDigitCount=0;
+      counterPanelDraft[`${field}UserDigitCount`]=0;
       if(field==='start') counterPanelDraft.saveSuggestedStart=true;
       if(field==='end') counterPanelDraft.saveSuggestedEnd=true;
     }
@@ -13567,6 +13584,7 @@ km priv: 0,00</div>
         privBase:privKmTotal,
         startDigits:'',
         endDigits:'',
+        startUserDigitCount:0,
         endUserDigitCount:0,
         privDigits:'',
         startCleared:false,
@@ -13618,18 +13636,8 @@ km priv: 0,00</div>
       const draft=counterPanelDraft;
       const active=draft && draft.activeField===field;
       const value=field==='priv' ? counterDraftPrivDisplay() : String(counterDraftFieldValue(field));
-      if(field==='end' && active && draft.providerEntryMode==='endWork'){
-        const chars=Array.from(value);
-        if(!chars.length) chars.push('0');
-        const greenCount=Math.max(0,Math.min(chars.length,Number(draft.endUserDigitCount)||0));
-        const greenStart=chars.length-greenCount;
-        return chars.map((ch,index)=>{
-          const classes=[];
-          if(index>=greenStart) classes.push('counter-user-entered-digit');
-          if(index===chars.length-1) classes.push('inline-caret-digit');
-          const escaped=escapeHtml(ch);
-          return classes.length ? `<span class="${classes.join(' ')}">${escaped}</span>` : escaped;
-        }).join('');
+      if((field==='start' || field==='end') && active){
+        return mixedCounterDigitOriginHtml(value,draft[`${field}UserDigitCount`],true);
       }
       return inlineCursorHtml(value,active);
     }
@@ -13650,7 +13658,7 @@ km priv: 0,00</div>
         } else {
           draft[`${field}Digits`]='';
           draft[`${field}Cleared`]=false;
-          if(field==='end') draft.endUserDigitCount=0;
+          draft[`${field}UserDigitCount`]=0;
         }
         mirrorCounterStartDraftToEnd();
         renderCounterPanel();
@@ -13662,7 +13670,7 @@ km priv: 0,00</div>
         } else {
           const prop=`${field}Digits`;
           draft[prop]=draft[prop].slice(0,-1);
-          if(field==='end' && draft.endUserDigitCount>0) draft.endUserDigitCount--;
+          if(draft[`${field}UserDigitCount`]>0) draft[`${field}UserDigitCount`]--;
           if(!draft[prop]) draft[`${field}Cleared`]=false;
         }
         mirrorCounterStartDraftToEnd();
@@ -13676,7 +13684,7 @@ km priv: 0,00</div>
         const prop=`${field}Digits`;
         if(draft[prop].length<6){
           draft[prop]+=key;
-          if(field==='end') draft.endUserDigitCount=Math.min(6,draft.endUserDigitCount+1);
+          draft[`${field}UserDigitCount`]=Math.min(6,draft[`${field}UserDigitCount`]+1);
         }
       }
       mirrorCounterStartDraftToEnd();
@@ -14683,7 +14691,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.0.10';
+      return el ? el.textContent.trim() : 'v7.0.11';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
