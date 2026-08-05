@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.0.11: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.1.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -1300,12 +1300,27 @@
       flex:0 0 auto;
       display:flex; align-items:center; justify-content:center;
       font-weight:900;
-      color:var(--work-green);
-      text-shadow:0 1px 0 rgba(0,0,0,.55), 0 0 8px rgba(56,200,102,.34);
+      color:rgba(226,232,228,.78);
+      text-shadow:0 1px 0 rgba(0,0,0,.72), 0 0 5px rgba(255,255,255,.12);
       border-bottom:2.5px solid rgba(88,232,120,.55);
       box-sizing:border-box;
       position:relative;
       /* font-size i height ustawia JS dynamicznie */
+    }
+    .work-roller-digit:first-child{
+      border-top:2.5px solid rgba(88,232,120,.55);
+    }
+    .work-roller-digit.is-past{
+      color:rgba(93,101,96,.72);
+      text-shadow:0 1px 0 rgba(0,0,0,.72);
+    }
+    .work-roller-digit.is-current{
+      color:var(--work-green);
+      text-shadow:0 1px 0 rgba(0,0,0,.55), 0 0 8px rgba(56,200,102,.34);
+    }
+    .work-roller-digit.is-future{
+      color:rgba(226,232,228,.78);
+      text-shadow:0 1px 0 rgba(0,0,0,.72), 0 0 5px rgba(255,255,255,.12);
     }
     #workBtn .work-roller-digit::before,
     #workBtn .work-roller-digit::after{
@@ -1348,26 +1363,6 @@
     #workBtn.overtime .work-roller{
       box-shadow:inset 0 0 0 1px rgba(255,154,31,.24),
                  inset 0 0 10px rgba(0,0,0,.7);
-    }
-    #workBtn.overtime .work-roller-digit{
-      color:var(--overtime-orange);
-      text-shadow:0 1px 0 rgba(0,0,0,.55), 0 0 8px rgba(255,154,31,.34);
-      border-bottom-color:rgba(255,154,31,.55);
-    }
-    #workBtn.overtime .work-roller-digit::before,
-    #workBtn.overtime .work-roller-digit::after{
-      background:rgba(255,154,31,.46);
-      box-shadow:0 0 2px rgba(255,154,31,.24);
-    }
-    #workBtn.overtime .work-roller-mark-left,
-    #workBtn.overtime .work-roller-mark-right{
-      filter:drop-shadow(0 0 3px rgba(255,154,31,.82));
-    }
-    #workBtn.overtime .work-roller-mark-left{
-      border-color:transparent transparent transparent var(--overtime-orange);
-    }
-    #workBtn.overtime .work-roller-mark-right{
-      border-color:transparent var(--overtime-orange) transparent transparent;
     }
 
     /* === v1.12: przycisk obrotów - dwa banknoty (góra/dół) === */
@@ -5824,7 +5819,7 @@
           <div class="work-right">
             <div class="work-roller">
               <div class="work-roller-inner" id="workRollerInner">
-                <div class="work-roller-digit">0</div>
+                <div class="work-roller-digit is-future">1</div>
               </div>
             </div>
           </div>
@@ -5945,7 +5940,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.0.11</div>
+    <div class="version">v7.1.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -9340,33 +9335,42 @@
       inner.style.transform = `translateY(${offset}px)`;
     }
 
-    // === Rolka cyfr godzin pracy ===
-    // Strategia: wysokość okna rolki = clientHeight w px. Każda cyfra ma tę samą
-    // wysokość. translateY = -(intH+frac) * h. Cyfry 10..20 mają mniejszy font,
-    // żeby zmieściły się dwucyfrowe.
+    // === Rolka przedziałów kolejnych godzin pracy ===
+    // Każdy wiersz ma wysokość jednej godziny. Jego krawędzie są granicami pełnych
+    // godzin, a cyfra i krótkie kreski w środku wskazują połowę danego przedziału.
     function renderWorkRoller(workMinutes){
       const roller = document.querySelector('#workBtn .work-roller');
       const inner = document.getElementById('workRollerInner');
       if(!roller || !inner) return;
 
-      // Lazy build: cyfry 0..20 + znaczniki ◀ ▶ na rolce
+      const totalH = Math.max(0, workMinutes) / 60;
+      const currentHour = Math.floor(totalH) + 1;
+      const requiredMaxHour = Math.max(25, currentHour + 2);
+      let builtMaxHour = Number(inner.dataset.maxHour) || 0;
+
       if(inner.dataset.built !== '1'){
         inner.innerHTML='';
-        for(let i=0; i<=20; i++){
+        inner.dataset.built='1';
+        builtMaxHour = 0;
+      }
+      if(builtMaxHour < requiredMaxHour){
+        for(let hour=builtMaxHour + 1; hour<=requiredMaxHour; hour++){
           const d = document.createElement('div');
-          d.className = 'work-roller-digit' + (i>=10 ? ' two-digit' : '');
-          d.textContent = i;
+          d.className = 'work-roller-digit' + (hour>=10 ? ' two-digit' : '');
+          d.dataset.hour = String(hour);
+          d.textContent = hour;
           inner.appendChild(d);
         }
-        if(!roller.querySelector('.work-roller-mark-left')){
-          const ml = document.createElement('div');
-          ml.className = 'work-roller-mark-left';
-          roller.appendChild(ml);
-          const mr = document.createElement('div');
-          mr.className = 'work-roller-mark-right';
-          roller.appendChild(mr);
-        }
-        inner.dataset.built='1';
+        inner.dataset.maxHour = String(requiredMaxHour);
+        inner.dataset.lastH = '';
+      }
+      if(!roller.querySelector('.work-roller-mark-left')){
+        const ml = document.createElement('div');
+        ml.className = 'work-roller-mark-left';
+        roller.appendChild(ml);
+        const mr = document.createElement('div');
+        mr.className = 'work-roller-mark-right';
+        roller.appendChild(mr);
       }
 
       const h = roller.clientHeight;
@@ -9389,13 +9393,19 @@
         inner.dataset.lastH = String(h);
       }
 
-      // Wycentruj tak, by aktualna cyfra była na środku okna.
-      // top inner = (h/2 - digitH/2) - (intH+frac)*digitH
-      const totalH = workMinutes / 60;
-      const intH = Math.min(20, Math.floor(totalH));
-      const frac = totalH - Math.floor(totalH);
-      const baseOffset = (h / 2) - (digitH / 2);
-      const offset = baseOffset - (intH + frac) * digitH;
+      const hasWorkStarted = startWorkMinutes !== null;
+      inner.querySelectorAll('.work-roller-digit').forEach(d => {
+        const hour = Number(d.dataset.hour);
+        const state = !hasWorkStarted || hour > currentHour
+          ? 'is-future'
+          : (hour < currentHour ? 'is-past' : 'is-current');
+        d.classList.remove('is-past','is-current','is-future');
+        d.classList.add(state);
+      });
+
+      // The time axis begins at the top edge of hour 1: a full-hour boundary is
+      // centered at work start, while the hour numeral reaches center at 30 min.
+      const offset = (h / 2) - totalH * digitH;
       inner.style.transform = `translateY(${offset}px)`;
     }
 
@@ -14691,7 +14701,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.0.11';
+      return el ? el.textContent.trim() : 'v7.1.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
