@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.1.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.1.2: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5955,7 +5955,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.1.1</div>
+    <div class="version">v7.1.2</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -8375,6 +8375,13 @@
              !zwState.activeSession &&
              isZwActiveWorkday();
     }
+    function isZwProcedureActiveForRainReminder(){
+      return !!(
+        zwSessionStartLocked ||
+        isZwReminderPointerGestureActive() ||
+        (zwState && zwState.activeSession)
+      );
+    }
     function getReminderSlotDisplayState(coinVisible=false){
       const zwSessionState = getZwSessionSlotState();
       if(zwSessionState) return zwSessionState;
@@ -8480,7 +8487,17 @@
     }
     function ensureZwSessionProgress(){
       const session = zwState && zwState.activeSession;
-      if(!session || session.finalized || !isZwActiveWorkday()) return;
+      if(!session || !isZwActiveWorkday()) return;
+      if(session.finalized){
+        const fadeUntil = Number(session.fadeUntil || 0);
+        if(session.status === 'fading' && fadeUntil > 0 && Date.now() >= fadeUntil){
+          zwState.activeSession = null;
+          saveZwState();
+          stopZwExerciseFrame();
+          resumePendingRainLightsAfterZwCompletion('zw_fade_restored');
+        }
+        return;
+      }
       const cfg = getZwModeConfig(session.mode);
       if(session.status === 'running'){
         const totalSec = cfg.phases.reduce((sum,v)=>sum+v,0);
@@ -8583,11 +8600,15 @@
         saveZwState();
         hideOverlay();
         renderAll();
+        resumePendingRainLightsAfterZwCompletion('zw_postponed');
         return;
       }
-      finalizeZwSession(normalized, 'manual');
+      const completed = finalizeZwSession(normalized, 'manual');
       hideOverlay();
       renderAll();
+      if(completed && !zwState.activeSession){
+        resumePendingRainLightsAfterZwCompletion('zw_manual_complete');
+      }
     }
     function finalizeZwSession(decision, source='manual'){
       const session = zwState && zwState.activeSession;
@@ -8627,6 +8648,7 @@
             zwState.activeSession = null;
             saveZwState();
             renderAll();
+            resumePendingRainLightsAfterZwCompletion('zw_auto_complete');
           }
         }, ZW_MODULE_FADE_MS + 60);
         startZwExerciseFrame();
@@ -11038,6 +11060,7 @@
       const endOverlay = document.getElementById('endConfirmOverlay');
       return isRainLightsActiveWorkday() &&
              isRainLightsDaylight() &&
+             !isZwProcedureActiveForRainReminder() &&
              document.visibilityState === 'visible' &&
              !overlay.classList.contains('show') &&
              (!endOverlay || endOverlay.classList.contains('hidden')) &&
@@ -11057,6 +11080,7 @@
         saveRainLightsState();
         return;
       }
+      if(isZwProcedureActiveForRainReminder()) return;
       rainLightsPendingTimer = setTimeout(()=>{
         rainLightsPendingTimer = null;
         flushPendingRainLightsReminder();
@@ -11065,16 +11089,28 @@
     function queueRainLightsReminder(risk, reason){
       if(!isRainLightsActiveWorkday()) return;
       if(!enforceRainLightsDaylight()) return;
+      const wasPending = !!rainLightsState.pendingAlert;
       rainLightsState.pendingAlert = true;
-      rainLightsState.pendingReason = String(reason || 'queued');
+      if(!wasPending) rainLightsState.pendingReason = String(reason || 'queued');
       rainLightsState.currentRiskLevel = Number(risk && risk.level || rainLightsState.currentRiskLevel || 0);
       saveRainLightsState();
       schedulePendingRainLightsReminderCheck();
+    }
+    function resumePendingRainLightsAfterZwCompletion(reason='zw_complete'){
+      setTimeout(()=>{
+        if(isZwProcedureActiveForRainReminder()) return;
+        if(!rainLightsState || !rainLightsState.pendingAlert || !isRainLightsActiveWorkday()) return;
+        if(!enforceRainLightsDaylight()) return;
+        clearTimeout(rainLightsPendingTimer);
+        rainLightsPendingTimer = null;
+        scheduleRainLightsCheck(reason, 0, true);
+      }, 0);
     }
     function flushPendingRainLightsReminder(){
       if(!syncRainLightsWorkdayScope(true)) return;
       if(!enforceRainLightsDaylight()) return;
       if(!rainLightsState.pendingAlert || !rainLightsState.lastRiskPresent) return;
+      if(isZwProcedureActiveForRainReminder()) return;
       if(Date.now() - Number(rainLightsState.lastCheckAt || 0) >= RAIN_LIGHTS_CHECK_INTERVAL_MS){
         scheduleRainLightsCheck('queued_refresh', 0, true);
         return;
@@ -14716,7 +14752,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.1.1';
+      return el ? el.textContent.trim() : 'v7.1.2';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
