@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.1.2: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.2.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -1330,12 +1330,33 @@
       text-shadow:0 1px 0 rgba(0,0,0,.72);
     }
     .work-roller-digit.is-current{
-      color:var(--work-green);
-      text-shadow:0 1px 0 rgba(0,0,0,.55), 0 0 8px rgba(56,200,102,.34);
+      color:rgba(132,202,151,.84);
+      text-shadow:0 1px 0 rgba(0,0,0,.62), 0 0 2px rgba(56,200,102,.14);
     }
     .work-roller-digit.is-future{
       color:rgba(226,232,228,.78);
       text-shadow:0 1px 0 rgba(0,0,0,.72), 0 0 5px rgba(255,255,255,.12);
+    }
+    #workBtn .work-roller-digit-label{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:inherit;
+      text-shadow:inherit;
+      pointer-events:none;
+    }
+    #workBtn .work-roller-digit-label-elapsed{
+      color:var(--work-green);
+      text-shadow:0 1px 0 rgba(0,0,0,.55), 0 0 8px rgba(56,200,102,.34);
+      clip-path:inset(0 0 100% 0);
+      -webkit-clip-path:inset(0 0 100% 0);
+      opacity:0;
+      transition:clip-path .6s ease, -webkit-clip-path .6s ease;
+    }
+    #workBtn .work-roller-digit.is-current .work-roller-digit-label-elapsed{
+      opacity:1;
     }
     #workBtn .work-roller-digit::before,
     #workBtn .work-roller-digit::after{
@@ -5955,7 +5976,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.1.2</div>
+    <div class="version">v7.2.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -9395,7 +9416,14 @@
           const d = document.createElement('div');
           d.className = 'work-roller-digit' + (hour>=10 ? ' two-digit' : '');
           d.dataset.hour = String(hour);
-          d.textContent = hour;
+          const baseLabel = document.createElement('span');
+          baseLabel.className = 'work-roller-digit-label work-roller-digit-label-base';
+          baseLabel.textContent = String(hour);
+          const elapsedLabel = document.createElement('span');
+          elapsedLabel.className = 'work-roller-digit-label work-roller-digit-label-elapsed';
+          elapsedLabel.textContent = String(hour);
+          elapsedLabel.setAttribute('aria-hidden', 'true');
+          d.append(baseLabel, elapsedLabel);
           inner.appendChild(d);
         }
         inner.dataset.maxHour = String(requiredMaxHour);
@@ -9431,6 +9459,7 @@
       }
 
       const hasWorkStarted = startWorkMinutes !== null;
+      const activeHourProgress = totalH - Math.floor(totalH);
       inner.querySelectorAll('.work-roller-digit').forEach(d => {
         const hour = Number(d.dataset.hour);
         const state = !hasWorkStarted || hour > currentHour
@@ -9438,6 +9467,16 @@
           : (hour < currentHour ? 'is-past' : 'is-current');
         d.classList.remove('is-past','is-current','is-future');
         d.classList.add(state);
+        const elapsedLabel = d.querySelector('.work-roller-digit-label-elapsed');
+        if(elapsedLabel){
+          const elapsedPercent = state === 'is-current'
+            ? Math.max(0, Math.min(100, activeHourProgress * 100))
+            : 0;
+          const clipBottom = (100 - elapsedPercent).toFixed(4) + '%';
+          const clipValue = `inset(0 0 ${clipBottom} 0)`;
+          elapsedLabel.style.clipPath = clipValue;
+          elapsedLabel.style.webkitClipPath = clipValue;
+        }
       });
 
       // The time axis begins at the top edge of hour 1: a full-hour boundary is
@@ -14752,7 +14791,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.1.2';
+      return el ? el.textContent.trim() : 'v7.2.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
