@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.2.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.2.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5976,7 +5976,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.2.0</div>
+    <div class="version">v7.2.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -6008,6 +6008,7 @@
     const EARLY_MONTH_WINDOW_DAYS = 7;
     const EARLY_MONTH_FREE_AREA_MS = 30000;
     const EARLY_MONTH_WATCH_RECHECK_MS = 1000;
+    const EARLY_MONTH_CHECK_RETRY_MS = 60000;
     const UBER_REMINDER_ARM_MS = 60000;
 
     const PROVIDERS = [
@@ -14791,7 +14792,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.2.0';
+      return el ? el.textContent.trim() : 'v7.2.1';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -15748,6 +15749,7 @@ km priv: 0,00</div>
     let earlyMonthAreaFreeSince = 0;
     let earlyMonthRequestBusy = false;
     let earlyMonthPromptData = null;
+    let earlyMonthNextCheckAt = 0;
 
     function normalizeEarlyMonthState(value){
       const s = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
@@ -15842,6 +15844,24 @@ km priv: 0,00</div>
       earlyMonthAreaTimer = setTimeout(()=>reevaluateEarlyMonthPromptWatch(), Math.max(0, delayMs || 0));
     }
     function reevaluateEarlyMonthPromptWatch(){
+      if(document.visibilityState !== 'visible'){
+        clearEarlyMonthAreaTimer();
+        earlyMonthAreaFreeSince = 0;
+        return;
+      }
+      if(!earlyMonthRequestBusy && earlyMonthPromptData && earlyMonthPromptData.date !== todayISO()){
+        disarmEarlyMonthPrompt();
+        if(earlyMonthPromptVisible){
+          fadeEarlyMonthModule(()=>{
+            earlyMonthPromptVisible = false;
+            reevaluateEarlyMonthPromptWatch();
+          });
+          return;
+        }
+        clearEarlyMonthModule();
+      }
+      // The dashboard watcher also checks each new local day, without requiring an upload.
+      maybeCheckEarlyMonthSheet().catch(()=>{});
       if(!earlyMonthPromptArmed || earlyMonthPromptVisible){
         clearEarlyMonthAreaTimer();
         earlyMonthAreaFreeSince = 0;
@@ -15949,12 +15969,17 @@ km priv: 0,00</div>
           targetName:state.targetName,
           daysRemaining:state.daysRemaining
         };
-        reevaluateEarlyMonthPromptWatch();
       }
+      reevaluateEarlyMonthPromptWatch();
+    }
+    function getEarlyMonthSheetConfig(){
+      const url = localStorage.getItem(LS_APPSCRIPT) || '';
+      const pin = localStorage.getItem(LS_SYNC_PIN) || '';
+      return url && pin ? { url, pin } : null;
     }
     async function requestEarlyMonthSheet(mode, cfg){
-      const activeCfg = cfg || getAutoSyncConfig();
-      if(!activeCfg) throw new Error('Brak konfiguracji Auto Sync.');
+      const activeCfg = cfg || getEarlyMonthSheetConfig();
+      if(!activeCfg) throw new Error('Brak adresu skryptu lub PIN-u synchronizacji.');
       const response = await jsonpRequest(activeCfg.url, {
         action:'nextMonthSheet',
         mode:mode || 'check',
@@ -15967,15 +15992,23 @@ km priv: 0,00</div>
       }
       return response;
     }
-    async function maybeCheckEarlyMonthSheetAfterOutgoingSync(cfg, source){
+    async function maybeCheckEarlyMonthSheet(cfg){
+      if(document.visibilityState !== 'visible' || earlyMonthPromptVisible || earlyMonthRequestBusy) return;
       if(!isEarlyMonthWindowToday()) return;
       const today = todayISO();
       const state = loadEarlyMonthState();
       if(state.checkDate === today || state.askTomorrowDate === today || state.failedDate === today) return;
-      if(earlyMonthRequestBusy) return;
+      if(Date.now() < earlyMonthNextCheckAt) return;
+      const activeCfg = cfg || getEarlyMonthSheetConfig();
+      if(!activeCfg) return;
+      earlyMonthNextCheckAt = Date.now() + EARLY_MONTH_CHECK_RETRY_MS;
       earlyMonthRequestBusy = true;
       try{
-        const response = await requestEarlyMonthSheet('check', cfg);
+        const response = await requestEarlyMonthSheet('check', activeCfg);
+        if(today !== todayISO()){
+          earlyMonthNextCheckAt = 0;
+          return;
+        }
         if(response.eligible === false) return;
         if(response.exists === true){
           disarmEarlyMonthPrompt({
@@ -15994,7 +16027,7 @@ km priv: 0,00</div>
     }
     function handleSuccessfulOutgoingSyncForEarlyMonth(cfg, snapshot, source){
       setTimeout(()=>{
-        maybeCheckEarlyMonthSheetAfterOutgoingSync(cfg, source).catch(()=>{});
+        maybeCheckEarlyMonthSheet(cfg).catch(()=>{});
       }, 0);
     }
     async function confirmAndShowEarlyMonthPrompt(){
@@ -16003,9 +16036,14 @@ km priv: 0,00</div>
         reevaluateEarlyMonthPromptWatch();
         return;
       }
+      const checkedDate = todayISO();
       earlyMonthRequestBusy = true;
       try{
         const response = await requestEarlyMonthSheet('check');
+        if(checkedDate !== todayISO()){
+          scheduleEarlyMonthAreaWatch(0);
+          return;
+        }
         if(response.exists === true || response.eligible === false){
           disarmEarlyMonthPrompt({
             checkDate:todayISO(),
@@ -16040,6 +16078,10 @@ km priv: 0,00</div>
     }
     async function createEarlyMonthSheetFromPrompt(){
       if(earlyMonthRequestBusy) return;
+      if(!earlyMonthPromptData || earlyMonthPromptData.date !== todayISO()){
+        reevaluateEarlyMonthPromptWatch();
+        return;
+      }
       const el = document.getElementById('earlyMonthModule');
       earlyMonthRequestBusy = true;
       if(el) el.classList.add('busy');
