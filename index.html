@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.2.3: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.2.4: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5884,7 +5884,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.2.3</div>
+    <div class="version">v7.2.4</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -7816,14 +7816,13 @@
       const hourDeg = (h % 12) * 30 + m * 0.5;
       // === Strzałka godzinowa - jako polygon (grot strzałki) ===
       const aRad = (hourDeg - 90) * Math.PI / 180;
-      const r1 = 116, r2 = 75;
-      // Punkty trzonu strzałki (prostokąt) + grot na końcu (przy cyfrze, r1)
-      // Grot ma szerokość większą i kończy się w punkcie r1+8
+      // Double the visible length outward without moving the inner end.
+      const r1 = 161, r2 = 75;
       const tipR = r1 + 4;        // wierzchołek grotu
       const headR = r1 - 14;       // gdzie zaczyna się grot (cofnięty od wierzchołka o 18)
       const shaftR = r2;           // koniec trzonu (bliżej środka)
-      const halfShaft = 5.5;       // pół-szerokość trzonu
-      const halfHead  = 11;        // pół-szerokość grotu (szersza)
+      const halfShaft = 8.25;      // pół-szerokość trzonu
+      const halfHead  = 16.5;      // pół-szerokość grotu (szersza)
       // Wektor wzdłużny i prostopadły
       const ux = Math.cos(aRad), uy = Math.sin(aRad);
       const nx = -uy, ny = ux;
@@ -14663,7 +14662,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.2.3';
+      return el ? el.textContent.trim() : 'v7.2.4';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
