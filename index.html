@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.2.4: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.2.5: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5884,7 +5884,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.2.4</div>
+    <div class="version">v7.2.5</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -7816,29 +7816,21 @@
       const hourDeg = (h % 12) * 30 + m * 0.5;
       // === Strzałka godzinowa - jako polygon (grot strzałki) ===
       const aRad = (hourDeg - 90) * Math.PI / 180;
-      // Double the visible length outward without moving the inner end.
-      const r1 = 161, r2 = 75;
-      const tipR = r1 + 4;        // wierzchołek grotu
-      const headR = r1 - 14;       // gdzie zaczyna się grot (cofnięty od wierzchołka o 18)
-      const shaftR = r2;           // koniec trzonu (bliżej środka)
-      const halfShaft = 8.25;      // pół-szerokość trzonu
-      const halfHead  = 16.5;      // pół-szerokość grotu (szersza)
+      // Keep the thicker shaft, but finish with a short taper instead of side wings.
+      const shaftR = 75, tipR = 150, halfShaft = 8.25;
+      const headR = tipR - halfShaft;
       // Wektor wzdłużny i prostopadły
       const ux = Math.cos(aRad), uy = Math.sin(aRad);
       const nx = -uy, ny = ux;
       function pt(r, side){
         return [cx + ux*r + nx*side, cy + uy*r + ny*side];
       }
-      // 7 wierzchołków: trzon-lewa-koniec, trzon-lewa-baza, grot-lewa-baza,
-      //                  wierzchołek, grot-prawa-baza, trzon-prawa-baza, trzon-prawa-koniec
       const p1 = pt(shaftR, -halfShaft);
       const p2 = pt(headR,  -halfShaft);
-      const p3 = pt(headR,  -halfHead);
-      const p4 = pt(tipR,    0);
-      const p5 = pt(headR,   halfHead);
-      const p6 = pt(headR,   halfShaft);
-      const p7 = pt(shaftR,  halfShaft);
-      const points = [p1,p2,p3,p4,p5,p6,p7].map(p=>p.map(n=>n.toFixed(2)).join(',')).join(' ');
+      const p3 = pt(tipR,    0);
+      const p4 = pt(headR,   halfShaft);
+      const p5 = pt(shaftR,  halfShaft);
+      const points = [p1,p2,p3,p4,p5].map(p=>p.map(n=>n.toFixed(2)).join(',')).join(' ');
 
       // Obwódka (czarna)
       const hOut = document.createElementNS('http://www.w3.org/2000/svg','polygon');
@@ -14662,7 +14654,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.2.4';
+      return el ? el.textContent.trim() : 'v7.2.5';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
