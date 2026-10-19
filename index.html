@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.2.2: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.2.3: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -478,35 +478,12 @@
       z-index:20;
     }
     .clock-face{ width:75%; height:75%; border-radius:50%; position:relative; container-type:inline-size; }
-    .number{
+    .dial-original-numerals{
       position:absolute; left:50%; top:50%;
+      width:87.5034%; height:87.5034%;
       transform:translate(-50%,-50%);
-      color:#f8f8f8; font-weight:400;
-      font-size:52px;
-      font-size:17cqw;
-      line-height:1; letter-spacing:0;
-      background:linear-gradient(
-        180deg,
-        #ffffff 0%,
-        #ffffff 40%,
-        #f4f4f4 72%,
-        #d5d5d5 100%
-      );
-      -webkit-background-clip:text;
-      background-clip:text;
-      -webkit-text-fill-color:transparent;
-      -webkit-text-stroke:.35px rgba(255,255,255,.65);
-      filter:
-        drop-shadow(0 -.4px .2px rgba(255,255,255,.8))
-        drop-shadow(.7px 1.2px .2px rgba(175,175,175,.9))
-        drop-shadow(0 1.7px .7px rgba(0,0,0,.8));
-    }
-    @supports not ((-webkit-background-clip:text) or (background-clip:text)){
-      .number{
-        background:none;
-        color:#f8f8f8;
-        -webkit-text-fill-color:#f8f8f8;
-      }
+      object-fit:contain;
+      pointer-events:none;
     }
     .dial-marker{
       fill:url(#dialMarkerSurface);
@@ -5745,19 +5722,8 @@
       </svg>
 
       <div class="clock-center">
+        <img class="dial-original-numerals" src="Photos/dial-numerals-original.png" width="960" height="960" alt="" aria-hidden="true" draggable="false">
         <div class="clock-face">
-          <div class="number" data-hour="12" style="top:2%; left:50%;">12</div>
-          <div class="number" data-hour="1" style="top:8.43%; left:74%;">1</div>
-          <div class="number" data-hour="2" style="top:26%; left:91.57%;">2</div>
-          <div class="number" data-hour="3" style="top:50%; left:98%;">3</div>
-          <div class="number" data-hour="4" style="top:74%; left:91.57%;">4</div>
-          <div class="number" data-hour="5" style="top:91.57%; left:74%;">5</div>
-          <div class="number" data-hour="6" style="top:98%; left:50%;">6</div>
-          <div class="number" data-hour="7" style="top:91.57%; left:26%;">7</div>
-          <div class="number" data-hour="8" style="top:74%; left:8.43%;">8</div>
-          <div class="number" data-hour="9" style="top:50%; left:2%;">9</div>
-          <div class="number" data-hour="10" style="top:26%; left:8.43%;">10</div>
-          <div class="number" data-hour="11" style="top:8.43%; left:26%;">11</div>
           <div class="date-center" id="dateCenterEl"></div>
         </div>
       </div>
@@ -5918,7 +5884,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.2.2</div>
+    <div class="version">v7.2.3</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -14697,7 +14663,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.2.2';
+      return el ? el.textContent.trim() : 'v7.2.3';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
