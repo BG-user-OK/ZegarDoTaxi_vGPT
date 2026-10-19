@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.2.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.2.2: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -464,7 +464,7 @@
       pointer-events:none;
       z-index:25;
     }
-    /* Punkty 4+5: druga warstwa SVG NAD cyframi godzin - dla strzałki i kropki minut */
+    /* The existing hand stays above the fixed hour numerals. */
     .clock-svg-overlay{
       position:absolute;
       inset:0;
@@ -477,97 +477,45 @@
       pointer-events:none;
       z-index:20;
     }
-    .clock-face{ width:75%; height:75%; border-radius:50%; position:relative; }
+    .clock-face{ width:75%; height:75%; border-radius:50%; position:relative; container-type:inline-size; }
     .number{
       position:absolute; left:50%; top:50%;
       transform:translate(-50%,-50%);
-      color:var(--dial-premium-mid); font-weight:900;
-      font-size:clamp(47px, 12.6vw, 88px);
-      line-height:1; letter-spacing:-1.2px;
+      color:#f8f8f8; font-weight:400;
+      font-size:52px;
+      font-size:17cqw;
+      line-height:1; letter-spacing:0;
       background:linear-gradient(
         180deg,
-        var(--dial-premium-top) 0%,
-        var(--dial-premium-mid) 46%,
-        var(--dial-premium-bottom) 100%
+        #ffffff 0%,
+        #ffffff 40%,
+        #f4f4f4 72%,
+        #d5d5d5 100%
       );
       -webkit-background-clip:text;
       background-clip:text;
       -webkit-text-fill-color:transparent;
-      -webkit-text-stroke:.38px rgba(255,255,255,.52);
+      -webkit-text-stroke:.35px rgba(255,255,255,.65);
       filter:
-        drop-shadow(0 -.45px .28px rgba(255,255,255,.72))
-        drop-shadow(0 1.25px .72px var(--dial-premium-shadow));
-      transition:opacity .3s ease, filter .3s ease;
-    }
-    .number.vacated{
-      color:transparent;
-      background:none;
-      -webkit-text-fill-color:transparent;
-      -webkit-text-stroke-color:transparent;
-      opacity:0;
-      filter:none;
-      text-shadow:none;
+        drop-shadow(0 -.4px .2px rgba(255,255,255,.8))
+        drop-shadow(.7px 1.2px .2px rgba(175,175,175,.9))
+        drop-shadow(0 1.7px .7px rgba(0,0,0,.8));
     }
     @supports not ((-webkit-background-clip:text) or (background-clip:text)){
       .number{
         background:none;
-        color:var(--dial-premium-mid);
-        -webkit-text-fill-color:var(--dial-premium-mid);
-      }
-      .number.vacated{
-        color:transparent;
-        -webkit-text-fill-color:transparent;
+        color:#f8f8f8;
+        -webkit-text-fill-color:#f8f8f8;
       }
     }
     .dial-marker{
       fill:url(#dialMarkerSurface);
-      stroke:var(--dial-premium-edge);
-      stroke-linejoin:round;
+      stroke:#fff;
+      stroke-linejoin:miter;
       shape-rendering:geometricPrecision;
     }
-    .dial-marker-minute{ stroke-width:.48; }
-    .dial-marker-hour{ stroke-width:.72; }
-    .active-hour-marker{ pointer-events:none; }
-    .active-hour-marker-bg{
-      fill:rgba(0,0,0,.92);
-      stroke:#fff;
-      stroke-width:2.2;
-      filter:drop-shadow(0 0 5px rgba(255,255,255,.72));
-    }
-    .active-hour-marker-hour,
-    .active-hour-marker-minute{
-      font-family:inherit;
-      font-weight:900;
-      text-anchor:middle;
-      dominant-baseline:central;
-    }
-    .active-hour-marker-hour{
-      fill:url(#dialHandSurface);
-      stroke:rgba(255,255,255,.58);
-      stroke-width:.62;
-      paint-order:stroke fill;
-      letter-spacing:-1.2px;
-      filter:
-        drop-shadow(0 -.5px .3px rgba(255,255,255,.95))
-        drop-shadow(0 1.3px .75px var(--dial-premium-shadow))
-        drop-shadow(0 0 6px rgba(255,255,255,.98))
-        drop-shadow(0 0 14px rgba(255,255,255,.68));
-      font-size:60px;
-    }
-    .active-hour-marker-minute{
-      fill:#fff;
-      font-size:30px;
-      filter:
-        drop-shadow(0 0 5px rgba(255,255,255,1))
-        drop-shadow(0 0 11px rgba(255,255,255,.76))
-        drop-shadow(0 0 19px rgba(180,255,200,.42));
-    }
-    .active-hour-marker-minute-bar{
-      stroke:#fff;
-      stroke-width:2;
-      stroke-linecap:round;
-      filter:drop-shadow(0 0 4px rgba(255,255,255,.88));
-    }
+    .dial-marker-minute{ stroke-width:.35; }
+    .dial-marker-hour{ stroke-width:.5; }
     @keyframes barrierLightBlink{
       0%,49.99%{ opacity:var(--barrier-light-on, .95); }
       50%,100%{ opacity:var(--barrier-light-off, .1); }
@@ -5772,9 +5720,9 @@
             <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
           <linearGradient id="dialMarkerSurface" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="var(--dial-premium-top)"/>
-            <stop offset="48%" stop-color="var(--dial-premium-mid)"/>
-            <stop offset="100%" stop-color="var(--dial-premium-bottom)"/>
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="48%" stop-color="#fafafa"/>
+            <stop offset="100%" stop-color="#d3d3d3"/>
           </linearGradient>
           <filter id="dialMarkerShadow" x="-12%" y="-12%" width="124%" height="126%" color-interpolation-filters="sRGB">
             <feDropShadow dx="0" dy="1" stdDeviation=".58" flood-color="#000000" flood-opacity=".78"/>
@@ -5799,27 +5747,27 @@
       <div class="clock-center">
         <div class="clock-face">
           <div class="number" data-hour="12" style="top:2%; left:50%;">12</div>
-          <div class="number" data-hour="1" style="top:9%; left:75%;">1</div>
-          <div class="number" data-hour="2" style="top:28%; left:91%;">2</div>
-          <div class="number" data-hour="3" style="top:50%; left:99%;">3</div>
-          <div class="number" data-hour="4" style="top:72%; left:91%;">4</div>
-          <div class="number" data-hour="5" style="top:91%; left:75%;">5</div>
-          <div class="number" data-hour="6" style="top:99%; left:50%;">6</div>
-          <div class="number" data-hour="7" style="top:91%; left:25%;">7</div>
-          <div class="number" data-hour="8" style="top:72%; left:9%;">8</div>
-          <div class="number" data-hour="9" style="top:50%; left:1%;">9</div>
-          <div class="number" data-hour="10" style="top:28%; left:9%;">10</div>
-          <div class="number" data-hour="11" style="top:9%; left:25%;">11</div>
+          <div class="number" data-hour="1" style="top:8.43%; left:74%;">1</div>
+          <div class="number" data-hour="2" style="top:26%; left:91.57%;">2</div>
+          <div class="number" data-hour="3" style="top:50%; left:98%;">3</div>
+          <div class="number" data-hour="4" style="top:74%; left:91.57%;">4</div>
+          <div class="number" data-hour="5" style="top:91.57%; left:74%;">5</div>
+          <div class="number" data-hour="6" style="top:98%; left:50%;">6</div>
+          <div class="number" data-hour="7" style="top:91.57%; left:26%;">7</div>
+          <div class="number" data-hour="8" style="top:74%; left:8.43%;">8</div>
+          <div class="number" data-hour="9" style="top:50%; left:2%;">9</div>
+          <div class="number" data-hour="10" style="top:26%; left:8.43%;">10</div>
+          <div class="number" data-hour="11" style="top:8.43%; left:26%;">11</div>
           <div class="date-center" id="dateCenterEl"></div>
         </div>
       </div>
 
-      <!-- Zapora końca pracy przykrywa stałe cyfry, ale pozostaje pod ruchomym znacznikiem. -->
+      <!-- The work-end barrier remains above the fixed hour numerals. -->
       <svg class="clock-svg clock-svg-barrier" viewBox="-30 -30 460 460" aria-hidden="true">
         <g id="forecastHand"></g>
       </svg>
 
-      <!-- Górna warstwa SVG: wskazówka i ruchomy znacznik godziny. -->
+      <!-- Upper SVG layer: the unchanged single hand. -->
       <svg class="clock-svg clock-svg-overlay" viewBox="-30 -30 460 460" aria-hidden="true">
         <defs>
           <linearGradient id="dialHandSurface" x1="0" y1="0" x2="0" y2="1">
@@ -5832,12 +5780,6 @@
           </filter>
         </defs>
         <g id="hourArrow"></g>
-        <g id="activeHourMarker" class="active-hour-marker">
-          <circle class="active-hour-marker-bg" cx="0" cy="0" r="55"></circle>
-          <text class="active-hour-marker-hour" id="activeHourMarkerHour" x="-18" y="7" textLength="68" lengthAdjust="spacingAndGlyphs">24</text>
-          <text class="active-hour-marker-minute" id="activeHourMarkerMinute" x="33" y="-20" textLength="30" lengthAdjust="spacingAndGlyphs">00</text>
-          <line class="active-hour-marker-minute-bar" id="activeHourMarkerMinuteBar" x1="22" y1="-4" x2="44" y2="-4"></line>
-        </g>
       </svg>
       <button class="weather-status-icon weather-unknown" id="weatherStatusIcon" type="button" aria-label="Pogoda" title="Pogoda"></button>
     </div>
@@ -5976,7 +5918,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.2.1</div>
+    <div class="version">v7.2.2</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -7883,14 +7825,14 @@
         const ang=(i*6-90)*Math.PI/180;
         const x=cx+Math.cos(ang)*radius, y=cy+Math.sin(ang)*radius;
         const isH=i%5===0;
-        const width=isH?9.6:3.8;
-        const height=isH?9.6:9.2;
+        const width=isH?11.2:3.6;
+        const height=isH?11.2:10.8;
         const marker=document.createElementNS('http://www.w3.org/2000/svg','rect');
         marker.setAttribute('x',(x-width/2).toFixed(2));
         marker.setAttribute('y',(y-height/2).toFixed(2));
         marker.setAttribute('width',String(width));
         marker.setAttribute('height',String(height));
-        marker.setAttribute('rx',isH?'1.35':'.72');
+        marker.setAttribute('rx','.15');
         marker.setAttribute('class',`dial-marker ${isH?'dial-marker-hour':'dial-marker-minute'}`);
         marker.setAttribute('transform',`rotate(${i*6} ${x.toFixed(2)} ${y.toFixed(2)})`);
         marker.setAttribute('opacity',isH?'1':'.96');
@@ -7898,13 +7840,9 @@
       }
     }
 
-    // ===== wskazówki: ruchomy znacznik godziny + strzałka godzin =====
+    // ===== Existing single hand =====
     function renderHands(){
       const gHour = document.getElementById('hourArrow');
-      const marker = document.getElementById('activeHourMarker');
-      const markerHour = document.getElementById('activeHourMarkerHour');
-      const markerMinute = document.getElementById('activeHourMarkerMinute');
-      const markerMinuteBar = document.getElementById('activeHourMarkerMinuteBar');
       clearChildren(gHour);
 
       const now = new Date();
@@ -7956,39 +7894,6 @@
       hIn.setAttribute('stroke-linejoin', 'round');
       gHour.appendChild(hIn);
 
-      // === Ruchomy znacznik aktualnej godziny (tryb 24h) ===
-      const hh12 = h === 0 ? 12 : (h > 12 ? h - 12 : h);
-      function hourLabel24(hour24){ return hour24 === 0 ? '24' : String(hour24); }
-      const labelCurrent = hourLabel24(h);
-      const markerRad = (hourDeg - 90) * Math.PI / 180;
-      const markerOrbitRadius = 179;
-      const markerX = cx + Math.cos(markerRad) * markerOrbitRadius;
-      const markerY = cy + Math.sin(markerRad) * markerOrbitRadius;
-      marker.setAttribute('transform', `translate(${markerX.toFixed(2)} ${markerY.toFixed(2)})`);
-      markerHour.textContent = labelCurrent;
-      markerMinute.textContent = pad(m);
-      const twoDigitHour = labelCurrent.length > 1;
-      const hourX = twoDigitHour ? -18 : -12;
-      const minuteX = twoDigitHour ? 33 : 26;
-      markerHour.setAttribute('x', String(hourX));
-      markerMinute.setAttribute('x', String(minuteX));
-      if(twoDigitHour){
-        markerHour.setAttribute('textLength', '68');
-      } else {
-        markerHour.removeAttribute('textLength');
-      }
-      markerHour.setAttribute('lengthAdjust', 'spacingAndGlyphs');
-      markerMinute.setAttribute('textLength', '30');
-      markerMinute.setAttribute('lengthAdjust', 'spacingAndGlyphs');
-      markerMinuteBar.setAttribute('x1', String(minuteX - 11));
-      markerMinuteBar.setAttribute('x2', String(minuteX + 11));
-
-      // Stałe miejsce aktualnej godziny pozostaje puste do następnej pełnej godziny.
-      document.querySelectorAll('.number').forEach(el => {
-        const hourVal = parseInt(el.dataset.hour, 10);
-        el.classList.toggle('vacated', hourVal === hh12);
-        el.textContent = String(hourVal);
-      });
     }
 
     // ===== czas / praca =====
@@ -14792,7 +14697,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.2.1';
+      return el ? el.textContent.trim() : 'v7.2.2';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
