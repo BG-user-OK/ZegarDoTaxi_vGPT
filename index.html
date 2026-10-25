@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.2.5: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.3.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5884,7 +5884,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.2.5</div>
+    <div class="version">v7.3.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -6073,6 +6073,7 @@
         localStorage.setItem(LS_KEY, JSON.stringify(state));
         const persist = { lastCounterEnd, notes, recentNoteSymbols, recentNoteTextBySymbol, emojiRecords };
         localStorage.setItem(LS_PERSIST, JSON.stringify(persist));
+        window.dispatchEvent(new Event('tarcza-zp-state'));
         const comparable = stableStringify({state, persist});
         const previous = localStorage.getItem(LS_SYNC_STATE_HASH) || '';
         localStorage.setItem(LS_SYNC_STATE_HASH, comparable);
@@ -14654,7 +14655,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.2.5';
+      return el ? el.textContent.trim() : 'v7.3.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -16511,6 +16512,7 @@ km priv: 0,00</div>
             <div class="sync-menu-row sync-auto-row">
               <button class="sync-menu-btn sync-auto-wide ${autoSyncOn?'sync-auto-on':'sync-auto-off'}" type="button" data-sync-act="auto">Auto Sync:<br>${autoSyncOn?'ON':'OFF'}</button>
             </div>
+            <button class="sync-menu-btn" type="button" onclick="window.ZpWorkBridge?.show()">Zapnij Pasy — integracja</button>
             <div class="sync-menu-row sync-edit-row">
               <button class="sync-menu-btn sync-edit sync-edit-square" type="button" data-sync-act="edit">EDYTUJ<br>START CEL</button>
             </div>
@@ -17796,5 +17798,6 @@ km priv: 0,00</div>
     // auto-save co minutę
     setInterval(()=>saveState(), 60000);
   </script>
+<script type="module" src="./zp-work-bridge.js?v=7.3.0"></script>
 </body>
 </html>

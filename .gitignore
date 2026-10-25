@@ -16,3 +16,5 @@
 !/Photos/**
 
 /Photos/.gitkeep
+
+!/zp-work-bridge.js
