@@ -36,6 +36,7 @@ jobs:
           mkdir -p pages-dist
           cp index.html pages-dist/
           cp sw.js pages-dist/
+          cp zp-work-bridge.js pages-dist/
           cp manifest.json pages-dist/
           cp icon-192.png pages-dist/
           cp icon-512.png pages-dist/
@@ -67,7 +68,7 @@ jobs:
           echo "Expecting ${expected} at ${url}"
           for attempt in {1..18}; do
             body="$(curl --connect-timeout 10 --max-time 20 -fsSL "${url}?pagesVerify=${GITHUB_RUN_ID}-${attempt}-$(date +%s)" || true)"
-            if [[ "$body" == *"$expected"* ]]; then
+            if [[ "$body" == *"$expected"* ]] && curl --connect-timeout 10 --max-time 20 -fsSL "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/zp-work-bridge.js?pagesVerify=${GITHUB_RUN_ID}-${attempt}" | cmp -s zp-work-bridge.js -; then
               echo "Published ${expected} confirmed."
               exit 0
             fi

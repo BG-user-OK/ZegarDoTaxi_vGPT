@@ -1,12 +1,12 @@
 // Service Worker dla Tarczy czasu pracy
 // WAŻNE: przy każdej nowej wersji aplikacji zmień nazwę cache - stare wersje automatycznie się usuną.
-// v7.3.0: based on a previously developed v:1.28 version created by another AI.
-const CACHE_NAME = 'tarcza-v7.3.0';
+// v7.3.1: based on a previously developed v:1.28 version created by another AI.
+const CACHE_NAME = 'tarcza-v7.3.1';
 
 const FILES_TO_CACHE = [
   './',
   './index.html',
-  './zp-work-bridge.js?v=7.3.0',
+  './zp-work-bridge.js?v=7.3.1',
   './Photos/dial-numerals-original.png',
   './manifest.json',
   './icon-192.png',

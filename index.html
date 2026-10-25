@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.3.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.3.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -5884,7 +5884,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.3.0</div>
+    <div class="version">v7.3.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -14655,7 +14655,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.3.0';
+      return el ? el.textContent.trim() : 'v7.3.1';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -17798,6 +17798,6 @@ km priv: 0,00</div>
     // auto-save co minutę
     setInterval(()=>saveState(), 60000);
   </script>
-<script type="module" src="./zp-work-bridge.js?v=7.3.0"></script>
+<script type="module" src="./zp-work-bridge.js?v=7.3.1"></script>
 </body>
 </html>
