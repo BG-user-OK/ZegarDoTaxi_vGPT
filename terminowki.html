@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#b80f2b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Wyślij terminówkę do Tarczy</title>
+  <link rel="manifest" href="manifest-terminowki.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="appointments-paste.css?v=7.5.0">
+</head>
+<body>
+  <main>
+    <header><span class="eyebrow">PIXEL → ARKUSZ → TARCZA</span><h1>Wyślij terminówkę</h1><p>Wklej blok z ChatGPT, sprawdź godziny i wyślij na telefon z Tarczą.</p></header>
+    <p id="pasteStatus" class="status" role="status">Gotowe do wklejenia. Ta strona obsługuje tylko terminówki.</p>
+    <form id="pasteForm">
+      <button id="pasteClipboard" type="button" class="paste-button">Wklej ze schowka</button>
+      <label for="pasteText">Blok z ChatGPT lub pełny tekst terminówki</label>
+      <textarea id="pasteText" rows="7" spellcheck="false" maxlength="100000" placeholder="Wklej tutaj cały blok…"></textarea>
+      <label for="pasteDate">Data początku kursu</label><input id="pasteDate" type="date">
+      <p class="hint">Datę pobieramy z bloku. Jeśli tekst jej nie zawiera, wybierz ją samodzielnie.</p>
+      <section id="pastePreview" class="preview" hidden>
+        <h2>Sprawdź przed wysłaniem</h2>
+        <dl><div><dt>Początek zajętości</dt><dd id="previewStart"></dd></div><div><dt>Odbiór pasażera</dt><dd id="previewPickup"></dd></div><div><dt>Koniec zajętości</dt><dd id="previewEnd"></dd></div></dl>
+        <pre id="previewText"></pre>
+      </section>
+      <button id="pasteSend" type="submit" class="send-button" disabled>Wyślij do Tarczy</button>
+      <p id="pasteSendStatus" class="status" hidden aria-hidden="true"></p>
+    </form>
+    <section id="pasteQueueSection" class="queue" hidden><h2>Czeka na wysłanie</h2><ul id="pasteQueue"></ul><button id="pasteRetry" type="button">Ponów połączenie</button><p class="hint">Nie ma jeszcze potwierdzenia w Arkuszu. Otwórz tę stronę po odzyskaniu sieci.</p></section>
+    <details id="pasteConnection"><summary>Połączenie — ustawiasz tylko raz</summary><form id="pasteSettings">
+      <label for="connectionUrl">Adres połączenia używany w Tarczy</label><input id="connectionUrl" type="url" autocomplete="off" spellcheck="false" placeholder="Adres wdrożenia kończący się /exec">
+      <label for="connectionPin">Dotychczasowy PIN synchronizacji</label><input id="connectionPin" type="password" autocomplete="off">
+      <button type="submit">Zapisz połączenie</button><p class="hint">Te same dane co w Tarczy. Pozostają na tym urządzeniu; nie dodawaj ich do bloku z ChatGPT.</p>
+    </form></details>
+    <footer>Potwierdzony zapis w Arkuszu oznacza gotowość do pobrania przez Tarczę. Tarcza pobiera wpisy, gdy jest otwarta i ma połączenie z siecią.<br>Terminówki v7.5.0</footer>
+  </main>
+  <script src="appointments-core.js?v=7.5.0"></script><script src="appointments-paste.js?v=7.5.0"></script>
+</body>
+</html>

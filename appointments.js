@@ -1,4 +1,4 @@
-/* Occupancy scheduler UI and transport v7.4.0. No workday or Calendar writes. */
+/* Occupancy scheduler UI and transport v7.5.0. No workday or Calendar writes. */
 (function (root) {
   'use strict';
   const C = root.TarczaAppointmentsCore, NS = 'http://www.w3.org/2000/svg';

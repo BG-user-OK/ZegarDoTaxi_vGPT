@@ -1,4 +1,4 @@
-/* Occupancy scheduler v7.4.0 */
+/* Occupancy scheduler v7.5.0 */
 .appointments-layer{position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:31;pointer-events:none}
 .appointments-layer [data-appointment]{cursor:pointer;pointer-events:all}
 .appointments-layer [role=button]:focus-visible circle:first-child{stroke:#ffdb00;stroke-width:3}

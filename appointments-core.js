@@ -1,11 +1,11 @@
-/* Tarcza occupancy scheduler v7.4.0. Independent of workday snapshots. */
+/* Tarcza occupancy scheduler v7.5.0. Independent of workday snapshots. */
 (function (root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.TarczaAppointmentsCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
-  const VERSION = '7.4.0', SCHEMA = 'tarcza-appointments-v1', ZONE = 'Europe/Warsaw';
+  const VERSION = '7.5.0', SCHEMA = 'tarcza-appointments-v1', ZONE = 'Europe/Warsaw';
   const MINUTE = 60000, HORIZON = 720 * MINUTE;
   const clone = value => JSON.parse(JSON.stringify(value));
   const pad = value => String(value).padStart(2, '0');
@@ -77,6 +77,7 @@
   function contentSignature(record) {
     return JSON.stringify(['text', 'date', 'startAt', 'pickupAt', 'endAt', 'deletedAt', 'expiredAt'].map(key => record[key] || null));
   }
+  function equivalentText(a, b) { return String(a).normalize('NFC').replace(/\r\n?/g, '\n').trim() === String(b).normalize('NFC').replace(/\r\n?/g, '\n').trim(); }
   function ordered(records) { return records.slice().sort((a, b) => Date.parse(a.pickupAt) - Date.parse(b.pickupAt) || a.id.localeCompare(b.id)); }
   function angle(at) { const p = parts(at); return ((p.hour % 12) * 60 + p.minute + p.second / 60) * 0.5 - 90; }
   function point(at, radius = 200) {
@@ -171,12 +172,53 @@
         const id = existingId || this.idFactory(), timestamp = new Date(now).toISOString();
         const record = Object.assign({}, old || {}, parsed, { id, revision: old ? old.revision : 0,
           originalText: old ? old.originalText : parsed.text, createdAt: old ? old.createdAt : timestamp,
+          originalDate: old ? old.originalDate || old.date : parsed.date,
           updatedAt: timestamp, deletedAt: null, expiredAt: null, source: old ? old.source : 'manual' });
         state.records[id] = record;
         const prior = state.outbox.filter(o => o.id === id).at(-1);
         state.outbox.push({ opId: this.idFactory(), id, kind: 'put', baseRevision: record.revision,
           waitsFor: prior ? prior.opId : '', record: clone(record), attempted: false });
         delete state.drafts[existingId || 'new'];
+      });
+    }
+    async importEntry(parsed, id, now = Date.now()) {
+      validateInterval(parsed);
+      if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id)) throw Error('Nieprawidłowe ID wpisu.');
+      let result;
+      const state = await this.store.transact(s => {
+        let existing = s.records[id];
+        if (existing && (existing.deletedAt || existing.expiredAt)) throw Error('Ten wpis został usunięty lub wygasł. Ponowne wklejenie go nie odtworzy.');
+        const same = r => ((r.originalDate || r.date) === parsed.date && equivalentText(r.originalText, parsed.text)) ||
+          (r.date === parsed.date && r.text === parsed.text && r.startAt === parsed.startAt && r.pickupAt === parsed.pickupAt && r.endAt === parsed.endAt);
+        if (existing && !same(existing)) throw Error('To ID należy już do innego lub zmienionego wpisu. Edytuj terminówkę w Tarczy; nie nadpisano jej.');
+        if (!existing) {
+          const matches = Object.values(s.records).filter(r => active(r, now) && same(r));
+          if (matches.length > 1) throw Error('Istnieje kilka identycznych terminówek. Sprawdź listę w Tarczy; niczego nie dodano.');
+          existing = matches[0];
+        }
+        if (existing) { result = { id: existing.id, duplicate: true }; return; }
+        const timestamp = new Date(now).toISOString();
+        const record = Object.assign({}, parsed, { id, revision: 0, originalText: parsed.text, originalDate: parsed.date,
+          source: 'paste', createdAt: timestamp, updatedAt: timestamp, deletedAt: null, expiredAt: null });
+        s.records[id] = record;
+        s.outbox.push({ opId: this.idFactory(), id, kind: 'put', baseRevision: 0, waitsFor: '', record: clone(record), attempted: false, origin: 'paste-create' });
+        result = { id, duplicate: false };
+      });
+      return Object.assign(result, { state });
+    }
+    async reconcileImports(remoteRecords) {
+      return this.store.transact(s => {
+        for (const op of s.outbox.filter(o => o.origin === 'paste-create' && o.baseRevision === 0)) {
+          const same = r => equivalentText(r.originalText, op.record.originalText) && (r.originalDate || r.date) === (op.record.originalDate || op.record.date);
+          const exact = remoteRecords.find(r => r.id === op.id);
+          const matches = exact ? [exact] : remoteRecords.filter(same);
+          if (!matches.length || (exact && !same(exact) && !exact.deletedAt && !exact.expiredAt)) continue;
+          if (matches.length > 1) {
+            s.conflicts.push({ id: this.idFactory(), appointmentId: op.id, operations: [clone(op)], remote: null, reason: 'W Arkuszu jest kilka identycznych terminówek. Nie wybrano żadnej automatycznie.' });
+          } else if (!s.outbox.some(o => o.id === matches[0].id && o.opId !== op.opId)) s.records[matches[0].id] = clone(matches[0]);
+          s.outbox = s.outbox.filter(o => o.opId !== op.opId);
+          if ((!exact || matches.length > 1) && !s.outbox.some(o => o.id === op.id)) delete s.records[op.id];
+        }
       });
     }
     async remove(id, now = Date.now()) {
@@ -234,5 +276,5 @@
     }
   }
   return { VERSION, SCHEMA, ZONE, MINUTE, HORIZON, parts, validDate, addDays, localInstant, parseText, validateInterval,
-    uuid, active, contentSignature, ordered, angle, point, offsetAt, arcPath, visibleIntervals, segments, defaultText, emptyState, IndexedStore, Repository };
+    uuid, active, contentSignature, equivalentText, ordered, angle, point, offsetAt, arcPath, visibleIntervals, segments, defaultText, emptyState, IndexedStore, Repository };
 });

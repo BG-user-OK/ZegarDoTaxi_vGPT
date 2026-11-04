@@ -1,0 +1,13 @@
+{
+  "id": "./terminowki",
+  "name": "Terminówki do Tarczy",
+  "short_name": "Wyślij kurs",
+  "description": "Wklej terminówkę z ChatGPT i wyślij przez istniejący Arkusz na telefon z Tarczą.",
+  "start_url": "./terminowki.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f4f7",
+  "theme_color": "#b80f2b",
+  "lang": "pl",
+  "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }, { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }]
+}
