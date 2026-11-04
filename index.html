@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.5.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.6.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="appointments.css?v=7.5.0">
+  <link rel="stylesheet" href="appointments.css?v=7.6.0">
   <meta name="theme-color" content="#000000">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -5885,7 +5885,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.5.0</div>
+    <div class="version">v7.6.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -6665,6 +6665,7 @@
       throw error;
     }
     async function sendSharedDataChanges(cfg, changes){
+      if(appointmentTransferInProgress()) throw new Error('appointment transfer active');
       const requestId = createSharedWriteRequestId();
       await fetch(cfg.url, {
         method:'POST',
@@ -14557,12 +14558,14 @@ km priv: 0,00</div>
       return 'missing';
     }
     async function doExport(url, payloadOverride, options={}){
+      if(appointmentTransferInProgress()) return false;
       const payload = payloadOverride || buildDailyExportPayload();
       const compatible = await ensureAppsScriptCompatibility(url, {
         notify:options.compatibilityNotify !== false,
         promptForPin:options.compatibilityNotify !== false
       });
       if(!compatible) return false;
+      if(appointmentTransferInProgress()) return false;
       markDailyExportAttempt(payload);
       if(isCurrentPostWorkPayload(payload)){
         setPostWorkVerificationState('export', 'busy', { payload, message:'Wysyłam i sprawdzam eksport dniówki.' });
@@ -14656,7 +14659,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.5.0';
+      return el ? el.textContent.trim() : 'v7.6.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -15194,6 +15197,7 @@ km priv: 0,00</div>
       });
     }
     function sendSyncPayload(cfg, snapshot, keepalive){
+      if(appointmentTransferInProgress()) return Promise.reject(new Error('appointment transfer active'));
       return fetch(cfg.url, {
         method:'POST',
         mode:'no-cors',
@@ -16846,7 +16850,49 @@ km priv: 0,00</div>
       syncWorkWakeLock();
     }
 
+    // v7.6.0: appointment submission never uploads a workday, report or shared-data change.
+    function appointmentTransferInProgress(){
+      return !!(window.TarczaAppointments && window.TarczaAppointments.isTransferring());
+    }
+    async function refreshWorkdayAfterAppointment(){
+      if(autoSyncBusy || manualSyncBusy || overlay.classList.contains('show') || window.TarczaAppointments.isOpen()) return 'deferred';
+      const cfg = { url:localStorage.getItem(LS_APPSCRIPT)||'', pin:localStorage.getItem(LS_SYNC_PIN)||'', deviceId:getDeviceId() };
+      if(!cfg.url || !cfg.pin) return 'skipped';
+      // A stale but clean phone is the normal case. Genuine local edits are preserved silently.
+      if(hasUnuploadedLocalChanges() || hasPendingDailyExport()) return 'skipped';
+      autoSyncBusy = true;
+      const originalState = currentComparableStateString(), originalChange = getLastLocalChangeAt();
+      try{
+        const list = await fetchSyncList(cfg);
+        if(!list || !list.ok) throw new Error('syncList failed');
+        const candidate = findNewestOtherSnapshot(list.snapshots || [], cfg.deviceId);
+        const localChange = Math.max(originalChange, Number(localStorage.getItem(LS_LAST_SEEN_CLOUD_CHANGE_AT) || 0));
+        if(!candidate || Number(candidate.lastLocalChangeAt || candidate.savedAtMs || 0) <= localChange) return 'unchanged';
+        const loaded = await jsonpRequest(cfg.url, { action:'syncLoad', pin:cfg.pin, id:candidate.id });
+        const snapshot = loaded && loaded.snapshot;
+        if(!loaded || !loaded.ok || !snapshot || String(snapshot.syncId || snapshot.id) !== candidate.id ||
+           !snapshot.state || !snapshot.persist) throw new Error('syncLoad failed');
+        if(Number(snapshot.lastLocalChangeAt || snapshot.savedAtMs || 0) <= localChange) return 'unchanged';
+        let shared = null;
+        try { shared = prepareSharedDataMerge(await fetchSharedData(cfg)); } catch { /* Workday download remains independent. */ }
+        // Recheck after all awaits: never overwrite edits made while the download was in flight.
+        if(hasUnuploadedLocalChanges() || getLastLocalChangeAt() !== originalChange || currentComparableStateString() !== originalState ||
+           overlay.classList.contains('show') || window.TarczaAppointments.isOpen()) return 'deferred';
+        applySyncSnapshot(snapshot);
+        if(shared && !shared.conflicts.length && !shared.changes.length){
+          applyMergedSharedData(shared.result);
+          saveSharedDataBase(shared.remote);
+          saveSharedDataConflicts([]);
+          markSharedDataVerified();
+          clearLocalSyncDirty(snapshot);
+        }
+        markCloudSeen(snapshot);
+        setDownloadedSyncIndicatorClean();
+        return 'applied';
+      } finally { autoSyncBusy = false; }
+    }
     async function autoSyncCheckOnForeground(reason){
+      if(appointmentTransferInProgress()) return;
       if(autoSyncBusy) return;
       const now = Date.now();
       if(now - lastAutoSyncForegroundCheckAt < 2000) return;
@@ -16942,6 +16988,7 @@ km priv: 0,00</div>
     }
 
     async function performScheduledAutoSyncUpload(reason, keepalive, options={}){
+      if(appointmentTransferInProgress()) return;
       const forceFinalSync = shouldForceFinalSync(reason, options);
       clearAutoSyncSchedule(false);
       if(forceFinalSync) autoSyncForcedFinalSyncActive = true;
@@ -17122,6 +17169,7 @@ km priv: 0,00</div>
     }
 
     async function autoSyncUploadOnHide(reason){
+      if(appointmentTransferInProgress()) return;
       if(autoSyncBusy || !isAutoSyncEnabled()) return;
       const cfg = getAutoSyncConfig();
       if(!cfg) return;
@@ -17802,15 +17850,17 @@ km priv: 0,00</div>
     // auto-save co minutę
     setInterval(()=>saveState(), 60000);
   </script>
-<script src="./appointments-core.js?v=7.5.0"></script>
-<script src="./appointments.js?v=7.5.0"></script>
+<script src="./appointments-core.js?v=7.6.0"></script>
+<script src="./appointments-paste.js?v=7.6.0"></script>
+<script src="./appointments.js?v=7.6.0"></script>
 <script>
   window.TarczaAppointments.start({
     getConfig:()=>({ url:localStorage.getItem(LS_APPSCRIPT)||'', pin:localStorage.getItem(LS_SYNC_PIN)||'' }),
+    refreshWorkday:refreshWorkdayAfterAppointment,
     canOpen:()=>!overlay.classList.contains('show') && !endConfirmActive &&
       document.getElementById('endConfirmOverlay').classList.contains('hidden')
   });
 </script>
-<script type="module" src="./zp-work-bridge.js?v=7.5.0"></script>
+<script type="module" src="./zp-work-bridge.js?v=7.6.0"></script>
 </body>
 </html>

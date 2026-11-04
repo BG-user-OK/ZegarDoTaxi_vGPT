@@ -1,4 +1,4 @@
-/* Pixel paste-to-Tarcza page v7.5.0. Uses the existing Sheets backend; no workday logic. */
+/* Pixel paste-to-Tarcza page v7.6.0. Uses the existing Sheets backend; no workday logic. */
 (function (root, factory) {
   const C = typeof module === 'object' && module.exports ? require('./appointments-core.js') : root.TarczaAppointmentsCore;
   const api = factory(C);
@@ -34,7 +34,9 @@
   }
   class Importer {
     constructor(repository, getConfig, options = {}) {
-      this.repository = repository; this.getConfig = getConfig; this.fetcher = options.fetch || globalThis.fetch;
+      this.repository = repository; this.getConfig = getConfig;
+      // Native Window.fetch requires its Window receiver; an importer method call is invalid on Android Chrome.
+      this.fetcher = options.fetch || ((...args) => globalThis.fetch(...args));
       this.online = options.online || (() => navigator.onLine); this.time = options.now || (() => Date.now());
       this.capabilityUrl = ''; this.inFlight = null;
     }

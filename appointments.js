@@ -1,13 +1,43 @@
-/* Occupancy scheduler UI and transport v7.5.0. No workday or Calendar writes. */
+/* Occupancy scheduler UI and transport v7.6.0. Appointment-only submission. */
 (function (root) {
   'use strict';
   const C = root.TarczaAppointmentsCore, NS = 'http://www.w3.org/2000/svg';
   let host, repository, state = C.emptyState(), layer, dialog, status, busy = false, timer, channel;
-  let lastRender = '', ready = false, syncing = false, syncAgain = false, capabilityUrl = '', statusKind = 'local';
+  let lastRender = '', ready = false, syncing = false, syncAgain = false, statusKind = 'local', importer;
   let gesture = null, fanIds = [], view = '', editorKey = '', editorDirty = false, lastConfigKey = '';
   let arcs, annotations, drawTarget = null, annotationSignature = '', listSignature = '';
   let suppressOpeningClick = false;
   let editorBase, editorConflictId = '';
+  let refreshingWorkday = false;
+  const transfers = () => Object.values(state.deliveries || {});
+  function isTransferring() { return !ready || view === 'paste' || refreshingWorkday || transfers().some(t => t.status === 'confirmed' && t.refresh) || state.outbox.some(o => state.deliveries?.[o.id]); }
+  function deliveryStatus(id) { return state.deliveries?.[id]?.status || ''; }
+  async function updateDeliveries(failed = false) {
+    state = await repository.store.transact(s => {
+      for (const [id, transfer] of Object.entries(s.deliveries || {})) {
+        const matches = Object.values(s.records).filter(r => (r.originalDate || r.date) === transfer.date && C.equivalentText(r.originalText, transfer.text));
+        const record = s.records[id] || (matches.length === 1 ? matches[0] : null);
+        const pending = s.outbox.some(o => o.id === (record?.id || id));
+        const conflict = s.conflicts.some(c => c.appointmentId === id || c.appointmentId === record?.id);
+        transfer.status = conflict || record?.deletedAt || record?.expiredAt ? 'error' : record?.revision > 0 && !pending ? 'confirmed' : failed ? 'error' : 'sending';
+        if (record && record.id !== id) { s.deliveries[record.id] = transfer; delete s.deliveries[id]; }
+      }
+    });
+    lastRender = ''; render();
+  }
+  async function refreshWorkday() {
+    const waiting = transfers().filter(t => t.status === 'confirmed' && t.refresh);
+    if (!waiting.length || !host.refreshWorkday || refreshingWorkday) return;
+    refreshingWorkday = true;
+    try {
+      const result = await host.refreshWorkday();
+      if (result === 'deferred') return;
+      state = await repository.store.transact(s => {
+        for (const t of Object.values(s.deliveries || {})) if (waiting.some(w => w.date === t.date && w.text === t.text)) t.refresh = false;
+      });
+    } catch { /* Delivery is already confirmed. A read-only refresh can wait for the next retry. */ }
+    finally { refreshingWorkday = false; }
+  }
   function armOpeningClick() { suppressOpeningClick = true; setTimeout(() => { suppressOpeningClick = false; }, 1000); }
   const now = () => Date.now() + (state.serverOffset || 0);
   const records = () => Object.values(state.records);
@@ -59,6 +89,7 @@
     const dstNotice = C.offsetAt(now()) !== C.offsetAt(now() + C.HORIZON) ? '<p class="appointments-help">Zmiana czasu w tym oknie: powtórzone godziny mogą mieć wspólne położenie. Sprawdź daty i przesunięcia UTC w treści kursu.</p>' : '';
     open(`${header('Terminówki')}<p class="appointments-horizon">Tarcza: najbliższe 12 godzin · Europe/Warsaw</p>${statusHtml()}
       ${dstNotice}
+      <button type="button" class="appointments-yellow appointments-submit-new" data-action="paste">Zgłoś nową</button>
       <div class="appointments-toolbar"><button type="button" class="appointments-green" data-action="new" autofocus>＋ Dodaj</button>
       <button type="button" data-action="sync">↻ Synchronizuj</button></div>
       ${conflicts}${active.length ? active.map(r => `<button type="button" class="appointments-row" data-action="details" data-id="${escape(r.id)}">
@@ -74,9 +105,55 @@
       <pre class="appointments-full-text">${escape(r.text)}</pre>
       ${Date.parse(r.pickupAt) <= now() ? '<p class="appointments-help">Po czasie odbioru — zajętość trwa do końca kursu.</p>' : ''}
       <p class="appointments-help">Koniec: ${escape(format(r.endAt))}</p>${statusHtml()}
+      ${deliveryStatus(id) === 'error' ? '<button type="button" data-action="sync">Ponów wysłanie</button>' : ''}
       <div class="appointments-actions"><button type="button" class="appointments-red" data-action="delete" data-id="${escape(id)}" aria-label="Usuń terminówkę">🗑</button>
       <button type="button" class="appointments-green" data-action="close" autofocus>OK</button>
       <button type="button" class="appointments-yellow" data-action="edit" data-id="${escape(id)}" aria-label="Edytuj terminówkę">✎</button></div>`, 'details:' + id);
+  }
+  function pasteEditor() {
+    open(`${header('Zgłoś nową terminówkę')}<form id="appointmentPasteForm">
+      <button type="button" class="appointments-yellow" data-action="clipboard">Wklej ze schowka</button>
+      <label>Blok z ChatGPT<textarea id="appointmentPasteText" rows="7" maxlength="100000" spellcheck="false" required>${escape(state.drafts['integrated-paste'] || '')}</textarea></label>
+      <div id="appointmentPastePreview" class="appointments-help"></div>
+      <p id="appointmentError" class="appointments-error" role="alert"></p>
+      <div class="appointments-actions"><button type="button" data-action="close">Anuluj</button><button type="submit" class="appointments-yellow">Wyślij nową</button></div>
+      </form>`, 'paste');
+    const area = dialog.querySelector('#appointmentPasteText');
+    area.addEventListener('input', () => {
+      repository.draft('integrated-paste', area.value).catch(() => error('Nie udało się zachować szkicu. Skopiuj blok przed zamknięciem.'));
+      previewPaste();
+    });
+    dialog.querySelector('form').addEventListener('submit', sendPaste);
+    previewPaste();
+  }
+  async function previewPaste() {
+    const area = dialog.querySelector('#appointmentPasteText'), target = dialog.querySelector('#appointmentPastePreview');
+    if (!area || !target) return;
+    const raw = area.value;
+    try {
+      const { parsed } = await root.TarczaPaste.parseInput(raw);
+      if (area.value !== raw) return;
+      target.textContent = `Początek: ${format(parsed.startAt)} · Odbiór: ${format(parsed.pickupAt)} · Koniec: ${format(parsed.endAt)}`;
+    } catch (cause) { if (area.value === raw) target.textContent = raw.trim() ? cause.message : 'Wklej cały blok z datą. Sprawdź podgląd przed wysłaniem.'; }
+  }
+  async function sendPaste(event) {
+    event.preventDefault(); if (busy) return; busy = true;
+    const button = event.submitter; if (button) button.disabled = true;
+    try {
+      const { id, parsed } = await root.TarczaPaste.parseInput(dialog.querySelector('#appointmentPasteText').value);
+      if (Date.parse(parsed.endAt) <= now()) throw Error('Ten kurs już się zakończył. Sprawdź datę i godziny.');
+      const saved = await repository.importEntry(parsed, id, now());
+      state = await repository.store.transact(s => {
+        s.deliveries ||= {};
+        s.deliveries[saved.id] = { date: parsed.date, text: parsed.text, status: 'sending', refresh: true };
+        delete s.drafts['integrated-paste'];
+      });
+      close(); // Durable local save precedes closing; no network wait on the main screen.
+      message('Terminówka zapisana. Wysyłam do Arkusza…');
+      if (channel) channel.postMessage('changed');
+      scheduleSync(0);
+    } catch (cause) { error(cause.message || 'Nie udało się zapisać. Blok pozostaje w formularzu.'); }
+    finally { busy = false; if (button) button.disabled = false; }
   }
   function wheel(label, key, time) {
     const [h, m] = time.split(':');
@@ -183,6 +260,14 @@
     const { action: act, id } = button.dataset;
     if (act === 'close') { close(); return; }
     if (act === 'new') { editor(); return; }
+    if (act === 'paste') { pasteEditor(); return; }
+    if (act === 'clipboard') {
+      try {
+        const text = await navigator.clipboard.readText(), area = dialog.querySelector('#appointmentPasteText');
+        if (area) { area.value = text; area.dispatchEvent(new Event('input')); }
+      } catch { error('Przytrzymaj pole tekstowe i wybierz Wklej.'); }
+      return;
+    }
     if (act === 'details') { details(id); return; }
     if (act === 'edit') { editor(id); return; }
     if (act === 'step') { step(button); return; }
@@ -240,7 +325,13 @@
     if (Math.hypot(x - p.x, y - p.y) > 25) el('path', { d: `M ${p.x} ${p.y} L ${x} ${y}`, stroke: color, 'stroke-width': .6, opacity: .7, fill: 'none', 'pointer-events': 'none' });
     const attrs = { x, y, fill: color, 'font-size': pickup ? 24 : 18, 'font-family': 'Arial,sans-serif', 'font-weight': '700',
       'text-anchor': 'middle', 'dominant-baseline': 'middle', stroke: '#000', 'stroke-width': 2.8, 'paint-order': 'stroke', 'pointer-events': pickup ? 'all' : 'none' };
-    if (pickup) { attrs['data-appointment'] = id; attrs.class = 'appointment-pickup-label'; }
+    if (pickup) {
+      const record = current(id);
+      const statuses = records().filter(r => r.pickupAt === record?.pickupAt && C.active(r, now())).map(r => deliveryStatus(r.id));
+      const delivery = statuses.includes('error') ? 'error' : statuses.includes('sending') ? 'sending' : 'confirmed';
+      attrs['data-appointment'] = id; attrs.class = 'appointment-pickup-label'; attrs['data-delivery'] = delivery;
+      attrs['aria-label'] = `${text}${delivery === 'sending' ? ' · wysyłanie' : delivery === 'error' ? ' · nie wysłano, ponów' : ''}`;
+    }
     const node = el('text', attrs);
     if (pickup) {
       const [h, m] = text.split(':');
@@ -258,7 +349,7 @@
       'stroke-width': 12, 'stroke-linecap': 'butt', 'data-occupancy-count': s.count, 'pointer-events': 'none' }));
     const intervals = C.visibleIntervals(active, time), used = [], pickupLabels = new Set(), endpointLabels = new Set();
     intervals.forEach(i => { arrow(i.start, true); arrow(i.end, false); });
-    const nextAnnotations = active.map(r => `${r.id}|${r.updatedAt}|${r.revision}|${time < Date.parse(r.startAt)}|${Date.parse(r.pickupAt) <= time + C.HORIZON}|${Date.parse(r.endAt) <= time + C.HORIZON}`).join(';') + '|' + layer.getBoundingClientRect().width;
+    const nextAnnotations = active.map(r => `${r.id}|${r.updatedAt}|${r.revision}|${deliveryStatus(r.id)}|${time < Date.parse(r.startAt)}|${Date.parse(r.pickupAt) <= time + C.HORIZON}|${Date.parse(r.endAt) <= time + C.HORIZON}`).join(';') + '|' + layer.getBoundingClientRect().width;
     if (nextAnnotations !== annotationSignature) {
     annotationSignature = nextAnnotations; annotations.replaceChildren(); drawTarget = annotations;
     // Draw pickup labels first so orange endpoints yield to them.
@@ -316,38 +407,29 @@
   }
   function scheduleSync(delay = 30000) { clearTimeout(timer); timer = setTimeout(() => sync(false), delay); }
   async function sync(notify = false) {
-    if (!ready || document.hidden || !navigator.onLine) { message('Offline — dane i kolejka pozostają na urządzeniu.'); return; }
+    if (!ready || document.hidden) return;
+    if (!navigator.onLine) { await updateDeliveries(true); message('Offline — dane i kolejka pozostają na urządzeniu.', 'error'); scheduleSync(); return; }
     if (syncing) { syncAgain = true; return; }
     const config = host.getConfig();
-    if (!config?.url || !config?.pin) { message('Zapis lokalny. Skonfiguruj dotychczasowy adres Apps Script i PIN synchronizacji.'); return; }
-    if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/?#]+\/exec$/.test(config.url)) { message('Nieprawidłowy adres Apps Script.', 'error'); return; }
+    if (!config?.url || !config?.pin) { await updateDeliveries(true); message('Zapis lokalny. Skonfiguruj dotychczasowy adres Apps Script i PIN synchronizacji.'); scheduleSync(); return; }
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/?#]+\/exec$/.test(config.url)) { await updateDeliveries(true); message('Nieprawidłowy adres Apps Script.', 'error'); scheduleSync(); return; }
     syncing = true;
     try {
-      if (capabilityUrl !== config.url) {
-        // Existing backends route unknown POST actions to daily exports. Never send a write until this safe GET confirms support.
-        let caps;
-        try { caps = await json(config.url + '?action=appointmentsCapabilities'); } catch { caps = null; }
-        if (!caps || caps.schema !== C.SCHEMA || caps.protocol !== 1 || caps.ok !== true) {
-          message('Zapis lokalny działa. Synchronizacja terminówek czeka na wdrożenie nowego Apps Script.'); return;
-        }
-        capabilityUrl = config.url;
-      }
+      await updateDeliveries();
       message('Sprawdzam terminówki na serwerze…');
-      for (let round = 0; round < 6; round++) {
-        const operations = await repository.outgoing(), sentAt = Date.now();
-        const response = await json(config.url, { action: 'appointmentsSync', pin: config.pin, operations });
-        state = await repository.accept(response, sentAt, Date.now());
-        if (!state.outbox.length || !operations.length) break;
-      }
+      state = await importer.sync();
+      await updateDeliveries(true);
       message(state.conflicts.length ? 'Konflikt zmian — otwórz listę terminówek.' : state.outbox.length ? 'Część zmian czeka na wysłanie.' : 'Terminówki potwierdzone na serwerze.', state.conflicts.length ? 'error' : 'ok');
       lastRender = ''; render(); if (channel) channel.postMessage('changed');
       if (view === 'list') list();
-    } catch { message('Brak potwierdzenia serwera. Dane i kolejka są zachowane; ponowię próbę.', 'error'); }
+      await refreshWorkday();
+    } catch { await updateDeliveries(true); message('Brak potwierdzenia serwera. Dane i kolejka są zachowane; ponowię próbę.', 'error'); }
     finally { syncing = false; const again = syncAgain; syncAgain = false; scheduleSync(again ? 500 : 30000); }
   }
   async function start(options) {
     if (ready) return; host = options;
     const store = new C.IndexedStore(root.indexedDB); repository = new C.Repository(store);
+    importer = new root.TarczaPaste.Importer(repository, () => host.getConfig());
     dialog = document.createElement('dialog'); dialog.id = 'appointmentsDialog'; dialog.className = 'appointments-dialog';
     dialog.setAttribute('aria-label', 'Harmonogram terminówek'); document.body.appendChild(dialog);
     dialog.addEventListener('click', action);
@@ -385,7 +467,16 @@
         event.preventDefault(); selectHits(C.ordered(records().filter(r => C.active(r, now()) && Math.abs(Date.parse(r.pickupAt) - Date.parse(current(event.target.dataset.appointment).pickupAt)) < 5 * C.MINUTE)));
       }
     });
-    try { state = await store.read(); ready = true; message('Zapis lokalny gotowy.'); }
+    try {
+      state = await store.transact(s => {
+        // Reuse the queue left by the earlier standalone sender without copying or losing its records.
+        for (const op of s.outbox.filter(o => o.origin === 'paste-create')) {
+          s.deliveries ||= {};
+          s.deliveries[op.id] ||= { date: op.record.originalDate || op.record.date, text: op.record.originalText, status: 'error', refresh: true };
+        }
+      });
+      ready = true; message('Zapis lokalny gotowy.');
+    }
     catch { button.title = 'Nie można otworzyć lokalnej bazy terminówek.'; console.error('Nie można otworzyć lokalnej bazy terminówek.'); return; }
     if (typeof BroadcastChannel !== 'undefined') { channel = new BroadcastChannel('tarcza-appointments-v1'); channel.onmessage = () => load().then(() => { if (view === 'list') list(); }); }
     window.addEventListener('online', () => scheduleSync(0));
@@ -394,9 +485,9 @@
     setInterval(() => {
       render();
       const cfg = host.getConfig(), key = cfg?.url + '|' + cfg?.pin;
-      if (key !== lastConfigKey) { lastConfigKey = key; capabilityUrl = ''; scheduleSync(500); }
+      if (key !== lastConfigKey) { lastConfigKey = key; importer.capabilityUrl = ''; scheduleSync(500); }
     }, 1000);
     render(); scheduleSync(1500);
   }
-  root.TarczaAppointments = { start, isOpen: () => !!dialog?.open, open: () => { if (ready) { armOpeningClick(); list(); } }, sync, version: C.VERSION };
+  root.TarczaAppointments = { start, isOpen: () => !!dialog?.open, isTransferring, open: () => { if (ready) { armOpeningClick(); list(); } }, sync, version: C.VERSION };
 })(window);
