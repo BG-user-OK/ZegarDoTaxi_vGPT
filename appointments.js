@@ -1,4 +1,4 @@
-/* Occupancy scheduler UI and transport v7.6.0. Appointment-only submission. */
+/* Occupancy scheduler UI and transport v7.6.1. Compact dial annotations. */
 (function (root) {
   'use strict';
   const C = root.TarczaAppointmentsCore, NS = 'http://www.w3.org/2000/svg';
@@ -303,15 +303,24 @@
       fill: 'none', stroke: '#ff6565', 'stroke-width': 2, 'stroke-linecap': 'round', 'pointer-events': 'none' });
   }
   function label(at, text, color, pickup, id, used) {
-    const p = C.point(at, 207), width = pickup ? 46 : 48, height = pickup ? 30 : 22;
+    const [hour, minutes] = text.split(':'), displayHour = String(Number(hour));
+    const size = pickup ? 24 : 18, minuteSize = pickup ? 14 : 11;
+    const measure = document.createElement('canvas').getContext('2d');
+    measure.font = `700 ${size}px Arial`; const hourWidth = measure.measureText(displayHour).width;
+    measure.font = `700 ${minuteSize}px Arial`;
+    const width = hourWidth + measure.measureText(minutes).width + 6, height = pickup ? 30 : 24;
+    const rect = layer.getBoundingClientRect();
+    // The tick ring is narrower than the viewport. Use its side margins before moving a label along the ring.
+    const left = Math.max(-35, -30 + (2 - rect.left) * 460 / rect.width);
+    const right = Math.min(435, -30 + (window.innerWidth - 2 - rect.left) * 460 / rect.width);
+    const top = Math.max(-50, -30 + (2 - rect.top) * 460 / rect.height);
+    const bottom = Math.min(450, -30 + (window.innerHeight - 2 - rect.top) * 460 / rect.height);
     let chosen;
-    // Keep the complete label box outside the tick ring and inside the phone viewport.
-    // Only labels move; a leader points back to the true endpoint when space is tight.
-    for (const shift of [0, 8, -8, 16, -16, 24, -24, 32, -32, 40, -40, 48, -48]) {
+    for (const shift of [0, 4, -4, 8, -8, 12, -12, 16, -16]) {
       for (const radius of [230, 238, 246]) {
         const a = (C.angle(at) + shift) * Math.PI / 180;
-        const x = Math.max(-24 + width / 2, Math.min(424 - width / 2, 200 + Math.cos(a) * radius));
-        const y = Math.max(-22 + height / 2, Math.min(422 - height / 2, 200 + Math.sin(a) * radius));
+        const x = Math.max(left + width / 2, Math.min(right - width / 2, 200 + Math.cos(a) * radius));
+        const y = Math.max(top + height / 2, Math.min(bottom - height / 2, 200 + Math.sin(a) * radius));
         const nearestX = Math.max(x - width / 2, Math.min(x + width / 2, 200));
         const nearestY = Math.max(y - height / 2, Math.min(y + height / 2, 200));
         if (Math.hypot(nearestX - 200, nearestY - 200) < 207) continue;
@@ -322,8 +331,8 @@
     }
     if (!chosen) return; // Dense groups retain their markers and the selectable chronological list.
     const { x, y } = chosen; used.push({ x, y, width, height });
-    if (Math.hypot(x - p.x, y - p.y) > 25) el('path', { d: `M ${p.x} ${p.y} L ${x} ${y}`, stroke: color, 'stroke-width': .6, opacity: .7, fill: 'none', 'pointer-events': 'none' });
-    const attrs = { x, y, fill: color, 'font-size': pickup ? 24 : 18, 'font-family': 'Arial,sans-serif', 'font-weight': '700',
+    const attrs = { x, y, fill: color, 'font-size': size, 'font-family': 'Arial,sans-serif', 'font-weight': '700',
+      'data-appointment-time': text,
       'text-anchor': 'middle', 'dominant-baseline': 'middle', stroke: '#000', 'stroke-width': 2.8, 'paint-order': 'stroke', 'pointer-events': pickup ? 'all' : 'none' };
     if (pickup) {
       const record = current(id);
@@ -333,11 +342,8 @@
       attrs['aria-label'] = `${text}${delivery === 'sending' ? ' · wysyłanie' : delivery === 'error' ? ' · nie wysłano, ponów' : ''}`;
     }
     const node = el('text', attrs);
-    if (pickup) {
-      const [h, m] = text.split(':');
-      el('tspan', {}, node).textContent = h;
-      el('tspan', { 'font-size': 14, dy: -8 }, node).textContent = m;
-    } else node.textContent = text;
+    el('tspan', {}, node).textContent = displayHour;
+    el('tspan', { 'font-size': minuteSize, dy: pickup ? -8 : -6 }, node).textContent = minutes;
   }
   function render() {
     if (!ready || document.hidden) return;
@@ -352,7 +358,17 @@
     const nextAnnotations = active.map(r => `${r.id}|${r.updatedAt}|${r.revision}|${deliveryStatus(r.id)}|${time < Date.parse(r.startAt)}|${Date.parse(r.pickupAt) <= time + C.HORIZON}|${Date.parse(r.endAt) <= time + C.HORIZON}`).join(';') + '|' + layer.getBoundingClientRect().width;
     if (nextAnnotations !== annotationSignature) {
     annotationSignature = nextAnnotations; annotations.replaceChildren(); drawTarget = annotations;
-    // Draw pickup labels first so orange endpoints yield to them.
+    // Endpoints mark their true times. Draw them before pickup dots so coincident pickups stay red.
+    const endpointMarkers = new Set();
+    intervals.forEach(i => {
+      for (const at of [time < Date.parse(i.record.startAt) ? Date.parse(i.record.startAt) : null, !i.continues ? Date.parse(i.record.endAt) : null]) {
+        if (at === null || endpointMarkers.has(at)) continue;
+        endpointMarkers.add(at); const p = C.point(at);
+        el('circle', { cx: p.x, cy: p.y, r: 8, fill: '#ffa21c', stroke: '#fff', 'stroke-width': 1,
+          class: 'appointment-endpoint-marker', 'data-endpoint-at': at, 'pointer-events': 'none' });
+      }
+    });
+    // Draw pickup labels first so endpoints yield to them.
     C.ordered(active).forEach(r => {
       const pickup = Date.parse(r.pickupAt);
       if (pickup > time + C.HORIZON) return;

@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.6.0: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.6.1: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="appointments.css?v=7.6.0">
+  <link rel="stylesheet" href="appointments.css?v=7.6.1">
   <meta name="theme-color" content="#000000">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -5885,7 +5885,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.6.0</div>
+    <div class="version">v7.6.1</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -14659,7 +14659,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.6.0';
+      return el ? el.textContent.trim() : 'v7.6.1';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -16850,7 +16850,7 @@ km priv: 0,00</div>
       syncWorkWakeLock();
     }
 
-    // v7.6.0: appointment submission never uploads a workday, report or shared-data change.
+    // v7.6.1: appointment submission never uploads a workday, report or shared-data change.
     function appointmentTransferInProgress(){
       return !!(window.TarczaAppointments && window.TarczaAppointments.isTransferring());
     }
@@ -17850,9 +17850,9 @@ km priv: 0,00</div>
     // auto-save co minutę
     setInterval(()=>saveState(), 60000);
   </script>
-<script src="./appointments-core.js?v=7.6.0"></script>
-<script src="./appointments-paste.js?v=7.6.0"></script>
-<script src="./appointments.js?v=7.6.0"></script>
+<script src="./appointments-core.js?v=7.6.1"></script>
+<script src="./appointments-paste.js?v=7.6.1"></script>
+<script src="./appointments.js?v=7.6.1"></script>
 <script>
   window.TarczaAppointments.start({
     getConfig:()=>({ url:localStorage.getItem(LS_APPSCRIPT)||'', pin:localStorage.getItem(LS_SYNC_PIN)||'' }),
@@ -17861,6 +17861,6 @@ km priv: 0,00</div>
       document.getElementById('endConfirmOverlay').classList.contains('hidden')
   });
 </script>
-<script type="module" src="./zp-work-bridge.js?v=7.6.0"></script>
+<script type="module" src="./zp-work-bridge.js?v=7.6.1"></script>
 </body>
 </html>

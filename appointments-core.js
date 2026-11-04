@@ -1,11 +1,11 @@
-/* Tarcza occupancy scheduler v7.6.0. Independent of workday snapshots. */
+/* Tarcza occupancy scheduler v7.6.1. Independent of workday snapshots. */
 (function (root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.TarczaAppointmentsCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
-  const VERSION = '7.6.0', SCHEMA = 'tarcza-appointments-v1', ZONE = 'Europe/Warsaw';
+  const VERSION = '7.6.1', SCHEMA = 'tarcza-appointments-v1', ZONE = 'Europe/Warsaw';
   const MINUTE = 60000, HORIZON = 720 * MINUTE;
   const clone = value => JSON.parse(JSON.stringify(value));
   const pad = value => String(value).padStart(2, '0');
