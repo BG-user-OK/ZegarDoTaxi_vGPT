@@ -1,4 +1,4 @@
-/* Occupancy scheduler v7.6.1 */
+/* Occupancy scheduler v7.7.0 */
 .appointments-dialog .appointments-submit-new{display:block;width:100%;min-height:64px;font-size:25px;margin:14px 0}
 .appointment-pickup-label[data-delivery=sending]{fill:#ffe048;animation:appointment-delivery-blink 1s steps(1,end) infinite}
 .appointment-pickup-label[data-delivery=error]{fill:#ff2727;animation:appointment-delivery-blink 1s steps(1,end) infinite}

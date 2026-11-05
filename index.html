@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tarcza czasu pracy</title>
-<!-- v7.6.1: based on a previously developed v:1.28 version created by another AI. -->
+<!-- v7.7.0: based on a previously developed v:1.28 version created by another AI. -->
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="appointments.css?v=7.6.1">
+  <link rel="stylesheet" href="appointments.css?v=7.7.0">
   <meta name="theme-color" content="#000000">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -5885,7 +5885,7 @@
   <div class="overlay" id="overlay"></div>
 
   <button class="install-btn" id="installBtn" type="button">📥 Zainstaluj</button>
-    <div class="version">v7.6.1</div>
+    <div class="version">v7.7.0</div>
 
   <script>
     const LS_KEY = 'tarcza_state_v1';
@@ -5928,7 +5928,7 @@
       { key:'freenow', label:'FREENOW', bg:'#000000', fg:'#ff3838' },
       { key:'agap',    label:'AGAP',    bg:'#ff8a0a', fg:'#000000' },
       { key:'tip',     label:'NAPIWEK', bg:'#9adf9a', fg:'#0d3b0d' },
-      { key:'other',   label:'INNE',    bg:'#555555', fg:'#ffffff' },
+      { key:'other',   label:'iTaxi',   bg:'#fff52d', fg:'#000000' },
       { key:'swinka',  label:'ŚWINKA',  bg:'#f7a7c7', fg:'#2b0715' }
     ];
     const DISPLAY_TOTAL_EXCLUDED_PROVIDER_KEYS = new Set(['swinka']);
@@ -12079,13 +12079,25 @@
       const z=Math.trunc((g || 0)/100);
       return String(z).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     }
+    // Manual entry only. Persisted and AI-imported amounts remain integer groszy, including historical fractions.
+    function manualAmountScale(provider){
+      return ['taxi','priv','agap','tip','other'].includes(provider) ? 100 : 1;
+    }
+    function providerImageSource(provider){
+      return provider==='other' ? 'Photos/itaxi.png' : `Photos/${provider}.png`;
+    }
+    function manualAmountCursor(value,provider){
+      const text=formatAmountDisplay(value);
+      if(manualAmountScale(provider)!==100) return inlineCursorHtml(text,true);
+      const comma=text.lastIndexOf(',');
+      return `${inlineCursorHtml(text.slice(0,comma),true)}${escapeHtml(text.slice(comma))}`;
+    }
     function keypadAmountValue(){
-      const raw = parseInt(keypadRaw || '0', 10);
+      const raw = parseInt(keypadRaw || '0', 10)*manualAmountScale(keypadContext && keypadContext.provider);
       return keypadAmountNegative ? -raw : raw;
     }
     function keypadAmountDisplay(){
-      const value = parseInt(keypadRaw || '0', 10);
-      return keypadAmountNegative ? '-' + formatAmountDisplay(value) : formatAmountDisplay(value);
+      return formatAmountDisplay(keypadAmountValue());
     }
     function openMoneyPanelLegacy(){
       let rows='';
@@ -12110,7 +12122,7 @@
         const v=revenues[p.key]||0;
         const filled = v !== 0;
         const disp=filled?formatAmountDisplay(v):'—';
-        const imgSrc = `Photos/${p.key}.png`;
+        const imgSrc = providerImageSource(p.key);
         rows += `
           <div class="provider-row ${filled?'provider-filled':'provider-empty'}">
             <button class="prov-btn ${filled?'filled':'empty'}" data-prov="${p.key}" style="background:${p.bg};color:${p.fg};">
@@ -12419,7 +12431,7 @@
     }
     function moneyDraftInputValue(){
       if(!moneyPanelDraft) return 0;
-      const value=parseInt(moneyPanelDraft.inputRaw||'0',10)||0;
+      const value=(parseInt(moneyPanelDraft.inputRaw||'0',10)||0)*manualAmountScale(moneyPanelDraft.activeProvider);
       return moneyPanelDraft.negative ? -value : value;
     }
     function applyMoneyDraftInput(){
@@ -12462,12 +12474,9 @@
       const active=draft.activeProvider===key;
       const value=draft.values[key]||0;
       if(active && draft.mode==='add' && draft.editBase!==0 && (draft.inputRaw || draft.negative)){
-        return inlineCursorHtml(
-          `${formatAmountDisplay(draft.editBase)} + ${formatAmountDisplay(moneyDraftInputValue())}`,
-          true
-        );
+        return `${escapeHtml(formatAmountDisplay(draft.editBase))} + ${manualAmountCursor(moneyDraftInputValue(),key)}`;
       }
-      if(active) return inlineCursorHtml(formatAmountDisplay(value),true);
+      if(active) return manualAmountCursor(value,key);
       return value!==0 ? formatAmountDisplay(value) : '&mdash;';
     }
     function moneyCounterDraftProp(target,suffix){
@@ -12694,7 +12703,7 @@
         const value=moneyPanelDraft.values[p.key]||0;
         const filled=value!==0;
         const active=moneyPanelDraft.activeProvider===p.key;
-        const imgSrc=`Photos/${p.key}.png`;
+        const imgSrc=providerImageSource(p.key);
         const providerControl = p.key==='swinka'
           ? `<div class="prov-btn swinka-provider-control ${filled?'filled':'empty'}" style="background:${p.bg};color:${p.fg};" role="group" aria-label="${p.label}">
               <div class="swinka-provider-main" data-provider-select="${p.key}" role="button" tabindex="0">
@@ -12830,7 +12839,7 @@
       if(normalized==='freenow' || normalized==='free now') return { kind:'provider', key:'freenow', label:'FREENOW' };
       if(normalized==='agap') return { kind:'provider', key:'agap', label:'AGAP' };
       if(normalized==='tip' || normalized==='tips' || normalized==='napiwek') return { kind:'provider', key:'tip', label:'NAPIWEK' };
-      if(normalized==='inne') return { kind:'provider', key:'other', label:'INNE' };
+      if(normalized==='inne' || normalized==='itaxi' || normalized==='i taxi') return { kind:'provider', key:'other', label:'iTaxi' };
       if(normalized==='swinka') return { kind:'provider', key:'swinka', label:'ŚWINKA' };
       if(normalized==='km priv') return { kind:'privKm', key:'privKm', label:'km PRIV' };
       if(normalized==='licznik' || normalized==='licznik end' || normalized==='licznik koncowy'){
@@ -12882,7 +12891,7 @@
         .trim();
       if(!text) throw new Error('Wklej dane przygotowane przez AI.');
 
-      const labelPattern='licznik(?:\\s+(?:end|końcowy|koncowy))?|km\\s*priv|free\\s*now|freenow|napiwek|tips?|świnka|swinka|uber|bolt|taxi|priv|agap|inne';
+      const labelPattern='licznik(?:\\s+(?:end|końcowy|koncowy))?|km\\s*priv|free\\s*now|freenow|napiwek|tips?|świnka|swinka|uber|bolt|i\\s*taxi|taxi|priv|agap|inne';
       const labelRegex=new RegExp(`(^|[\\s;])(${labelPattern})(?=\\s*(?::|=)?\\s*[+-]?\\d)`,'gimu');
       const matches=Array.from(text.matchAll(labelRegex));
       if(!matches.length){
@@ -13098,7 +13107,7 @@ km priv: 0,00</div>
       let src='';
       let square=false;
       if(conflict.kind==='provider' && PROVIDERS.some(provider=>provider.key===conflict.key)){
-        src=`Photos/${conflict.key}.png`;
+        src=providerImageSource(conflict.key);
       } else if(conflict.kind==='endOdometer' || conflict.kind==='privKm'){
         src='Photos/licznik.png';
         square=true;
@@ -14659,7 +14668,7 @@ km priv: 0,00</div>
     // ===== synchronizacja stanu =====
     function appVersionLabel(){
       const el = document.querySelector('.version');
-      return el ? el.textContent.trim() : 'v7.6.1';
+      return el ? el.textContent.trim() : 'v7.7.0';
     }
     const APPSCRIPT_COMPAT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     let appsScriptCompatibilitySessionKey = '';
@@ -16850,7 +16859,7 @@ km priv: 0,00</div>
       syncWorkWakeLock();
     }
 
-    // v7.6.1: appointment submission never uploads a workday, report or shared-data change.
+    // v7.7.0: appointment submission never uploads a workday, report or shared-data change.
     function appointmentTransferInProgress(){
       return !!(window.TarczaAppointments && window.TarczaAppointments.isTransferring());
     }
@@ -17850,9 +17859,9 @@ km priv: 0,00</div>
     // auto-save co minutę
     setInterval(()=>saveState(), 60000);
   </script>
-<script src="./appointments-core.js?v=7.6.1"></script>
-<script src="./appointments-paste.js?v=7.6.1"></script>
-<script src="./appointments.js?v=7.6.1"></script>
+<script src="./appointments-core.js?v=7.7.0"></script>
+<script src="./appointments-paste.js?v=7.7.0"></script>
+<script src="./appointments.js?v=7.7.0"></script>
 <script>
   window.TarczaAppointments.start({
     getConfig:()=>({ url:localStorage.getItem(LS_APPSCRIPT)||'', pin:localStorage.getItem(LS_SYNC_PIN)||'' }),
@@ -17861,6 +17870,6 @@ km priv: 0,00</div>
       document.getElementById('endConfirmOverlay').classList.contains('hidden')
   });
 </script>
-<script type="module" src="./zp-work-bridge.js?v=7.6.1"></script>
+<script type="module" src="./zp-work-bridge.js?v=7.7.0"></script>
 </body>
 </html>

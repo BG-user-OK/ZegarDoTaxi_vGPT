@@ -1,4 +1,4 @@
-/* Occupancy scheduler UI and transport v7.6.1. Compact dial annotations. */
+/* Occupancy scheduler UI and transport v7.7.0. Compact dial annotations. */
 (function (root) {
   'use strict';
   const C = root.TarczaAppointmentsCore, NS = 'http://www.w3.org/2000/svg';

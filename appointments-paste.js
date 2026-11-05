@@ -1,4 +1,4 @@
-/* Pixel paste-to-Tarcza page v7.6.1. Uses the existing Sheets backend; no workday logic. */
+/* Pixel paste-to-Tarcza page v7.7.0. Uses the existing Sheets backend; no workday logic. */
 (function (root, factory) {
   const C = typeof module === 'object' && module.exports ? require('./appointments-core.js') : root.TarczaAppointmentsCore;
   const api = factory(C);
